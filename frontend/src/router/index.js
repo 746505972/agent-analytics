@@ -1,13 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Upload from '@/views/Upload.vue'
 import Dashboard from '@/views/Dashboard.vue'
-import Chat from '@/views/Chat.vue'
 import Preview from '@/views/Preview.vue'
 
 const routes = [
   {
     path: '/',
-    redirect: '/upload'
+    redirect: '/dashboard'
   },
   {
     path: '/upload',
@@ -18,11 +17,6 @@ const routes = [
     path: '/dashboard',
     name: 'Dashboard',
     component: Dashboard
-  },
-  {
-    path: '/chat',
-    name: 'Chat',
-    component: Chat
   },
   {
     path: '/preview',

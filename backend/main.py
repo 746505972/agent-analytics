@@ -1,5 +1,5 @@
 # main.py
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import pandas as pd
@@ -7,7 +7,7 @@ from typing import List, Dict
 import os
 import uuid
 
-from utils.file_manager import upload_file, read_any_file
+from utils.file_manager import upload_file, read_any_file, delete_file, get_file_path
 
 app = FastAPI(title="Agent-Analytics API", description="数据分析系统的后端API")
 
@@ -23,16 +23,88 @@ app.add_middleware(
 # 确保数据目录存在
 os.makedirs("data", exist_ok=True)
 
+@app.middleware("http")
+async def session_middleware(request: Request, call_next):
+    # 为每个请求生成或获取session_id
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        session_id = str(uuid.uuid4())
+    
+    # 将session_id添加到请求状态中
+    request.state.session_id = session_id
+    
+    response = await call_next(request)
+    
+    # 设置session cookie
+    if not request.cookies.get("session_id"):
+        response.set_cookie(key="session_id", value=session_id, httponly=True)
+    
+    return response
+
 @app.get("/")
 async def root():
     return {"message": "欢迎使用 Agent-Analytics API"}
 
+@app.get("/user/files")
+async def get_user_files(request: Request):
+    """
+    获取用户上传的文件列表
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+        
+        # 构建用户目录路径
+        user_dir = os.path.join("data", session_id)
+        
+        # 检查目录是否存在
+        if not os.path.exists(user_dir):
+            return JSONResponse(content={
+                "success": True,
+                "data": []
+            })
+        
+        # 获取目录中的所有CSV文件
+        files = []
+        for filename in os.listdir(user_dir):
+            if filename.endswith(".csv"):
+                file_path = os.path.join(user_dir, filename)
+                if os.path.isfile(file_path):
+                    # 获取文件信息
+                    stat = os.stat(file_path)
+                    df = pd.read_csv(file_path, encoding="utf-8-sig")
+                    
+                    files.append({
+                        "data_id": os.path.splitext(filename)[0],
+                        "filename": filename,
+                        "rows": len(df),
+                        "columns": len(df.columns),
+                        "size": stat.st_size,
+                        "modified": stat.st_mtime
+                    })
+        
+        return JSONResponse(content={
+            "success": True,
+            "data": files
+        })
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
 @app.post("/upload")
-async def upload_data_file(file: UploadFile = File(...)):
+async def upload_data_file(request: Request, file: UploadFile = File(...)):
     """
     上传数据文件接口
     """
     try:
+        # 获取session_id
+        session_id = request.state.session_id
+        
         # 生成唯一的文件名
         file_extension = os.path.splitext(file.filename)[1]
         temp_file_name = f"temp_{uuid.uuid4()}{file_extension}"
@@ -42,8 +114,8 @@ async def upload_data_file(file: UploadFile = File(...)):
             content = await file.read()
             buffer.write(content)
         
-        # 使用现有的文件管理器处理文件
-        result = upload_file(temp_file_name)
+        # 使用现有的文件管理器处理文件，传入原始文件名和session_id
+        result = upload_file(temp_file_name, file.filename, session_id)
         
         # 删除临时文件
         os.remove(temp_file_name)
@@ -61,13 +133,53 @@ async def upload_data_file(file: UploadFile = File(...)):
             }
         )
 
+@app.delete("/data/{data_id}")
+async def delete_data(request: Request, data_id: str):
+    """
+    删除数据文件接口
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+        
+        # 删除文件时检查session_id
+        file_path = get_file_path(data_id, session_id)
+        if not os.path.exists(file_path):
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "success": False,
+                    "error": "数据文件不存在"
+                }
+            )
+        
+        # 删除文件
+        delete_file(data_id, session_id)
+        
+        return JSONResponse(content={
+            "success": True,
+            "message": "数据文件删除成功"
+        })
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
 @app.get("/data/{data_id}")
-async def get_data_preview(data_id: str, page: int = 1, page_size: int = 10):
+async def get_data_preview(request: Request, data_id: str, page: int = 1, page_size: int = 10):
     """
     获取数据预览接口
     """
     try:
-        file_path = f"data/{data_id}.csv"
+        # 获取session_id
+        session_id = request.state.session_id
+        
+        # 构建文件路径
+        file_path = get_file_path(data_id, session_id)
         if not os.path.exists(file_path):
             return JSONResponse(
                 status_code=404,
@@ -111,12 +223,16 @@ async def get_data_preview(data_id: str, page: int = 1, page_size: int = 10):
         )
 
 @app.get("/data/{data_id}/info")
-async def get_data_info(data_id: str):
+async def get_data_info(request: Request, data_id: str):
     """
     获取数据文件信息接口
     """
     try:
-        file_path = f"data/{data_id}.csv"
+        # 获取session_id
+        session_id = request.state.session_id
+        
+        # 构建文件路径
+        file_path = get_file_path(data_id, session_id)
         if not os.path.exists(file_path):
             return JSONResponse(
                 status_code=404,

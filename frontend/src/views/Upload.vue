@@ -8,7 +8,7 @@
           </router-link>
         </div>
         <div class="header-right">
-          <router-link class="hollow-button" to="/analysis">
+          <router-link class="hollow-button" to="/dashboard">
             进入分析
           </router-link>
         </div>
@@ -198,7 +198,8 @@ export default {
         // 发送文件到后端
         const response = await fetch('http://localhost:8000/upload', {
           method: 'POST',
-          body: formData
+          body: formData,
+          credentials: 'include' // 包含cookies，用于session管理
         })
 
         const result = await response.json()

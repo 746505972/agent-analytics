@@ -3,12 +3,12 @@
     <div class="indexheader">
       <div class="inner">
         <div class="header-left">
-          <router-link to="/upload" class="back-link">
+          <a href="javascript:void(0)" class="back-link" @click="showDeleteConfirmation">
             <span>返回</span>
-          </router-link>
+          </a>
         </div>
         <div class="header-right">
-          <router-link class="hollow-button" to="/analysis">
+          <router-link class="hollow-button" to="/dashboard">
             进入分析
           </router-link>
         </div>
@@ -39,9 +39,6 @@
       <div class="preview-section" v-if="!loading">
         <div class="preview-top">
           <h3>数据预览如下<p>（共<span>{{ totalRows }}</span>行）</p></h3>
-          <label>
-            <input class="btn-text-change" type="checkbox" v-model="isTextFormat" checked>文字格式
-          </label>
         </div>
         
         <div class="preview-wrap">
@@ -98,7 +95,7 @@
         
         <div class="operation-buttons">
           <button class="hollow-button previous-page" @click="goBack">上一步</button>
-          <button class="hollow-button updata" @click="uploadMore">继续上传</button>
+          <button class="hollow-button updata" @click="uploadMore" disabled>继续上传</button>
           <button class="blue-button jin" @click="enterAnalysis">进入分析</button>
         </div>
       </div>
@@ -145,7 +142,10 @@ export default {
       columnHeaders: [],
       rowData: [],
       totalRows: 0,
-      totalPages: 0
+      totalPages: 0,
+      
+      // 添加一个标志，用于标识是否确认离开
+      isLeaving: false
     }
   },
   computed: {
@@ -166,13 +166,28 @@ export default {
       this.useSampleData()
     }
   },
+  // 添加路由守卫钩子
+  beforeRouteLeave(to, from, next) {
+    // 如果已经确认离开，则直接离开
+    if (this.isLeaving) {
+      next();
+      return;
+    }
+    
+    // 显示删除确认弹窗
+    this.showDeleteConfirmation();
+    // 阻止默认的路由跳转
+    next(false);
+  },
   methods: {
     async loadData() {
       this.loading = true
       try {
         // 这里应该调用后端API获取数据
         // 暂时使用示例数据
-        const response = await fetch(`http://localhost:8000/data/${this.dataId}?page=${this.currentPage}&page_size=${this.pageSize}`)
+        const response = await fetch(`http://localhost:8000/data/${this.dataId}?page=${this.currentPage}&page_size=${this.pageSize}`, {
+          credentials: 'include' // 包含cookies，用于session管理
+        })
         
         if (response.ok) {
           const result = await response.json()
@@ -181,7 +196,7 @@ export default {
             this.rowData = result.data.data
             this.totalRows = result.data.rows
             this.totalPages = result.data.total_pages
-            this.documentName = `数据文档-${this.dataId}`
+            this.documentName = this.dataId  // 使用原始文件名作为文档名
           } else {
             this.useSampleData()
           }
@@ -235,8 +250,9 @@ export default {
       }
     },
     
+    // 修改 goBack 方法，显示删除确认弹窗
     goBack() {
-      this.$router.push('/upload')
+      this.showDeleteConfirmation()
     },
     
     uploadMore() {
@@ -244,7 +260,7 @@ export default {
     },
     
     enterAnalysis() {
-      this.$router.push('/analysis')
+      this.$router.push('/dashboard')
     },
     
     showDeleteConfirmation() {
@@ -255,10 +271,39 @@ export default {
       this.showDeleteConfirm = false
     },
     
-    confirmDelete() {
-      // 实际项目中这里应该调用删除API
-      console.log('删除数据')
-      this.showDeleteConfirm = false
+    // 确认删除后真正离开页面
+    async confirmDeleteAndLeave() {
+      // 调用后端删除API
+      try {
+        const response = await fetch(`http://localhost:8000/data/${this.dataId}`, {
+          method: 'DELETE',
+          credentials: 'include' // 包含cookies，用于session管理
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            console.log('数据删除成功');
+            // 关闭弹窗
+            this.showDeleteConfirm = false;
+            // 设置离开标志
+            this.isLeaving = true;
+            // 真正离开页面
+            this.$router.go(-1);
+          } else {
+            console.error('删除失败:', result.error);
+          }
+        } else {
+          console.error('删除请求失败，状态码:', response.status);
+        }
+      } catch (error) {
+        console.error('删除数据时发生错误:', error);
+      }
+    },
+    
+    // 修改 confirmDelete 方法，调用新的 confirmDeleteAndLeave
+    async confirmDelete() {
+      await this.confirmDeleteAndLeave();
     }
   }
 }
