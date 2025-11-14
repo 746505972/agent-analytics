@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 400 200">
+  <rect x="10" y="10" width="380" height="180" fill="#f0f0f0" stroke="#ccc"/>
+  <rect x="20" y="20" width="360" height="30" fill="#e0e0e0"/>
+  <rect x="20" y="60" width="80" height="20" fill="#409eff"/>
+  <rect x="110" y="60" width="80" height="20" fill="#409eff"/>
+  <rect x="200" y="60" width="80" height="20" fill="#409eff"/>
+  <rect x="20" y="90" width="360" height="1" fill="#ddd"/>
+  <rect x="20" y="110" width="360" height="1" fill="#ddd"/>
+  <rect x="20" y="130" width="360" height="1" fill="#ddd"/>
+  <rect x="20" y="150" width="360" height="1" fill="#ddd"/>
+  <text x="30" y="40" font-family="Arial" font-size="14" fill="#666">示例行标题</text>
+  <text x="30" y="80" font-family="Arial" font-size="12" fill="#666">数据1</text>
+  <text x="120" y="80" font-family="Arial" font-size="12" fill="#666">数据2</text>
+  <text x="210" y="80" font-family="Arial" font-size="12" fill="#666">数据3</text>
+</svg>
