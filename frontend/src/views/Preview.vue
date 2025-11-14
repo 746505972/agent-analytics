@@ -9,7 +9,7 @@
         </div>
         <div class="header-right">
           <router-link class="hollow-button" to="/analysis">
-            进入SPSSAU
+            进入分析
           </router-link>
         </div>
       </div>
@@ -64,14 +64,36 @@
         </div>
         
         <div class="pagination" v-if="totalPages > 1">
-          <button 
-            v-for="page in totalPages" 
-            :key="page" 
-            :class="{ active: currentPage === page }"
-            @click="changePage(page)"
-          >
-            {{ page }}
-          </button>
+          <button @click="prevPage" :disabled="currentPage === 1">&lt;</button>
+          <template v-if="totalPages <= 5">
+            <button 
+              v-for="page in totalPages" 
+              :key="page" 
+              :class="{ active: currentPage === page }"
+              @click="changePage(page)"
+            >
+              {{ page }}
+            </button>
+          </template>
+          <template v-else>
+            <button 
+              v-for="page in Math.min(3, totalPages)" 
+              :key="page" 
+              :class="{ active: currentPage === page }"
+              @click="changePage(page)"
+            >
+              {{ page }}
+            </button>
+            <span v-if="totalPages > 3">...</span>
+            <button 
+              v-if="totalPages > 3"
+              :class="{ active: currentPage === totalPages }"
+              @click="changePage(totalPages)"
+            >
+              {{ totalPages }}
+            </button>
+          </template>
+          <button @click="nextPage" :disabled="currentPage === totalPages">&gt;</button>
         </div>
         
         <div class="operation-buttons">
@@ -177,20 +199,20 @@ export default {
     useSampleData() {
       this.loading = false
       this.columnHeaders = ['编号', '姓名', '年龄', '性别', '学历', '收入', '日期']
-      this.rowData = [
-        { '编号': '1', '姓名': '张三', '年龄': '28', '性别': '男', '学历': '本科', '收入': '8000', '日期': '2021/8/12' },
-        { '编号': '2', '姓名': '李四', '年龄': '32', '性别': '女', '学历': '硕士', '收入': '12000', '日期': '2021/8/13' },
-        { '编号': '3', '姓名': '王五', '年龄': '45', '性别': '男', '学历': '博士', '收入': '20000', '日期': '2021/8/14' },
-        { '编号': '4', '姓名': '赵六', '年龄': '29', '性别': '女', '学历': '本科', '收入': '9500', '日期': '2021/8/15' },
-        { '编号': '5', '姓名': '钱七', '年龄': '37', '性别': '男', '学历': '硕士', '收入': '15000', '日期': '2021/8/16' },
-        { '编号': '6', '姓名': '孙八', '年龄': '26', '性别': '女', '学历': '本科', '收入': '7800', '日期': '2021/8/17' },
-        { '编号': '7', '姓名': '周九', '年龄': '40', '性别': '男', '学历': '博士', '收入': '18000', '日期': '2021/8/18' },
-        { '编号': '8', '姓名': '吴十', '年龄': '24', '性别': '女', '学历': '硕士', '收入': '11000', '日期': '2021/8/19' },
-        { '编号': '9', '姓名': '郑一', '年龄': '33', '性别': '男', '学历': '本科', '收入': '10000', '日期': '2021/8/20' },
-        { '编号': '10', '姓名': '王二', '年龄': '31', '性别': '女', '学历': '博士', '收入': '13000', '日期': '2021/8/21' }
-      ]
+      this.rowData = []
+      for (let i = 1; i <= 30; i++) {
+        this.rowData.push({
+          '编号': i,
+          '姓名': `姓名${i}`,
+          '年龄': 20 + (i % 50),
+          '性别': i % 2 === 0 ? '男' : '女',
+          '学历': ['本科', '硕士', '博士'][(i % 3)],
+          '收入': 5000 + (i * 100),
+          '日期': `2021/8/${1 + (i % 30)}`
+        })
+      }
       this.totalRows = this.rowData.length
-      this.totalPages = 1
+      this.totalPages = Math.ceil(this.totalRows / this.pageSize)
       this.documentName = '示例数据文档'
     },
     
@@ -198,6 +220,18 @@ export default {
       this.currentPage = page
       if (this.dataId) {
         this.loadData()
+      }
+    },
+    
+    prevPage() {
+      if (this.currentPage > 1) {
+        this.changePage(this.currentPage - 1)
+      }
+    },
+    
+    nextPage() {
+      if (this.currentPage < this.totalPages) {
+        this.changePage(this.currentPage + 1)
       }
     },
     
@@ -232,14 +266,17 @@ export default {
 
 <style scoped>
 .preview-container {
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   background-color: #f5f5f5;
 }
 
 .indexheader {
+  flex-shrink: 0;
   background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  padding: 15px 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  padding: 10px 0;
 }
 
 .inner {
@@ -248,51 +285,34 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
-}
-
-.header-left .back-link {
-  text-decoration: none;
-  color: #333;
-  font-size: 16px;
-}
-
-.header-right .hollow-button {
-  display: inline-block;
-  padding: 8px 16px;
-  border: 1px solid #409eff;
-  color: #409eff;
-  border-radius: 4px;
-  text-decoration: none;
-  font-size: 14px;
-  transition: all 0.3s;
-}
-
-.header-right .hollow-button:hover {
-  background-color: #409eff;
-  color: white;
+  padding: 0 15px;
 }
 
 .main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   max-width: 1200px;
-  margin: 30px auto;
-  padding: 0 20px;
+  margin: 15px auto;
+  padding: 0 15px;
+  overflow: hidden;
 }
 
 .upload-steps {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 15px;
   background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  border-radius: 6px;
+  box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.1);
 }
 
 .step-item {
   display: flex;
   align-items: center;
-  font-size: 16px;
+  font-size: 14px;
   color: #909399;
 }
 
@@ -308,12 +328,13 @@ export default {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background-color: #f5f5f5;
-  margin-right: 10px;
+  margin-right: 8px;
   font-weight: bold;
+  font-size: 12px;
 }
 
 .step-item.completed-step span {
@@ -328,39 +349,41 @@ export default {
 
 .upload-steps hr {
   flex: 1;
-  margin: 0 20px;
+  margin: 0 15px;
   border: none;
   height: 1px;
   background-color: #ebeef5;
 }
 
+.data-info {
+  flex-shrink: 0;
+}
+
 .data-info h2 {
-  font-size: 20px;
+  font-size: 18px;
   color: #303133;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .data-info-content {
   display: flex;
   align-items: center;
-  gap: 20px;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  gap: 5px;
+  padding: 5px;
+  border-radius: 6px;
 }
 
 .data-info-content input {
   flex: 1;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid #dcdfe6;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .data-info-content p {
   color: #606266;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .data-info-content p span {
@@ -369,44 +392,49 @@ export default {
 }
 
 .preview-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  margin-top: 20px;
-  padding: 20px;
+  border-radius: 6px;
+  box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  overflow: hidden;
 }
 
 .loading-section {
+  flex: 1;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  margin-top: 20px;
-  padding: 50px;
-  text-align: center;
+  border-radius: 6px;
+  box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .loading-spinner {
-  font-size: 18px;
+  font-size: 16px;
   color: #409eff;
 }
 
 .preview-top {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .preview-top h3 {
-  font-size: 18px;
+  font-size: 16px;
   color: #303133;
 }
 
 .preview-top h3 p {
   display: inline;
-  font-size: 14px;
+  font-size: 13px;
   color: #606266;
-  margin-left: 10px;
+  margin-left: 8px;
 }
 
 .preview-top h3 p span {
@@ -416,16 +444,16 @@ export default {
 .preview-top label {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   color: #606266;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
 }
 
 .preview-wrap {
+  flex: 1;
   overflow: auto;
-  margin-bottom: 20px;
-  max-height: calc(100vh - 365px);
+  margin-bottom: 15px;
 }
 
 .preview-table {
@@ -435,10 +463,11 @@ export default {
 
 .preview-table th,
 .preview-table td {
-  padding: 12px 15px;
+  padding: 8px 10px;
   text-align: left;
   border: 1px solid #ebeef5;
   white-space: nowrap;
+  font-size: 13px;
 }
 
 .preview-table th {
@@ -454,42 +483,51 @@ export default {
 }
 
 .pagination {
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 8px;
+  margin-bottom: 15px;
 }
 
 .pagination button {
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 1px solid #dcdfe6;
   background: white;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
+  font-size: 13px;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .pagination button.active,
-.pagination button:hover {
+.pagination button:hover:not(:disabled) {
   background-color: #409eff;
   color: white;
   border-color: #409eff;
 }
 
 .operation-buttons {
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
-  gap: 20px;
+  gap: 15px;
 }
 
 .hollow-button {
-  padding: 10px 20px;
+  padding: 8px 16px;
   border: 1px solid #dcdfe6;
   background: white;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
   color: #606266;
+  font-size: 13px;
 }
 
 .hollow-button:hover {
@@ -498,13 +536,14 @@ export default {
 }
 
 .blue-button {
-  padding: 10px 20px;
+  padding: 8px 16px;
   background-color: #409eff;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
+  font-size: 13px;
 }
 
 .blue-button:hover {
@@ -526,56 +565,57 @@ export default {
 
 .danger-box {
   background: white;
-  border-radius: 8px;
-  width: 400px;
-  padding: 20px;
+  border-radius: 6px;
+  width: 350px;
+  padding: 15px;
 }
 
 .top-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
 
 .top-header h2 {
-  font-size: 18px;
+  font-size: 16px;
   color: #303133;
 }
 
 .icon-button {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
   color: #909399;
 }
 
 .ml36 {
-  margin-left: 36px;
-  margin-bottom: 20px;
+  margin-left: 30px;
+  margin-bottom: 15px;
 }
 
 .ml36 .warning {
   color: #e6a23c;
-  font-size: 16px;
-  margin-bottom: 10px;
+  font-size: 14px;
+  margin-bottom: 8px;
 }
 
 .ml36 p {
   color: #606266;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .red-button {
-  padding: 10px 20px;
+  padding: 8px 16px;
   background-color: #f56c6c;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
-  margin-right: 10px;
+  margin-right: 8px;
+  font-size: 13px;
 }
 
 .red-button:hover {
@@ -583,13 +623,14 @@ export default {
 }
 
 .noborder-button {
-  padding: 10px 20px;
+  padding: 8px 16px;
   background: none;
   color: #606266;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.3s;
+  font-size: 13px;
 }
 
 .noborder-button:hover {
@@ -599,12 +640,12 @@ export default {
 @media (max-width: 768px) {
   .inner {
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
   }
   
   .upload-steps {
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
   }
   
   .upload-steps hr {
@@ -614,13 +655,13 @@ export default {
   .data-info-content {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+    gap: 8px;
   }
   
   .preview-top {
     flex-direction: column;
     align-items: flex-start;
-    gap: 15px;
+    gap: 10px;
   }
   
   .operation-buttons {
@@ -630,6 +671,23 @@ export default {
   
   .operation-buttons button {
     width: 100%;
+  }
+  
+  .main-content {
+    margin: 10px auto;
+    padding: 0 10px;
+  }
+  
+  .preview-section {
+    padding: 10px;
+  }
+  
+  .data-info-content {
+    padding: 10px;
+  }
+  
+  .upload-steps {
+    padding: 10px;
   }
 }
 </style>

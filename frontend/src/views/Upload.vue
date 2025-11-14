@@ -29,49 +29,38 @@
       </div>
       
       <div class="upload-section">
-        <div class="upload-area" @dragover.prevent @drop.prevent="handleDrop">
+        <div class="upload-area" @dragover.prevent @drop.prevent="handleDrop" @click="triggerFileInput">
           <div class="upload-content">
             <form id="upload-form">
               <img src="../assets/images/upload-icon.svg" alt="上传图标" class="upload-icon">
-              <a href="javascript:void(0);" @click="triggerFileInput">
+              <div class="upload-text">
                 点击上传或将文件拖拽到这里上传
-              </a>
+              </div>
             </form>
-            <input 
-              id="file-input" 
-              class="file-input" 
-              type="file" 
-              name="dataFile" 
+            <input
+              id="file-input"
+              class="file-input"
+              type="file"
+              name="dataFile"
               @change="handleFileSelect"
               accept=".csv,.xls,.xlsx,.sav,.dta,.sas7bdat"
             >
             <div class="upload-hint">
-              <span>支持EXCEL/SPSS/Stata/SAS文件</span>
-              <router-link to="/help/upload-instructions" target="_blank">
-                上传说明
-              </router-link>
+              <span>支持xls、xlsx、csv文件</span>
             </div>
           </div>
         </div>
-        
+
         <ul class="upload-instructions">
           <li>
             <h3>导入说明：</h3>
           </li>
-          <li>支持 xls、xlsx、csv、sav、dta、sas7bdat 等格式</li>
-          <li>不能合并单元格</li>
-          <li>第1行是标题不能缺失</li>
-          <li>文件在10M内，最高5万行，1024列</li>
+          <li>不含合并单元格</li>
+          <li>不能缺失标题行</li>
           <li>日期字段需包含年月日（如2021/1/1），或年月日时分秒（如2021/1/1 00:00:00）</li>
-          <li>
-            若有问题可
-            <router-link to="/help/upload-instructions" target="_blank" style="margin-left: 10px;">
-              查看上传详细说明
-            </router-link>
-          </li>
         </ul>
       </div>
-      
+
       <div class="example-section">
         <h2>
           <img src="../assets/images/table-icon.svg" alt="表格图标">
@@ -127,11 +116,11 @@
         </div>
       </div>
     </div>
-    
+
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-spinner">文件上传中...</div>
     </div>
-    
+
     <div v-if="uploadError" class="error-overlay">
       <div class="error-message">
         <h3>上传失败</h3>
@@ -156,7 +145,7 @@ export default {
     triggerFileInput() {
       document.getElementById('file-input').click()
     },
-    
+
     handleFileSelect(event) {
       const file = event.target.files[0]
       if (file) {
@@ -164,7 +153,7 @@ export default {
         this.uploadFile(file)
       }
     },
-    
+
     handleDrop(event) {
       const file = event.dataTransfer.files[0]
       if (file) {
@@ -175,7 +164,7 @@ export default {
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'application/octet-stream'
         ]
-        
+
         if (allowedTypes.includes(file.type) || this.isValidFileType(file.name)) {
           this.selectedFile = file
           this.uploadFile(file)
@@ -184,39 +173,40 @@ export default {
         }
       }
     },
-    
+
     isValidFileType(filename) {
-      const extensions = ['.csv', '.xls', '.xlsx', '.sav', '.dta', '.sas7bdat']
+      // Todo: 添加更多文件类型检查
+      const extensions = ['.csv', '.xls', '.xlsx']
       return extensions.some(ext => filename.toLowerCase().endsWith(ext))
     },
-    
+
     async uploadFile(file) {
-      // 文件大小检查 (10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        this.uploadError = '文件大小超过10MB限制'
+      // 文件大小检查 (100MB)
+      if (file.size > 100 * 1024 * 1024) {
+        this.uploadError = '文件大小超过100MB限制'
         return
       }
-      
+
       this.isLoading = true
       this.uploadError = null
-      
+
       try {
         // 创建 FormData 对象
         const formData = new FormData()
         formData.append('file', file)
-        
+
         // 发送文件到后端
         const response = await fetch('http://localhost:8000/upload', {
           method: 'POST',
           body: formData
         })
-        
+
         const result = await response.json()
-        
+
         if (result.success) {
           // 保存 data_id 到本地存储
           localStorage.setItem('currentDataId', result.data.data_id)
-          
+
           // 上传完成后跳转到数据预览页面
           this.$router.push({
             path: '/preview',
@@ -232,7 +222,7 @@ export default {
         this.isLoading = false
       }
     },
-    
+
     clearError() {
       this.uploadError = null
     }
@@ -347,6 +337,19 @@ export default {
   border-radius: 8px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   padding: 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+  background: rgba(122, 204, 233, 0.09);
+}
+
+.upload-area:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.1);
 }
 
 .upload-content {
@@ -359,16 +362,15 @@ export default {
   margin-bottom: 20px;
 }
 
-.upload-content a {
-  display: block;
+.upload-text {
   color: #409eff;
   font-size: 18px;
-  text-decoration: none;
   margin-bottom: 20px;
+  transition: all 0.3s ease;
 }
 
-.upload-content a:hover {
-  text-decoration: underline;
+.upload-area:hover .upload-text {
+  color: #66b1ff;
 }
 
 .file-input {
