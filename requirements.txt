@@ -18,6 +18,7 @@ plotly>=5.11.0
 
 # LLM和Agent相关
 langchain>=0.0.300
+langchain-openai>=0.0.20
 openai>=1.0.0
 
 # Web框架

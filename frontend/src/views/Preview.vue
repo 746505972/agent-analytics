@@ -8,7 +8,7 @@
           </a>
         </div>
         <div class="header-right">
-          <router-link class="hollow-button" to="/dashboard">
+          <router-link class="hollow-button" to="/dashboard" @click.native="enterAnalysisFromHeader">
             进入分析
           </router-link>
         </div>
@@ -95,7 +95,6 @@
         
         <div class="operation-buttons">
           <button class="hollow-button previous-page" @click="goBack">上一步</button>
-          <button class="hollow-button updata" @click="uploadMore" disabled>继续上传</button>
           <button class="blue-button jin" @click="enterAnalysis">进入分析</button>
         </div>
       </div>
@@ -145,7 +144,9 @@ export default {
       totalPages: 0,
       
       // 添加一个标志，用于标识是否确认离开
-      isLeaving: false
+      isLeaving: false,
+      // 添加一个标志，用于标识是否要进入分析页面
+      isEnteringAnalysis: false
     }
   },
   computed: {
@@ -170,6 +171,12 @@ export default {
   beforeRouteLeave(to, from, next) {
     // 如果已经确认离开，则直接离开
     if (this.isLeaving) {
+      next();
+      return;
+    }
+    
+    // 如果是要进入分析页面，则不显示删除确认弹窗
+    if (this.isEnteringAnalysis) {
       next();
       return;
     }
@@ -260,7 +267,12 @@ export default {
     },
     
     enterAnalysis() {
+      this.isEnteringAnalysis = true
       this.$router.push('/dashboard')
+    },
+    
+    enterAnalysisFromHeader() {
+      this.isEnteringAnalysis = true
     },
     
     showDeleteConfirmation() {

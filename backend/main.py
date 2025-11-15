@@ -6,8 +6,25 @@ import pandas as pd
 from typing import List, Dict
 import os
 import uuid
+import logging
+
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+logger = logging.getLogger(__name__)
+
+# 确保所有相关的日志器都设置为INFO级别
+logging.getLogger("uvicorn.access").setLevel(logging.INFO)
+logging.getLogger("uvicorn.error").setLevel(logging.INFO)
+
+# 检查环境变量
+logger.info(f"DASHSCOPE_API_KEY 环境变量设置情况: {bool(os.getenv('DASHSCOPE_API_KEY'))}")
 
 from utils.file_manager import upload_file, read_any_file, delete_file, get_file_path
+from routers.chat import router as chat_router
 
 app = FastAPI(title="Agent-Analytics API", description="数据分析系统的后端API")
 
@@ -19,6 +36,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 注册路由
+app.include_router(chat_router)
 
 # 确保数据目录存在
 os.makedirs("data", exist_ok=True)
@@ -142,9 +162,12 @@ async def delete_data(request: Request, data_id: str):
         # 获取session_id
         session_id = request.state.session_id
         
+        logger.info(f"尝试删除数据文件: {data_id}, session_id: {session_id}")
+        
         # 删除文件时检查session_id
         file_path = get_file_path(data_id, session_id)
         if not os.path.exists(file_path):
+            logger.warning(f"尝试删除不存在的文件: {file_path}")
             return JSONResponse(
                 status_code=404,
                 content={
@@ -155,12 +178,14 @@ async def delete_data(request: Request, data_id: str):
         
         # 删除文件
         delete_file(data_id, session_id)
+        logger.info(f"数据文件删除成功: {data_id}")
         
         return JSONResponse(content={
             "success": True,
             "message": "数据文件删除成功"
         })
     except Exception as e:
+        logger.error(f"删除数据文件时出错: {str(e)}", exc_info=True)
         return JSONResponse(
             status_code=500,
             content={
