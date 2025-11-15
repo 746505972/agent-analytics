@@ -29,9 +29,8 @@
       </div>
       
       <div class="data-info">
-        <h2>数据文档名称</h2>
         <div class="data-info-content">
-          <input type="text" v-model="documentName" placeholder="请输入文档名称">
+          <span class="document-name">{{ documentName }}</span>
           <p>当前样本量：<span>{{ totalRows }}</span></p>
         </div>
       </div>
@@ -430,22 +429,17 @@ export default {
   border-radius: 6px;
 }
 
-.data-info-content input {
+.document-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
   flex: 1;
-  padding: 8px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  font-size: 13px;
 }
 
 .data-info-content p {
   color: #606266;
   font-size: 13px;
-}
-
-.data-info-content p span {
-  font-weight: bold;
-  color: #409eff;
+  margin-left: 10px;
 }
 
 .preview-section {
