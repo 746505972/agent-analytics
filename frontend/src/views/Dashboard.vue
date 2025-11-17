@@ -6,80 +6,124 @@
     
     <div class="dashboard-content">
       <!-- 左侧：文件选择区域 -->
-      <div class="file-selection-section">
-        <div class="section-header" @click="toggleFileSection">
-          <h2>选择分析文件</h2>
-          <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
-        </div>
-        
-        <div v-show="!isFileSectionCollapsed" class="file-section-content">
-          <div class="file-list-container">
-            <div v-if="files.length === 0" class="no-files">
-              暂无上传文件，请先上传文件
-            </div>
-            <div v-else class="file-list">
-              <div 
-                v-for="file in files" 
-                :key="file.data_id"
-                class="file-item"
-                :class="{ selected: selectedFile === file.data_id }"
-                @click="selectFile(file.data_id)"
-              >
-                <div class="file-name">
-                  {{ file.filename }}
-                  <span class="delete-file" @click.stop="deleteFile(file.data_id)">×</span>
-                </div>
-                <div class="file-info">
-                  <span>行数: {{ file.rows }}</span>
-                  <span>列数: {{ file.columns }}</span>
+      <div class="left-section">
+        <div class="file-selection-section">
+          <div class="section-header" @click="toggleFileSection">
+            <h2>选择分析文件</h2>
+            <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
+          </div>
+          
+          <div v-show="!isFileSectionCollapsed" class="file-section-content">
+            <div class="file-list-container">
+              <div v-if="files.length === 0" class="no-files">
+                暂无上传文件，请先上传文件
+              </div>
+              <div v-else class="file-list">
+                <div 
+                  v-for="file in files" 
+                  :key="file.data_id"
+                  class="file-item"
+                  :class="{ selected: selectedFile === file.data_id }"
+                  @click="selectFile(file.data_id)"
+                >
+                  <div class="file-name">
+                    {{ file.filename }}
+                    <span class="delete-file" @click.stop="deleteFile(file.data_id)">×</span>
+                  </div>
+                  <div class="file-info">
+                    <span>行数: {{ file.rows }}</span>
+                    <span>列数: {{ file.columns }}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div class="file-actions">
-            <router-link to="/upload" class="upload-button">上传新文件</router-link>
+            <div class="file-actions">
+              <router-link to="/upload" class="upload-button">上传新文件</router-link>
+            </div>
           </div>
         </div>
       </div>
       
-      <!-- 左侧：列名显示区域 -->
-      <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-list-section">
-        <h3>列名列表</h3>
-        <ul class="column-list">
-          <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
-            {{ column }}
-          </li>
-        </ul>
+      <!-- 中间：方法选择和列名列表区域 -->
+      <div class="middle-section">
+        <!-- 方法选择区域 -->
+        <div v-if="selectedFile" class="method-selection-section">
+          <h3>方法选择</h3>
+          <div class="method-tabs">
+            <button 
+              v-for="method in analysisMethods" 
+              :key="method.id"
+              :class="{ active: currentMethod === method.id }"
+              @click="selectMethod(method.id)"
+              class="method-tab"
+            >
+              {{ method.name }}
+            </button>
+          </div>
+          <div class="method-content">
+            <div v-if="currentMethod === 'basic_info'" class="basic-info-method">
+              <h4>数据集基本信息</h4>
+              <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
+            </div>
+            <div v-else-if="currentMethod === 'statistical_summary'" class="statistical-summary-method">
+              <h4>统计摘要</h4>
+              <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
+            </div>
+            <div v-else-if="currentMethod === 'visualization'" class="visualization-method">
+              <h4>数据可视化</h4>
+              <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
+            </div>
+            <div v-else-if="currentMethod === 'ml_analysis'" class="ml-analysis-method">
+              <h4>机器学习分析</h4>
+              <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
+            </div>
+          </div>
+          <div class="method-actions">
+            <button @click="executeMethod" class="execute-button">执行分析</button>
+          </div>
+        </div>
+        
+        <!-- 列名列表区域 -->
+        <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-list-section">
+          <h3>列名列表</h3>
+          <ul class="column-list">
+            <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
+              {{ column }}
+            </li>
+          </ul>
+        </div>
       </div>
       
       <!-- 右侧：聊天分析区域 -->
-      <div class="chat-section">
-        <h2>数据分析助手</h2>
-        <div class="chat-box">
-          <div class="messages">
-            <div 
-              v-for="(message, index) in chatMessages" 
-              :key="index"
-              class="message"
-              :class="message.type"
-            >
-              <span v-if="message.type === 'received' && message.content === '' && isWaitingForResponse" class="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
-              </span>
-              <span v-else>{{ message.content }}</span>
+      <div class="right-section">
+        <div class="chat-section">
+          <h2>数据分析助手</h2>
+          <div class="chat-box">
+            <div class="messages">
+              <div 
+                v-for="(message, index) in chatMessages" 
+                :key="index"
+                class="message"
+                :class="message.type"
+              >
+                <span v-if="message.type === 'received' && message.content === '' && isWaitingForResponse" class="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </span>
+                <span v-else>{{ message.content }}</span>
+              </div>
             </div>
-          </div>
-          <div class="input-area">
-            <input 
-              type="text" 
-              placeholder="输入您的分析需求..." 
-              v-model="userInput"
-              @keyup.enter="sendMessage"
-              :disabled="!selectedFile || isWaitingForResponse"
-            />
-            <button @click="sendMessage" :disabled="!selectedFile || isWaitingForResponse">发送</button>
+            <div class="input-area">
+              <input 
+                type="text" 
+                placeholder="输入您的分析需求..." 
+                v-model="userInput"
+                @keyup.enter="sendMessage"
+                :disabled="!selectedFile || isWaitingForResponse"
+              />
+              <button @click="sendMessage" :disabled="!selectedFile || isWaitingForResponse">发送</button>
+            </div>
           </div>
         </div>
       </div>
@@ -103,11 +147,21 @@ export default {
         }
       ],
       isFileSectionCollapsed: false,
-      isWaitingForResponse: false
+      isWaitingForResponse: false,
+      // 新增方法选择相关数据
+      currentMethod: 'basic_info',
+      analysisMethods: [
+        { id: 'basic_info', name: '基本信息' },
+        { id: 'statistical_summary', name: '统计摘要' },
+        { id: 'visualization', name: '数据可视化' },
+        { id: 'ml_analysis', name: '机器学习分析' }
+      ]
     }
   },
   async mounted() {
     await this.loadUploadedFiles();
+    // 恢复保存的状态
+    this.restoreState();
   },
   methods: {
     toggleFileSection() {
@@ -117,7 +171,7 @@ export default {
     async loadUploadedFiles() {
       // 调用后端API获取用户上传的文件列表
       try {
-        const response = await fetch('http://localhost:8000/user/files', {
+        const response = await fetch('/user/files', {
           credentials: 'include' // 包含cookies，用于session管理
         });
         
@@ -142,7 +196,7 @@ export default {
       }
       
       try {
-        const response = await fetch(`http://localhost:8000/data/${fileId}`, {
+        const response = await fetch(`/data/${fileId}`, {
           method: 'DELETE',
           credentials: 'include'
         });
@@ -157,6 +211,8 @@ export default {
             if (this.selectedFile === fileId) {
               this.selectedFile = null;
               this.selectedFileColumns = [];
+              // 清除保存的选中文件状态
+              localStorage.removeItem('selectedFile');
             }
             
             console.log('文件删除成功');
@@ -173,10 +229,12 @@ export default {
     
     async selectFile(fileId) {
       this.selectedFile = fileId;
+      // 保存选中的文件状态
+      localStorage.setItem('selectedFile', fileId);
       
       // 获取选中文件的列名
       try {
-        const response = await fetch(`http://localhost:8000/data/${fileId}/info`, {
+        const response = await fetch(`/data/${fileId}/info`, {
           credentials: 'include'
         });
         
@@ -198,6 +256,49 @@ export default {
       }
     },
     
+    selectMethod(methodId) {
+      this.currentMethod = methodId;
+    },
+    
+    executeMethod() {
+      if (!this.selectedFile || !this.currentMethod) {
+        return;
+      }
+      
+      // 保存聊天记录到localStorage
+      localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
+      
+      // 根据选择的方法跳转到相应的分析页面
+      this.$router.push({
+        name: 'Analysis',
+        query: {
+          data_id: this.selectedFile,
+          method: this.currentMethod
+        }
+      });
+    },
+    
+    // 新增方法：恢复保存的状态
+    restoreState() {
+      // 恢复选中的文件
+      const savedSelectedFile = localStorage.getItem('selectedFile');
+      if (savedSelectedFile) {
+        this.selectedFile = savedSelectedFile;
+        // 获取选中文件的列名
+        this.selectFile(savedSelectedFile);
+      }
+      
+      // 恢复聊天记录
+      const savedChatMessages = localStorage.getItem('dashboardChatMessages');
+      if (savedChatMessages) {
+        try {
+          this.chatMessages = JSON.parse(savedChatMessages);
+        } catch (e) {
+          console.error("解析保存的聊天记录失败:", e);
+        }
+      }
+    },
+    
     async sendMessage() {
       if (this.userInput.trim() === "" || this.isWaitingForResponse) {
         return;
@@ -214,12 +315,18 @@ export default {
       this.userInput = "";
       this.isWaitingForResponse = true;
       
+      // 保存聊天记录到localStorage
+      localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
+      
       // 添加AI回复占位符
       const aiMessageIndex = this.chatMessages.length;
       this.chatMessages.push({
         type: "received",
         content: ""
       });
+      
+      // 保存聊天记录到localStorage
+      localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
       
       try {
         // 准备请求数据
@@ -232,7 +339,7 @@ export default {
         console.log("发送请求数据:", requestData);
         
         // 发起流式请求
-        const response = await fetch('http://localhost:8000/chat/stream', {
+        const response = await fetch('/chat/stream', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -330,6 +437,8 @@ export default {
         this.chatMessages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;
       } finally {
         this.isWaitingForResponse = false;
+        // 保存聊天记录到localStorage
+        localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
       }
     },
     
@@ -343,14 +452,15 @@ export default {
 
 <style scoped>
 .dashboard-container {
-  padding: 20px;
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 0;
+  max-width: 100%;
+  margin: 0;
 }
 
 .dashboard-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
+  padding: 10px;
 }
 
 .dashboard-header h1 {
@@ -365,14 +475,40 @@ export default {
 
 .dashboard-content {
   display: flex;
-  gap: 30px;
+  height: calc(100vh - 120px);
+  padding: 0 10px;
+  gap: 20px;
+}
+
+.left-section {
+  flex: 1;
+  padding-left: 10px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.middle-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 0 10px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.right-section {
+  flex: 1;
+  padding-right: 10px;
+  overflow-y: auto;
+  max-height: 100%;
 }
 
 .file-selection-section {
-  flex: 1;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  margin-bottom: 0;
 }
 
 .section-header {
@@ -400,7 +536,7 @@ export default {
 }
 
 .file-list-container {
-  min-height: 300px;
+  min-height: 200px;
 }
 
 .no-files {
@@ -410,7 +546,7 @@ export default {
 }
 
 .file-list {
-  max-height: 350px;
+  max-height: calc(100vh - 300px);
   overflow-y: auto;
 }
 
@@ -489,15 +625,87 @@ export default {
   background-color: #66b1ff;
 }
 
-.column-list-section {
-  flex: 1;
+/* 方法选择区域样式 */
+.method-selection-section {
   background: white;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  margin-top: 20px;
-  max-height: 300px;
-  overflow-y: auto;
+  margin-bottom: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.method-selection-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #303133;
+}
+
+.method-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.method-tab {
+  padding: 8px 16px;
+  background-color: #f5f7fa;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.method-tab:hover {
+  background-color: #ecf5ff;
+  border-color: #409eff;
+}
+
+.method-tab.active {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
+.method-content {
+  flex: 1;
+  margin-bottom: 20px;
+}
+
+.method-content h4 {
+  margin-top: 0;
+}
+
+.method-actions {
+  text-align: center;
+}
+
+.execute-button {
+  padding: 10px 20px;
+  background-color: #67c23a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+
+.execute-button:hover {
+  background-color: #85ce61;
+}
+
+.column-list-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .column-list-section h3 {
@@ -510,6 +718,8 @@ export default {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .column-item {
@@ -523,11 +733,13 @@ export default {
 }
 
 .chat-section {
-  flex: 2;
   background: white;
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .chat-section h2 {
@@ -539,9 +751,10 @@ export default {
 .chat-box {
   border: 1px solid #ddd;
   border-radius: 8px;
-  height: 500px;
+  flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 500px;
 }
 
 .messages {
@@ -638,11 +851,22 @@ export default {
 @media (max-width: 768px) {
   .dashboard-content {
     flex-direction: column;
+    height: auto;
   }
   
-  .file-selection-section,
-  .chat-section {
-    width: 100%;
+  .left-section,
+  .middle-section,
+  .right-section {
+    padding: 0 10px;
+    max-height: none;
+  }
+  
+  .file-list {
+    max-height: 250px;
+  }
+  
+  .chat-box {
+    min-height: 300px;
   }
 }
 </style>

@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "marked": "^17.0.0",
     "vue": "^3.5.24",
     "vue-router": "^4.6.3"
   },

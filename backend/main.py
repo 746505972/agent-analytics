@@ -72,11 +72,23 @@ async def session_middleware(request: Request, call_next):
     if not request.cookies.get("session_id"):
         response.set_cookie(key="session_id", value=session_id, httponly=True)
     
+    # 添加ngrok跳过浏览器警告头部
+    response.headers["ngrok-skip-browser-warning"] = "true"
+    
     return response
 
 @app.get("/")
 async def root():
     return {"message": "欢迎使用 Agent-Analytics API"}
+
+@app.get("/upload")
+async def get_upload():
+    """
+    上传文件页面占位符
+    """
+    return JSONResponse(content={
+        "message": "请使用POST方法上传文件"
+    })
 
 @app.post("/upload")
 async def upload_data_file(request: Request, file: UploadFile = File(...)):

@@ -196,7 +196,7 @@ export default {
         formData.append('file', file)
 
         // 发送文件到后端
-        const response = await fetch('http://localhost:8000/upload', {
+        const response = await fetch('/upload', {
           method: 'POST',
           body: formData,
           credentials: 'include' // 包含cookies，用于session管理

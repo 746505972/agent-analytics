@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Upload from '@/views/Upload.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import Preview from '@/views/Preview.vue'
+import Analysis from '@/views/Analysis.vue'
 
 const routes = [
   {
@@ -26,7 +27,7 @@ const routes = [
   {
     path: '/analysis',
     name: 'Analysis',
-    component: () => import('@/views/Dashboard.vue') // 占位符，后续替换为实际分析页面
+    component: Analysis
   }
 ]
 
@@ -34,5 +35,14 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
+
+// 添加路由守卫来处理返回dashboard时的状态恢复
+router.beforeEach((to, from, next) => {
+  // 当从Analysis页面返回Dashboard页面时，不清除状态
+  if (from.name === 'Analysis' && to.name === 'Dashboard') {
+    // 可以在这里添加特殊的处理逻辑
+  }
+  next();
+});
 
 export default router

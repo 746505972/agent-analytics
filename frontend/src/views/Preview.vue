@@ -189,9 +189,8 @@ export default {
     async loadData() {
       this.loading = true
       try {
-        // 这里应该调用后端API获取数据
-        // 暂时使用示例数据
-        const response = await fetch(`http://localhost:8000/data/${this.dataId}?page=${this.currentPage}&page_size=${this.pageSize}`, {
+        // 调用后端API获取数据
+        const response = await fetch(`/data/${this.dataId}?page=${this.currentPage}&page_size=${this.pageSize}`, {
           credentials: 'include' // 包含cookies，用于session管理
         })
         
@@ -286,7 +285,7 @@ export default {
     async confirmDeleteAndLeave() {
       // 调用后端删除API
       try {
-        const response = await fetch(`http://localhost:8000/data/${this.dataId}`, {
+        const response = await fetch(`/data/${this.dataId}`, {
           method: 'DELETE',
           credentials: 'include' // 包含cookies，用于session管理
         });
