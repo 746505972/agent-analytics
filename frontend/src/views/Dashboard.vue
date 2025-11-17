@@ -40,6 +40,10 @@
             <div class="file-actions">
               <router-link to="/upload" class="upload-button">上传新文件</router-link>
             </div>
+            <!-- 添加查看数据链接 -->
+            <div v-if="selectedFile" class="view-data-link" @click="showDataPreview">
+              查看数据
+            </div>
           </div>
         </div>
       </div>
@@ -97,7 +101,10 @@
       <!-- 右侧：聊天分析区域 -->
       <div class="right-section">
         <div class="chat-section">
-          <h2>数据分析助手</h2>
+          <div class="chat-header">
+            <h2>数据分析助手</h2>
+            <button @click="clearChatHistory" class="clear-chat-btn">清除历史记录</button>
+          </div>
           <div class="chat-box">
             <div class="messages">
               <div 
@@ -111,7 +118,7 @@
                   <span></span>
                   <span></span>
                 </span>
-                <span v-else>{{ message.content }}</span>
+                <div v-else v-html="renderMarkdown(message.content)" class="message-content"></div>
               </div>
             </div>
             <div class="input-area">
@@ -128,10 +135,92 @@
         </div>
       </div>
     </div>
+    
+    <!-- 数据预览弹窗 -->
+    <div class="preview-modal" v-if="showPreviewModal">
+      <div class="preview-modal-content">
+        <div class="preview-header">
+          <h3>数据预览</h3>
+          <button class="close-button" @click="closePreviewModal">×</button>
+        </div>
+        <div class="preview-body">
+          <div class="data-info">
+            <div class="data-info-content">
+              <span class="document-name">{{ previewData.documentName }}</span>
+              <p>当前样本量：<span>{{ previewData.totalRows }}</span></p>
+            </div>
+          </div>
+          
+          <div class="preview-section" v-if="!previewData.loading">
+            <div class="preview-top">
+              <h3>数据预览如下<p>（共<span>{{ previewData.totalRows }}</span>行）</p></h3>
+            </div>
+            
+            <div class="preview-wrap">
+              <table class="preview-table">
+                <thead>
+                  <tr>
+                    <th v-for="(header, index) in previewData.columnHeaders" :key="index">
+                      {{ header }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, rowIndex) in previewData.displayedRows" :key="rowIndex">
+                    <td v-for="(header, cellIndex) in previewData.columnHeaders" :key="cellIndex" :title="row[header]">
+                      {{ row[header] }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="pagination" v-if="previewData.totalPages > 1">
+              <button @click="prevPage" :disabled="previewData.currentPage === 1">&lt;</button>
+              <template v-if="previewData.totalPages <= 5">
+                <button 
+                  v-for="page in previewData.totalPages" 
+                  :key="page" 
+                  :class="{ active: previewData.currentPage === page }"
+                  @click="changePage(page)"
+                >
+                  {{ page }}
+                </button>
+              </template>
+              <template v-else>
+                <button 
+                  v-for="page in Math.min(3, previewData.totalPages)" 
+                  :key="page" 
+                  :class="{ active: previewData.currentPage === page }"
+                  @click="changePage(page)"
+                >
+                  {{ page }}
+                </button>
+                <span v-if="previewData.totalPages > 3">...</span>
+                <button 
+                  v-if="previewData.totalPages > 3"
+                  :class="{ active: previewData.currentPage === previewData.totalPages }"
+                  @click="changePage(previewData.totalPages)"
+                >
+                  {{ previewData.totalPages }}
+                </button>
+              </template>
+              <button @click="nextPage" :disabled="previewData.currentPage === previewData.totalPages">&gt;</button>
+            </div>
+          </div>
+          
+          <div class="loading-section" v-else>
+            <div class="loading-spinner">加载中...</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
+import { marked } from 'marked';
+
 export default {
   name: "Dashboard",
   data() {
@@ -155,15 +244,36 @@ export default {
         { id: 'statistical_summary', name: '统计摘要' },
         { id: 'visualization', name: '数据可视化' },
         { id: 'ml_analysis', name: '机器学习分析' }
-      ]
+      ],
+      // 数据预览弹窗相关数据
+      showPreviewModal: false,
+      previewData: {
+        documentName: '',
+        columnHeaders: [],
+        rowData: [],
+        displayedRows: [],
+        totalRows: 0,
+        totalPages: 0,
+        currentPage: 1,
+        pageSize: 10,
+        loading: true
+      }
     }
   },
   async mounted() {
     await this.loadUploadedFiles();
     // 恢复保存的状态
     this.restoreState();
+    // 检查是否有刚上传的文件需要默认选中
+    this.checkAndSelectUploadedFile();
   },
   methods: {
+    // 添加Markdown渲染方法
+    renderMarkdown(content) {
+      if (!content) return '';
+      return marked.parse(content);
+    },
+    
     toggleFileSection() {
       this.isFileSectionCollapsed = !this.isFileSectionCollapsed;
     },
@@ -296,6 +406,16 @@ export default {
         } catch (e) {
           console.error("解析保存的聊天记录失败:", e);
         }
+      }
+    },
+    
+    // 新增方法：检查并选中刚上传的文件
+    checkAndSelectUploadedFile() {
+      // 从localStorage获取刚上传的文件ID
+      const currentDataId = localStorage.getItem('currentDataId');
+      if (currentDataId && this.files.some(file => file.data_id === currentDataId)) {
+        // 如果有刚上传的文件且在文件列表中存在，则默认选中它
+        this.selectFile(currentDataId);
       }
     },
     
@@ -442,10 +562,120 @@ export default {
       }
     },
     
+    clearChatHistory() {
+      if (confirm('确定要清除聊天历史记录吗？')) {
+        // 重置聊天记录为初始状态
+        this.chatMessages = [
+          {
+            type: "received",
+            content: "您好！我是您的数据分析助手，请选择一个文件并告诉我您需要什么分析？"
+          }
+        ];
+        // 清除localStorage中的聊天记录
+        localStorage.removeItem('dashboardChatMessages');
+      }
+    },
+    
     getSelectedFileName() {
       const file = this.files.find(f => f.data_id === this.selectedFile);
       return file ? file.filename : "";
-    }
+    },
+    
+    // 显示数据预览弹窗
+    async showDataPreview() {
+      if (!this.selectedFile) return;
+      
+      // 初始化预览数据
+      this.previewData.currentPage = 1;
+      this.previewData.loading = true;
+      this.showPreviewModal = true;
+      
+      // 获取选中文件的信息
+      const selectedFile = this.files.find(file => file.data_id === this.selectedFile);
+      if (selectedFile) {
+        this.previewData.documentName = selectedFile.filename;
+      }
+      
+      // 加载数据
+      await this.loadPreviewData();
+    },
+    
+    // 关闭数据预览弹窗
+    closePreviewModal() {
+      this.showPreviewModal = false;
+    },
+    
+    // 加载预览数据
+    async loadPreviewData() {
+      this.previewData.loading = true;
+      try {
+        const response = await fetch(`/data/${this.selectedFile}?page=${this.previewData.currentPage}&page_size=${this.previewData.pageSize}`, {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            this.previewData.columnHeaders = result.data.columns;
+            this.previewData.rowData = result.data.data;
+            this.previewData.displayedRows = result.data.data;
+            this.previewData.totalRows = result.data.rows;
+            this.previewData.totalPages = result.data.total_pages;
+            this.previewData.documentName = result.data.data_id;  // 使用data_id作为文档名
+          } else {
+            console.error("获取预览数据失败:", result.error);
+            this.useSampleDataInPreview();
+          }
+        } else {
+          console.error("获取预览数据失败，状态码:", response.status);
+          this.useSampleDataInPreview();
+        }
+      } catch (error) {
+        console.error('加载预览数据失败:', error);
+        this.useSampleDataInPreview();
+      } finally {
+        this.previewData.loading = false;
+      }
+    },
+    
+    // 在预览中使用示例数据
+    useSampleDataInPreview() {
+      this.previewData.columnHeaders = ['编号', '姓名', '年龄', '性别', '学历', '收入', '日期'];
+      this.previewData.rowData = [];
+      for (let i = 1; i <= 30; i++) {
+        this.previewData.rowData.push({
+          '编号': '示例数据',
+          '姓名': '示例数据',
+          '年龄': '示例数据',
+          '性别': '示例数据',
+          '学历': '示例数据',
+          '收入': '示例数据',
+          '日期': '示例数据'
+        });
+      }
+      this.previewData.displayedRows = this.previewData.rowData;
+      this.previewData.totalRows = this.previewData.rowData.length;
+      this.previewData.totalPages = Math.ceil(this.previewData.totalRows / this.previewData.pageSize);
+      this.previewData.documentName = '示例数据文档';
+    },
+    
+    // 翻页相关方法
+    changePage(page) {
+      this.previewData.currentPage = page;
+      this.loadPreviewData();
+    },
+    
+    prevPage() {
+      if (this.previewData.currentPage > 1) {
+        this.changePage(this.previewData.currentPage - 1);
+      }
+    },
+    
+    nextPage() {
+      if (this.previewData.currentPage < this.previewData.totalPages) {
+        this.changePage(this.previewData.currentPage + 1);
+      }
+    },
   }
 }
 </script>
@@ -477,11 +707,11 @@ export default {
   display: flex;
   height: calc(100vh - 120px);
   padding: 0 10px;
-  gap: 20px;
+  gap: 10px;
 }
 
 .left-section {
-  flex: 1;
+  flex: 0.5;
   padding-left: 10px;
   overflow-y: auto;
   max-height: 100%;
@@ -735,11 +965,37 @@ export default {
 .chat-section {
   background: white;
   border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+
+
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chat-header h2 {
+  margin: 0;
+  color: #303133;
+}
+
+.clear-chat-btn {
+  padding: 5px 10px;
+  background-color: #f56c6c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.clear-chat-btn:hover {
+  background-color: #ff4d4f;
 }
 
 .chat-section h2 {
@@ -779,6 +1035,47 @@ export default {
 .message.received {
   background-color: #f5f5f5;
   color: #303133;
+}
+
+.message-content :deep(p) {
+  margin: 0 0 10px 0;
+}
+
+.message-content :deep(ul),
+.message-content :deep(ol) {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.message-content :deep(li) {
+  margin-bottom: 5px;
+}
+
+.message-content :deep(strong) {
+  font-weight: bold;
+}
+
+.message-content :deep(em) {
+  font-style: italic;
+}
+
+.message-content :deep(code) {
+  background-color: #f0f0f0;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.message-content :deep(pre) {
+  background-color: #f0f0f0;
+  padding: 10px;
+  border-radius: 5px;
+  overflow-x: auto;
+}
+
+.message-content :deep(pre > code) {
+  background: none;
+  padding: 0;
 }
 
 .typing-indicator {
@@ -848,6 +1145,197 @@ export default {
   cursor: not-allowed;
 }
 
+/* 查看数据链接样式 */
+.view-data-link {
+  text-align: center;
+  margin-top: 15px;
+  color: #409eff;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+/* 数据预览弹窗样式 */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.preview-modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 1200px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.preview-header h3 {
+  margin: 0;
+  color: #303133;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #909399;
+}
+
+.preview-body {
+  flex: 1;
+  padding: 20px;
+  overflow: auto;
+}
+
+/* 预览部分样式（复用Preview.vue的样式） */
+.data-info {
+  margin-bottom: 15px;
+}
+
+.data-info-content {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px;
+  border-radius: 6px;
+}
+
+.document-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+  flex: 1;
+}
+
+.data-info-content p {
+  color: #606266;
+  font-size: 13px;
+  margin-left: 10px;
+}
+
+.preview-section {
+  display: flex;
+  flex-direction: column;
+  background: white;
+  border-radius: 6px;
+  padding: 15px;
+  overflow: hidden;
+}
+
+.loading-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 50px;
+}
+
+.loading-spinner {
+  font-size: 16px;
+  color: #409eff;
+}
+
+.preview-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.preview-top h3 {
+  font-size: 16px;
+  color: #303133;
+}
+
+.preview-top h3 p {
+  display: inline;
+  font-size: 13px;
+  color: #606266;
+  margin-left: 8px;
+}
+
+.preview-top h3 p span {
+  font-weight: bold;
+}
+
+.preview-wrap {
+  overflow: auto;
+  margin-bottom: 15px;
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.preview-table th,
+.preview-table td {
+  padding: 8px 10px;
+  text-align: left;
+  border: 1px solid #ebeef5;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.preview-table th {
+  background-color: #f5f7fa;
+  font-weight: 600;
+  color: #606266;
+  position: sticky;
+  top: 0;
+}
+
+.preview-table tbody tr:hover {
+  background-color: #f5f7fa;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.pagination button {
+  padding: 6px 10px;
+  border: 1px solid #dcdfe6;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 13px;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination button.active,
+.pagination button:hover:not(:disabled) {
+  background-color: #409eff;
+  color: white;
+  border-color: #409eff;
+}
+
 @media (max-width: 768px) {
   .dashboard-content {
     flex-direction: column;
@@ -867,6 +1355,27 @@ export default {
   
   .chat-box {
     min-height: 300px;
+  }
+  
+  .preview-modal-content {
+    width: 95%;
+    height: 95%;
+  }
+  
+  .preview-body {
+    padding: 10px;
+  }
+  
+  .preview-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .data-info-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
 </style>

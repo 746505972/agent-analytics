@@ -9,6 +9,7 @@ sys.path.insert(0, parent_dir)
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 import pandas as pd
+import numpy as np
 import logging
 
 # 尝试不同的导入方式
@@ -59,6 +60,8 @@ async def get_user_files(request: Request):
                         # 获取文件信息
                         stat = os.stat(file_path)
                         df = pd.read_csv(file_path, encoding="utf-8-sig")
+                        # 处理NaN值，将其替换为None以便JSON序列化
+                        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
                         
                         files.append({
                             "data_id": os.path.splitext(filename)[0],
@@ -107,7 +110,27 @@ async def get_data_preview(request: Request, data_id: str, page: int = 1, page_s
             )
         
         # 读取CSV文件
-        df = pd.read_csv(file_path, encoding="utf-8-sig")
+        try:
+            df = pd.read_csv(file_path, encoding="utf-8-sig")
+        except Exception as e:
+            logger.error(f"读取文件 {file_path} 失败: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": f"读取文件失败: {str(e)}"
+                }
+            )
+        
+        # 检查DataFrame是否为空
+        if df.empty:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error": "数据文件为空"
+                }
+            )
         
         # 计算分页信息
         total_rows = len(df)
@@ -118,6 +141,22 @@ async def get_data_preview(request: Request, data_id: str, page: int = 1, page_s
         end_idx = start_idx + page_size
         page_data = df.iloc[start_idx:end_idx]
         
+        # 处理NaN值，将其替换为None以便JSON序列化
+        page_data = page_data.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+        
+        # 将numpy数据类型转换为Python原生数据类型
+        for col in page_data.columns:
+            def convert_value(x):
+                if pd.isna(x) or x is None:
+                    return None
+                if hasattr(x, 'item'):
+                    try:
+                        return x.item()
+                    except (ValueError, OverflowError):
+                        return str(x)
+                return x
+            page_data[col] = page_data[col].apply(convert_value)
+        
         return JSONResponse(content={
             "success": True,
             "data": {
@@ -127,10 +166,11 @@ async def get_data_preview(request: Request, data_id: str, page: int = 1, page_s
                 "page": page,
                 "page_size": page_size,
                 "total_pages": total_pages,
-                "data": page_data.replace({pd.NA: None, pd.NaT: None}).to_dict('records')
+                "data": page_data.to_dict('records')
             }
         })
     except Exception as e:
+        logger.error(f"获取数据预览时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={
@@ -160,7 +200,30 @@ async def get_data_info(request: Request, data_id: str):
             )
         
         # 读取CSV文件
-        df = pd.read_csv(file_path, encoding="utf-8-sig")
+        try:
+            df = pd.read_csv(file_path, encoding="utf-8-sig")
+        except Exception as e:
+            logger.error(f"读取文件 {file_path} 失败: {str(e)}")
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "success": False,
+                    "error": f"读取文件失败: {str(e)}"
+                }
+            )
+        
+        # 检查DataFrame是否为空
+        if df.empty:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error": "数据文件为空"
+                }
+            )
+        
+        # 处理NaN值，将其替换为None以便JSON序列化
+        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
         
         return JSONResponse(content={
             "success": True,
@@ -174,6 +237,7 @@ async def get_data_info(request: Request, data_id: str):
             }
         })
     except Exception as e:
+        logger.error(f"获取数据信息时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={
@@ -245,9 +309,11 @@ async def get_data_details(request: Request, data_id: str):
         
         # 读取CSV文件
         df = pd.read_csv(file_path, encoding="utf-8-sig")
+        # 处理NaN值，将其替换为None以便JSON序列化
+        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
         
         # 获取前5行数据
-        head_data = df.head(5).replace({pd.NA: None, pd.NaT: None}).to_dict('records')
+        head_data = df.head(5).to_dict('records')
         
         # 获取每列的数据类型
         dtypes = {col: str(dtype) for col, dtype in df.dtypes.items()}
@@ -256,11 +322,28 @@ async def get_data_details(request: Request, data_id: str):
         numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
         numeric_stats = {}
         for col in numeric_columns:
+            min_val = df[col].min()
+            max_val = df[col].max()
+            mean_val = df[col].mean()
+            std_val = df[col].std()
+            
+            # 处理可能的NaN值和无穷大值
+            def safe_float_convert(val):
+                if pd.isna(val) or val is None:
+                    return None
+                try:
+                    # 检查是否为无穷大
+                    if np.isinf(val):
+                        return None
+                    return float(val)
+                except (ValueError, OverflowError):
+                    return None
+            
             numeric_stats[col] = {
-                "min": float(df[col].min()) if not pd.isna(df[col].min()) else None,
-                "max": float(df[col].max()) if not pd.isna(df[col].max()) else None,
-                "mean": float(df[col].mean()) if not pd.isna(df[col].mean()) else None,
-                "std": float(df[col].std()) if not pd.isna(df[col].std()) else None,
+                "min": safe_float_convert(min_val),
+                "max": safe_float_convert(max_val),
+                "mean": safe_float_convert(mean_val),
+                "std": safe_float_convert(std_val),
             }
         
         # 获取分类列的统计信息
@@ -268,9 +351,23 @@ async def get_data_details(request: Request, data_id: str):
         categorical_stats = {}
         for col in categorical_columns:
             value_counts = df[col].value_counts()
+            # 处理可能的NaN值
+            value_counts = value_counts.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+            top_values = value_counts.head(5).to_dict()
+            
+            # 确保所有值都可以被JSON序列化
+            safe_top_values = {}
+            for k, v in top_values.items():
+                if pd.isna(k):
+                    safe_key = None
+                else:
+                    safe_key = str(k) if not isinstance(k, (str, int, float, bool)) else k
+                
+                safe_top_values[safe_key] = v
+            
             categorical_stats[col] = {
                 "unique_count": int(df[col].nunique()),
-                "top_values": value_counts.head(5).to_dict(),
+                "top_values": safe_top_values,
             }
         
         # 缺失值统计

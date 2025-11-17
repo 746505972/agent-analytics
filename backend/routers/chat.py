@@ -7,6 +7,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 import os
+import pandas as pd
+import numpy as np
 import json
 import logging
 
@@ -57,7 +59,10 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     file_path = get_file_path(chat_request.data_id, session_id)
                     if os.path.exists(file_path):
                         import pandas as pd
-                        df = pd.read_csv(file_path, encoding="utf-8-sig")
+                        import numpy as np
+                        df = pd.read_csv(file_path, encoding='utf-8-sig')
+                        # 处理NaN值，将其替换为None以便JSON序列化
+                        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
                         data_context = {
                             "data_id": chat_request.data_id,
                             "filename": f"{chat_request.data_id}.csv",
@@ -107,6 +112,8 @@ async def execute_command(request: Request, chat_request: ChatRequest):
                 if os.path.exists(file_path):
                     import pandas as pd
                     df = pd.read_csv(file_path, encoding="utf-8-sig")
+                    # 处理NaN值，将其替换为None以便JSON序列化
+                    df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
                     data_context = {
                         "data_id": chat_request.data_id,
                         "filename": f"{chat_request.data_id}.csv",

@@ -12,7 +12,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: "0.0.0.0",
-    allowedHosts: ["all","68e115cc48bf.ngrok-free.app"],
+    allowedHosts: ["all","20b44786cfa0.ngrok-free.app"],
     proxy: {
       '/upload': {
         target: 'http://localhost:8000',

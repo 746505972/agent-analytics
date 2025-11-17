@@ -1,4 +1,3 @@
-
 import os
 import shutil
 import uuid
@@ -30,7 +29,8 @@ def read_any_file(file_path: str) -> pd.DataFrame:
         return pd.read_csv(file_path, encoding="utf-8-sig")
 
     elif ext in [".xlsx", ".xls"]:
-        return pd.read_excel(file_path)
+        # 读取Excel文件的第一个工作表
+        return pd.read_excel(file_path, sheet_name=0)
 
     else:
         raise ValueError(f"不支持的文件格式：{ext}")
@@ -84,6 +84,10 @@ def upload_file(file_path: str, original_filename: str = None, session_id: str =
 
     # 读取文件
     df = read_any_file(file_path)
+
+    # 检查DataFrame是否为空
+    if df.empty:
+        raise ValueError("上传的文件为空或无法读取有效数据")
 
     # 使用原始文件名作为data_id（清理不安全字符）
     if original_filename:

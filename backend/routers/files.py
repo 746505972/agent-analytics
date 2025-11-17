@@ -2,6 +2,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 import os
 import pandas as pd
+import numpy as np
 import logging
 
 # 配置日志
@@ -55,6 +56,8 @@ async def get_user_files(request: Request):
                         # 获取文件信息
                         stat = os.stat(file_path)
                         df = pd.read_csv(file_path, encoding="utf-8-sig")
+                        # 处理NaN值，将其替换为None以便JSON序列化
+                        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
                         
                         files.append({
                             "data_id": os.path.splitext(filename)[0],

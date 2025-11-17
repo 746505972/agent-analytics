@@ -97,7 +97,10 @@
     
     <!-- 右侧：聊天分析区域 -->
     <div class="chat-section">
-      <h2>数据分析助手</h2>
+      <div class="chat-header">
+        <h2>数据分析助手</h2>
+        <button @click="clearChatHistory" class="clear-chat-btn">清除历史记录</button>
+      </div>
       <div class="chat-box">
         <div class="messages">
           <div 
@@ -111,7 +114,7 @@
               <span></span>
               <span></span>
             </span>
-            <span v-else>{{ message.content }}</span>
+            <div v-else v-html="renderMarkdown(message.content)" class="message-content"></div>
           </div>
         </div>
         <div class="input-area">
@@ -130,6 +133,8 @@
 </template>
 
 <script>
+import { marked } from 'marked';
+
 export default {
   name: 'Analysis',
   data() {
@@ -170,6 +175,12 @@ export default {
     this.restoreChatMessages();
   },
   methods: {
+    // 添加Markdown渲染方法
+    renderMarkdown(content) {
+      if (!content) return '';
+      return marked.parse(content);
+    },
+    
     async loadAnalysisResult() {
       if (!this.dataId || !this.analysisMethod) return;
       
@@ -219,6 +230,20 @@ export default {
         } catch (e) {
           console.error("解析保存的聊天记录失败:", e);
         }
+      }
+    },
+    
+    clearChatHistory() {
+      if (confirm('确定要清除聊天历史记录吗？')) {
+        // 重置聊天记录为初始状态
+        this.chatMessages = [
+          {
+            type: "received",
+            content: "您好！我是您的数据分析助手，我可以帮您解读分析结果或进行进一步分析。"
+          }
+        ];
+        // 清除localStorage中的聊天记录
+        localStorage.removeItem('dashboardChatMessages');
       }
     },
     
@@ -496,7 +521,7 @@ export default {
   background: white;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+
   display: flex;
   flex-direction: column;
 }
@@ -505,6 +530,32 @@ export default {
   margin-top: 0;
   margin-bottom: 20px;
   color: #303133;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chat-header h2 {
+  margin: 0;
+  color: #303133;
+}
+
+.clear-chat-btn {
+  padding: 5px 10px;
+  background-color: #f56c6c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.clear-chat-btn:hover {
+  background-color: #ff4d4f;
 }
 
 .chat-box {
@@ -537,6 +588,47 @@ export default {
 .message.received {
   background-color: #f5f5f5;
   color: #303133;
+}
+
+.message-content :deep(p) {
+  margin: 0 0 10px 0;
+}
+
+.message-content :deep(ul),
+.message-content :deep(ol) {
+  margin: 10px 0;
+  padding-left: 20px;
+}
+
+.message-content :deep(li) {
+  margin-bottom: 5px;
+}
+
+.message-content :deep(strong) {
+  font-weight: bold;
+}
+
+.message-content :deep(em) {
+  font-style: italic;
+}
+
+.message-content :deep(code) {
+  background-color: #f0f0f0;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.message-content :deep(pre) {
+  background-color: #f0f0f0;
+  padding: 10px;
+  border-radius: 5px;
+  overflow-x: auto;
+}
+
+.message-content :deep(pre > code) {
+  background: none;
+  padding: 0;
 }
 
 .typing-indicator {

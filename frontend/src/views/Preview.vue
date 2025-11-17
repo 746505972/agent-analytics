@@ -201,11 +201,13 @@ export default {
             this.rowData = result.data.data
             this.totalRows = result.data.rows
             this.totalPages = result.data.total_pages
-            this.documentName = this.dataId  // 使用原始文件名作为文档名
+            this.documentName = result.data.data_id  // 使用data_id作为文档名
           } else {
+            console.error("获取数据失败:", result.error)
             this.useSampleData()
           }
         } else {
+          console.error("获取数据失败，状态码:", response.status)
           this.useSampleData()
         }
       } catch (error) {
@@ -222,13 +224,13 @@ export default {
       this.rowData = []
       for (let i = 1; i <= 30; i++) {
         this.rowData.push({
-          '编号': i,
-          '姓名': `姓名${i}`,
-          '年龄': 20 + (i % 50),
-          '性别': i % 2 === 0 ? '男' : '女',
-          '学历': ['本科', '硕士', '博士'][(i % 3)],
-          '收入': 5000 + (i * 100),
-          '日期': `2021/8/${1 + (i % 30)}`
+          '编号': '示例数据',
+          '姓名': '示例数据',
+          '年龄': '示例数据',
+          '性别': '示例数据',
+          '学历': '示例数据',
+          '收入': '示例数据',
+          '日期': '示例数据'
         })
       }
       this.totalRows = this.rowData.length

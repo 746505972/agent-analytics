@@ -1,6 +1,8 @@
 # main.py
 import sys
 import os
+import asyncio
+from datetime import datetime, timedelta
 
 # 添加当前目录到sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -33,6 +35,7 @@ logger.info(f"DASHSCOPE_API_KEY 环境变量设置情况: {bool(os.getenv('DASHS
 
 # 使用绝对导入代替相对导入
 from utils.file_manager import upload_file, read_any_file, delete_file, get_file_path
+from utils.cleanup import clean_expired_sessions_and_files
 from routers.chat import router as chat_router
 from routers.data import router as data_router
 from routers.files import router as files_router
@@ -53,8 +56,50 @@ app.include_router(chat_router)
 app.include_router(data_router)
 app.include_router(files_router)
 
+# 存储定时任务的引用
+cleanup_task = None
+
 # 确保数据目录存在
 os.makedirs("data", exist_ok=True)
+
+async def periodic_cleanup():
+    """
+    定期清理过期的session数据
+    """
+    while True:
+        try:
+            logger.info("开始执行定期清理任务...")
+            clean_expired_sessions_and_files(expiration_hours=1)  # 1小时过期
+            logger.info("定期清理任务执行完成")
+        except Exception as e:
+            logger.error(f"定期清理任务执行出错: {e}")
+        
+        # 每隔10分钟执行一次清理
+        await asyncio.sleep(600)  # 600秒 = 10分钟
+
+@app.on_event("startup")
+async def startup_event():
+    """
+    应用启动时的事件处理
+    """
+    global cleanup_task
+    # 启动定期清理任务
+    cleanup_task = asyncio.create_task(periodic_cleanup())
+    logger.info("定期清理任务已启动")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """
+    应用关闭时的事件处理
+    """
+    global cleanup_task
+    if cleanup_task:
+        cleanup_task.cancel()
+        try:
+            await cleanup_task
+        except asyncio.CancelledError:
+            pass
+    logger.info("定期清理任务已停止")
 
 @app.middleware("http")
 async def session_middleware(request: Request, call_next):
@@ -99,8 +144,18 @@ async def upload_data_file(request: Request, file: UploadFile = File(...)):
         # 获取session_id
         session_id = request.state.session_id
         
+        # 检查文件类型
+        file_extension = os.path.splitext(file.filename)[1].lower()
+        if file_extension not in ['.csv', '.xls', '.xlsx']:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error": "不支持的文件类型，请上传CSV、XLS或XLSX格式的文件"
+                }
+            )
+        
         # 生成唯一的文件名
-        file_extension = os.path.splitext(file.filename)[1]
         temp_file_name = f"temp_{uuid.uuid4()}{file_extension}"
         
         # 保存上传的文件
@@ -119,6 +174,9 @@ async def upload_data_file(request: Request, file: UploadFile = File(...)):
             "data": result
         })
     except Exception as e:
+        # 如果在处理过程中出现任何错误，确保清理临时文件
+        if 'temp_file_name' in locals() and os.path.exists(temp_file_name):
+            os.remove(temp_file_name)
         return JSONResponse(
             status_code=400,
             content={
