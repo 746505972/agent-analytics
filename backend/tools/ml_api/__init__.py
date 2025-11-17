@@ -5,14 +5,16 @@
 
 import torch
 import torch.nn as nn
+from langchain_core.tools import tool
 
 # SVM 实现
-def support_vector_machine(df, target_column):
+@tool
+def support_vector_machine(df: dict, target_column: str) -> dict:
     """
     支持向量机分类/回归
     
     Args:
-        df (pd.DataFrame): 输入数据
+        df (dict): 输入数据（字典格式）
         target_column (str): 目标变量列名
         
     Returns:
@@ -26,12 +28,13 @@ def support_vector_machine(df, target_column):
     }
 
 # 随机森林实现
-def random_forest(df, target_column, n_estimators=100):
+@tool
+def random_forest(df: dict, target_column: str, n_estimators: int = 100) -> dict:
     """
     随机森林分类/回归
     
     Args:
-        df (pd.DataFrame): 输入数据
+        df (dict): 输入数据（字典格式）
         target_column (str): 目标变量列名
         n_estimators (int): 决策树数量
         
@@ -64,12 +67,13 @@ class SimpleNN(nn.Module):
         return out
 
 # 深度学习实现
-def deep_learning(df, target_column, model_type='simple_nn'):
+@tool
+def deep_learning(df: dict, target_column: str, model_type: str = 'simple_nn') -> dict:
     """
     深度学习模型训练
     
     Args:
-        df (pd.DataFrame): 输入数据
+        df (dict): 输入数据（字典格式）
         target_column (str): 目标变量列名
         model_type (str): 模型类型
         
@@ -83,3 +87,16 @@ def deep_learning(df, target_column, model_type='simple_nn'):
         'model_type': model_type,
         'status': 'placeholder'
     }
+
+# 将模块中的函数注册为工具
+def register_ml_tools(agent):
+    """
+    将机器学习工具注册到agent
+    
+    Args:
+        agent: DataAnalysisAgent实例
+    """
+    # 已经使用装饰器注册为工具，这里只需要将它们添加到agent中
+    agent.tools.append(support_vector_machine)
+    agent.tools.append(random_forest)
+    agent.tools.append(deep_learning)

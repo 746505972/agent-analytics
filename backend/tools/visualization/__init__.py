@@ -3,13 +3,16 @@
 提供基于 Echarts/Plotly 的数据可视化功能
 """
 
+from langchain_core.tools import tool
+
 # 生成柱状图
-def bar_chart(data, x_column, y_column, title="Bar Chart"):
+@tool
+def bar_chart(data: dict, x_column: str, y_column: str, title: str = "Bar Chart") -> dict:
     """
     生成柱状图
     
     Args:
-        data (pd.DataFrame): 数据
+        data (dict): 数据（字典格式）
         x_column (str): X轴列名
         y_column (str): Y轴列名
         title (str): 图表标题
@@ -28,12 +31,13 @@ def bar_chart(data, x_column, y_column, title="Bar Chart"):
     }
 
 # 生成折线图
-def line_chart(data, x_column, y_column, title="Line Chart"):
+@tool
+def line_chart(data: dict, x_column: str, y_column: str, title: str = "Line Chart") -> dict:
     """
     生成折线图
     
     Args:
-        data (pd.DataFrame): 数据
+        data (dict): 数据（字典格式）
         x_column (str): X轴列名
         y_column (str): Y轴列名
         title (str): 图表标题
@@ -51,12 +55,13 @@ def line_chart(data, x_column, y_column, title="Line Chart"):
     }
 
 # 生成散点图
-def scatter_plot(data, x_column, y_column, title="Scatter Plot"):
+@tool
+def scatter_plot(data: dict, x_column: str, y_column: str, title: str = "Scatter Plot") -> dict:
     """
     生成散点图
     
     Args:
-        data (pd.DataFrame): 数据
+        data (dict): 数据（字典格式）
         x_column (str): X轴列名
         y_column (str): Y轴列名
         title (str): 图表标题
@@ -74,12 +79,13 @@ def scatter_plot(data, x_column, y_column, title="Scatter Plot"):
     }
 
 # 生成饼图
-def pie_chart(data, label_column, value_column, title="Pie Chart"):
+@tool
+def pie_chart(data: dict, label_column: str, value_column: str, title: str = "Pie Chart") -> dict:
     """
     生成饼图
     
     Args:
-        data (pd.DataFrame): 数据
+        data (dict): 数据（字典格式）
         label_column (str): 标签列名
         value_column (str): 值列名
         title (str): 图表标题
@@ -97,12 +103,13 @@ def pie_chart(data, label_column, value_column, title="Pie Chart"):
     }
 
 # 生成直方图
-def histogram(data, column, bins=10, title="Histogram"):
+@tool
+def histogram(data: dict, column: str, bins: int = 10, title: str = "Histogram") -> dict:
     """
     生成直方图
     
     Args:
-        data (pd.DataFrame): 数据
+        data (dict): 数据（字典格式）
         column (str): 列名
         bins (int): 箱数
         title (str): 图表标题
@@ -118,3 +125,18 @@ def histogram(data, column, bins=10, title="Histogram"):
         'title': title,
         'status': 'placeholder'
     }
+
+# 将模块中的函数注册为工具
+def register_visualization_tools(agent):
+    """
+    将可视化工具注册到agent
+    
+    Args:
+        agent: DataAnalysisAgent实例
+    """
+    # 已经使用装饰器注册为工具，这里只需要将它们添加到agent中
+    agent.tools.append(bar_chart)
+    agent.tools.append(line_chart)
+    agent.tools.append(scatter_plot)
+    agent.tools.append(pie_chart)
+    agent.tools.append(histogram)

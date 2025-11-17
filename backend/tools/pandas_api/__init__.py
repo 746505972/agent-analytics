@@ -3,17 +3,24 @@ Pandas API 模块
 提供统计建模方法，包括数据清洗、聚类、假设检验、回归分析等功能
 """
 
+import pandas as pd
+from langchain_core.tools import tool
+
 # 数据清洗工具
-def clean_data(df):
+@tool
+def clean_data(df: dict) -> dict:
     """
     基础数据清洗功能
     
     Args:
-        df (pd.DataFrame): 输入数据
+        df (dict): 输入数据（字典格式）
         
     Returns:
-        pd.DataFrame: 清洗后的数据
+        dict: 清洗后的数据
     """
+    # 转换为DataFrame
+    df = pd.DataFrame(df)
+    
     # 删除完全重复的行
     df = df.drop_duplicates()
     
@@ -23,15 +30,16 @@ def clean_data(df):
     # 删除完全为空的行
     df = df.dropna(axis=0, how='all')
     
-    return df
+    return df.to_dict()
 
 # 聚类分析工具
-def cluster_analysis(df, method='kmeans', n_clusters=3):
+@tool
+def cluster_analysis(df: dict, method: str = 'kmeans', n_clusters: int = 3) -> dict:
     """
     执行聚类分析
     
     Args:
-        df (pd.DataFrame): 输入数据
+        df (dict): 输入数据（字典格式）
         method (str): 聚类方法 ('kmeans', 'hierarchical')
         n_clusters (int): 聚类数量
         
@@ -46,12 +54,13 @@ def cluster_analysis(df, method='kmeans', n_clusters=3):
     }
 
 # 回归分析工具
-def regression_analysis(df, target_column, method='linear'):
+@tool
+def regression_analysis(df: dict, target_column: str, method: str = 'linear') -> dict:
     """
     执行回归分析
     
     Args:
-        df (pd.DataFrame): 输入数据
+        df (dict): 输入数据（字典格式）
         target_column (str): 目标变量列名
         method (str): 回归方法 ('linear', 'logistic', 'polynomial')
         
@@ -66,15 +75,16 @@ def regression_analysis(df, target_column, method='linear'):
     }
 
 # 假设检验工具
-def hypothesis_test(df, column1, column2=None, test_type='ttest'):
+@tool
+def hypothesis_test(df: dict, column1: str, column2: str = None, test_type: str = 'ttest') -> dict:
     """
     执行假设检验
     
     Args:
-        df (pd.DataFrame): 输入数据
+        df (dict): 输入数据（字典格式）
         column1 (str): 第一列数据
         column2 (str, optional): 第二列数据(两样本检验时需要)
-        test_type (str): 检验类型 ('ttest', 'ztest', 'chisquare')
+        test_type (str): 棓验类型 ('ttest', 'ztest', 'chisquare')
         
     Returns:
         dict: 假设检验结果
@@ -86,3 +96,17 @@ def hypothesis_test(df, column1, column2=None, test_type='ttest'):
         'test_type': test_type,
         'status': 'placeholder'
     }
+
+# 将模块中的函数注册为工具
+def register_pandas_tools(agent):
+    """
+    将pandas工具注册到agent
+    
+    Args:
+        agent: DataAnalysisAgent实例
+    """
+    # 已经使用装饰器注册为工具，这里只需要将它们添加到agent中
+    agent.tools.append(clean_data)
+    agent.tools.append(cluster_analysis)
+    agent.tools.append(regression_analysis)
+    agent.tools.append(hypothesis_test)
