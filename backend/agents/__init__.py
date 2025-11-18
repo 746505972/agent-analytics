@@ -151,6 +151,7 @@ class DataAnalysisAgent:
 示例数据: {data_context.get('sample_data', '无')}
 </数据上下文信息>
 """
+                # 移除了数据上下文信息的日志打印，以保护用户隐私
                 messages.append(HumanMessage(content=context_info))
             
             # 添加用户问题
@@ -168,6 +169,8 @@ class DataAnalysisAgent:
                 'status': 'success'
             }
         except Exception as e:
+            import traceback
+            print(f"处理查询时发生错误: {traceback.format_exc()}")
             return {
                 'query': query,
                 'result': f"处理查询时发生错误: {str(e)}",

@@ -1,5 +1,6 @@
 import sys
 import os
+import urllib.parse
 
 # 添加项目根目录到sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -7,7 +8,7 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 import pandas as pd
 import numpy as np
 import logging
@@ -15,15 +16,15 @@ import logging
 # 尝试不同的导入方式
 try:
     # 首先尝试相对导入
-    from ..utils.file_manager import get_file_path, delete_file
+    from ..utils.file_manager import get_file_path, delete_file, sanitize_filename
 except ImportError:
     try:
         # 如果相对导入失败，尝试绝对导入
-        from utils.file_manager import get_file_path, delete_file
+        from utils.file_manager import get_file_path, delete_file, sanitize_filename
     except ImportError:
         # 最后尝试直接添加到路径并导入
         sys.path.insert(0, os.path.join(parent_dir, "utils"))
-        from utils.file_manager import get_file_path, delete_file
+        from utils.file_manager import get_file_path, delete_file, sanitize_filename
 
 router = APIRouter(prefix="/data", tags=["data"])
 
@@ -295,6 +296,64 @@ async def delete_data(request: Request, data_id: str):
         })
     except Exception as e:
         logger.error(f"删除数据文件时出错: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+@router.get("/{data_id}/download")
+async def download_data(request: Request, data_id: str):
+    """
+    下载数据文件接口
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+        
+        # 首先尝试使用原始data_id查找文件
+        file_path = get_file_path(data_id, session_id)
+        logger.info(f"尝试使用原始data_id查找文件: {file_path}")
+        
+        # 如果文件不存在，尝试使用清理后的data_id
+        if not os.path.exists(file_path):
+            # 解码URL编码的data_id
+            decoded_data_id = urllib.parse.unquote(data_id)
+            logger.info(f"原始文件未找到，尝试解码后的data_id: {decoded_data_id}")
+            
+            # 再次尝试使用解码后的data_id
+            file_path = get_file_path(decoded_data_id, session_id)
+            if not os.path.exists(file_path):
+                # 如果仍然不存在，尝试清理后的文件名
+                sanitized_data_id = sanitize_filename(decoded_data_id)
+                logger.info(f"解码后的文件未找到，尝试清理后的data_id: {sanitized_data_id}")
+                file_path = get_file_path(sanitized_data_id, session_id)
+        
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            logger.warning(f"文件不存在: {file_path}")
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "success": False,
+                    "error": f"数据文件不存在: {file_path}"
+                }
+            )
+        
+        # 从文件路径中提取实际的data_id（文件名不带扩展名）
+        actual_data_id = os.path.splitext(os.path.basename(file_path))[0]
+        logger.info(f"找到文件，实际data_id为: {actual_data_id}")
+        
+        # 返回文件下载响应
+        return FileResponse(
+            path=file_path,
+            filename=f"{actual_data_id}.csv",
+            media_type='text/csv'
+        )
+    except Exception as e:
+        logger.error(f"下载数据文件时出错: {str(e)}", exc_info=True)
         return JSONResponse(
             status_code=500,
             content={

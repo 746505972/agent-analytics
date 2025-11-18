@@ -48,6 +48,7 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
     async def generate():
         try:
             logger.info("开始处理聊天请求")
+            # 移除了聊天请求数据的日志打印，以保护用户隐私
             
             # 如果有data_id，获取文件路径并读取数据作为上下文
             data_context = None
@@ -57,6 +58,7 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     # 获取session_id
                     session_id = request.state.session_id
                     file_path = get_file_path(chat_request.data_id, session_id)
+                    # 移除了文件路径的日志打印，以保护用户隐私
                     if os.path.exists(file_path):
                         import pandas as pd
                         df = pd.read_csv(file_path, encoding='utf-8-sig')
@@ -84,8 +86,13 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                             "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
                             "sample_data": df.head().to_dict()
                         }
+                        # 移除了数据上下文的日志打印，以保护用户隐私
+                    else:
+                        logger.warning(f"文件不存在: {file_path}")
                 except Exception as e:
                     logger.warning(f"读取数据上下文时出错: {e}")
+                    import traceback
+                    logger.error(traceback.format_exc())
             
             # 使用agent处理查询
             result = agent.process_query(chat_request.message, data_context)

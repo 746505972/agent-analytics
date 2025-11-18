@@ -41,16 +41,18 @@
               <router-link to="/upload" class="upload-button">上传新文件</router-link>
             </div>
             <!-- 添加查看数据链接 -->
-            <div v-if="selectedFile" class="view-data-link" @click="showDataPreview">
-              查看数据
+            <div v-if="selectedFile" class="file-actions-container">
+              <div class="view-data-link" @click="showDataPreview">
+                查看数据
+              </div>
+              <div class="download-file-link" @click="downloadFile">
+                下载文件
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      
-      <!-- 中间：方法选择和列名列表区域 -->
-      <div class="middle-section">
-        <!-- 方法选择区域 -->
+        
+        <!-- 方法选择区域移到左栏 -->
         <div v-if="selectedFile" class="method-selection-section">
           <h3>方法选择</h3>
           <div class="method-tabs">
@@ -86,7 +88,10 @@
             <button @click="executeMethod" class="execute-button">执行分析</button>
           </div>
         </div>
-        
+      </div>
+      
+      <!-- 中间：列名列表区域 -->
+      <div class="middle-section">
         <!-- 列名列表区域 -->
         <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-list-section">
           <h3>列名列表</h3>
@@ -508,13 +513,18 @@ export default {
                       console.log("更新内容:", accumulatedContent);
                       // 更新AI回复内容
                       this.chatMessages[aiMessageIndex].content = accumulatedContent;
-                      // 滚动到底部
+                      // 滚动到底部并触发更新
                       this.$nextTick(() => {
                         const messagesContainer = document.querySelector('.messages');
                         if (messagesContainer) {
                           messagesContainer.scrollTop = messagesContainer.scrollHeight;
                         }
                       });
+                                          
+                      // 每累积一定字符数就强制更新DOM以实现实时显示效果
+                      if (accumulatedContent.length % 5 === 0) {
+                        await this.$nextTick();
+                      }
                     } else if (parsed.error) {
                       console.error("流式响应错误:", parsed.error);
                       this.chatMessages[aiMessageIndex].content = `错误: ${parsed.error}`;
@@ -524,6 +534,9 @@ export default {
                     console.error("解析流数据错误:", e, "原始数据:", data);
                     // 即使解析失败，也尝试显示原始内容
                     this.chatMessages[aiMessageIndex].content = `解析错误: ${data}`;
+                    
+                    // 强制更新DOM
+                    await this.$nextTick();
                   }
                 } else {
                   // 处理不以 'data: ' 开头的行，可能是错误信息
@@ -672,6 +685,31 @@ export default {
       if (this.previewData.currentPage < this.previewData.totalPages) {
         this.changePage(this.previewData.currentPage + 1);
       }
+    },
+    
+    // 下载文件方法
+    downloadFile() {
+      if (!this.selectedFile) return;
+      
+      // 获取选中的文件信息
+      const selectedFile = this.files.find(file => file.data_id === this.selectedFile);
+      if (!selectedFile) return;
+      
+      // 构造下载链接
+      const downloadUrl = `/data/${this.selectedFile}/download`;
+      
+      // 创建一个隐藏的a标签用于下载
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = selectedFile.filename;
+      link.style.display = 'none';
+      
+      // 添加到页面并触发点击
+      document.body.appendChild(link);
+      link.click();
+      
+      // 清理
+      document.body.removeChild(link);
     },
   }
 }
@@ -1142,11 +1180,24 @@ export default {
   cursor: not-allowed;
 }
 
+/* 文件操作链接容器 */
+.file-actions-container {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
 /* 查看数据链接样式 */
 .view-data-link {
-  text-align: center;
-  margin-top: 15px;
   color: #409eff;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+/* 下载文件链接样式 */
+.download-file-link {
+  color: #67c23a;
   cursor: pointer;
   font-size: 14px;
   text-decoration: underline;

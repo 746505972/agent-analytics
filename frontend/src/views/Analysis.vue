@@ -284,6 +284,8 @@ export default {
           history: this.chatMessages.slice(0, -1) // 不包括刚添加的AI回复占位符
         };
         
+// 移除了聊天请求数据的日志打印，以保护用户隐私
+        
         // 发起流式请求
         const response = await fetch('/chat/stream', {
           method: 'POST',
@@ -293,6 +295,8 @@ export default {
           body: JSON.stringify(requestData),
           credentials: 'include'
         });
+        
+// 移除了聊天响应的日志打印，以保护用户隐私
         
         if (response.ok && response.body) {
           const reader = response.body.getReader();
@@ -343,6 +347,11 @@ export default {
                   }
                 }
               }
+            }
+            
+            // 触发DOM更新以实现实时显示效果
+            if (accumulatedContent.length % 5 === 0) {  // 每5个字符触发一次更新
+              await this.$nextTick();
             }
           }
         } else {
