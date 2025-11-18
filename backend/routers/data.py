@@ -157,6 +157,9 @@ async def get_data_preview(request: Request, data_id: str, page: int = 1, page_s
                 return x
             page_data[col] = page_data[col].apply(convert_value)
         
+        # 再次处理可能遗漏的NaN值
+        page_data = page_data.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+        
         return JSONResponse(content={
             "success": True,
             "data": {
@@ -224,6 +227,19 @@ async def get_data_info(request: Request, data_id: str):
         
         # 处理NaN值，将其替换为None以便JSON序列化
         df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+        
+        # 再次确保所有值都可以被JSON序列化
+        for col in df.columns:
+            def convert_value(x):
+                if pd.isna(x) or x is None:
+                    return None
+                if hasattr(x, 'item'):
+                    try:
+                        return x.item()
+                    except (ValueError, OverflowError):
+                        return str(x)
+                return x
+            df[col] = df[col].apply(convert_value)
         
         return JSONResponse(content={
             "success": True,
@@ -376,6 +392,9 @@ async def get_data_details(request: Request, data_id: str):
         # 总体统计
         total_missing = int(df.isnull().sum().sum())
         total_cells = int(df.size)
+        
+        # 再次处理可能遗漏的NaN值
+        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
         
         return JSONResponse(content={
             "success": True,

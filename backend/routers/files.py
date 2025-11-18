@@ -59,6 +59,19 @@ async def get_user_files(request: Request):
                         # 处理NaN值，将其替换为None以便JSON序列化
                         df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
                         
+                        # 确保所有值都可以被JSON序列化
+                        for col in df.columns:
+                            def convert_value(x):
+                                if pd.isna(x) or x is None:
+                                    return None
+                                if hasattr(x, 'item'):
+                                    try:
+                                        return x.item()
+                                    except (ValueError, OverflowError):
+                                        return str(x)
+                                return x
+                            df[col] = df[col].apply(convert_value)
+                        
                         files.append({
                             "data_id": os.path.splitext(filename)[0],
                             "filename": filename,

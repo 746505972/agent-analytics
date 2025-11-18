@@ -220,17 +220,14 @@ export default {
     
     useSampleData() {
       this.loading = false
-      this.columnHeaders = ['编号', '姓名', '年龄', '性别', '学历', '收入', '日期']
+      this.columnHeaders = ['示例数据0', '示例数据1', '示例数据2', '示例数据3']
       this.rowData = []
       for (let i = 1; i <= 30; i++) {
         this.rowData.push({
-          '编号': '示例数据',
-          '姓名': '示例数据',
-          '年龄': '示例数据',
-          '性别': '示例数据',
-          '学历': '示例数据',
-          '收入': '示例数据',
-          '日期': '示例数据'
+          '示例数据0': '示例数据',
+          '示例数据1': '示例数据',
+          '示例数据2': '示例数据',
+          '示例数据3': '示例数据',
         })
       }
       this.totalRows = this.rowData.length

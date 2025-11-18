@@ -640,17 +640,14 @@ export default {
     
     // 在预览中使用示例数据
     useSampleDataInPreview() {
-      this.previewData.columnHeaders = ['编号', '姓名', '年龄', '性别', '学历', '收入', '日期'];
+      this.previewData.columnHeaders = ['示例数据0', '示例数据1', '示例数据2', '示例数据3'];
       this.previewData.rowData = [];
       for (let i = 1; i <= 30; i++) {
         this.previewData.rowData.push({
-          '编号': '示例数据',
-          '姓名': '示例数据',
-          '年龄': '示例数据',
-          '性别': '示例数据',
-          '学历': '示例数据',
-          '收入': '示例数据',
-          '日期': '示例数据'
+          '示例数据0': '示例数据',
+          '示例数据1': '示例数据',
+          '示例数据2': '示例数据',
+          '示例数据3': '示例数据',
         });
       }
       this.previewData.displayedRows = this.previewData.rowData;

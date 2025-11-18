@@ -59,10 +59,23 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     file_path = get_file_path(chat_request.data_id, session_id)
                     if os.path.exists(file_path):
                         import pandas as pd
-                        import numpy as np
                         df = pd.read_csv(file_path, encoding='utf-8-sig')
                         # 处理NaN值，将其替换为None以便JSON序列化
                         df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+                        
+                        # 确保所有值都可以被JSON序列化
+                        for col in df.columns:
+                            def convert_value(x):
+                                if pd.isna(x) or x is None:
+                                    return None
+                                if hasattr(x, 'item'):
+                                    try:
+                                        return x.item()
+                                    except (ValueError, OverflowError):
+                                        return str(x)
+                                return x
+                            df[col] = df[col].apply(convert_value)
+                        
                         data_context = {
                             "data_id": chat_request.data_id,
                             "filename": f"{chat_request.data_id}.csv",
@@ -114,6 +127,20 @@ async def execute_command(request: Request, chat_request: ChatRequest):
                     df = pd.read_csv(file_path, encoding="utf-8-sig")
                     # 处理NaN值，将其替换为None以便JSON序列化
                     df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+                    
+                    # 确保所有值都可以被JSON序列化
+                    for col in df.columns:
+                        def convert_value(x):
+                            if pd.isna(x) or x is None:
+                                return None
+                            if hasattr(x, 'item'):
+                                try:
+                                    return x.item()
+                                except (ValueError, OverflowError):
+                                    return str(x)
+                            return x
+                        df[col] = df[col].apply(convert_value)
+                    
                     data_context = {
                         "data_id": chat_request.data_id,
                         "filename": f"{chat_request.data_id}.csv",
