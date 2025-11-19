@@ -88,6 +88,24 @@ class DataAnalysisAgent:
             return delete_file(data_id, session_id)
         
         self.tools.append(delete_file_tool)
+        
+        # 注册获取用户文件列表工具
+        @tool
+        def list_user_files(session_id: str = None) -> list:
+            """获取用户上传的文件列表，参数为可选的session_id"""
+            # 如果没有提供session_id，返回空列表
+            if not session_id:
+                return []
+            
+            # 导入并调用获取用户文件列表的函数
+            try:
+                from routers.data import get_user_files_list
+                return get_user_files_list(session_id)
+            except Exception as e:
+                # 如果出现错误，返回空列表
+                return []
+        
+        self.tools.append(list_user_files)
     
     def register_module_tools(self):
         """

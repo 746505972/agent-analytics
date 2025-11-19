@@ -55,43 +55,98 @@
         <!-- 方法选择区域移到左栏 -->
         <div v-if="selectedFile" class="method-selection-section">
           <h3>方法选择</h3>
-          <div class="method-tabs">
-            <button 
-              v-for="method in analysisMethods" 
-              :key="method.id"
-              :class="{ active: currentMethod === method.id }"
-              @click="selectMethod(method.id)"
-              class="method-tab"
+          <div class="method-categories">
+            <div 
+              v-for="category in methodCategories" 
+              :key="category.id"
+              class="method-category"
+              :class="{ active: currentCategory === category.id }"
             >
-              {{ method.name }}
-            </button>
-          </div>
-          <div class="method-content">
-            <div v-if="currentMethod === 'basic_info'" class="basic-info-method">
-              <h4>数据集基本信息</h4>
-              <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
+              <div class="category-header" @click="selectCategory(category.id)">
+                <h4>{{ category.name }}</h4>
+                <span class="toggle-icon">{{ currentCategory === category.id ? '−' : '+' }}</span>
+              </div>
+              <div v-show="currentCategory === category.id" class="category-methods">
+                <button 
+                  v-for="method in category.methods" 
+                  :key="method.id"
+                  :class="{ active: currentMethod === method.id }"
+                  @click="selectMethod(method.id)"
+                  class="method-tab"
+                >
+                  {{ method.name }}
+                </button>
+              </div>
             </div>
-            <div v-else-if="currentMethod === 'statistical_summary'" class="statistical-summary-method">
-              <h4>统计摘要</h4>
-              <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
-            </div>
-            <div v-else-if="currentMethod === 'visualization'" class="visualization-method">
-              <h4>数据可视化</h4>
-              <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
-            </div>
-            <div v-else-if="currentMethod === 'ml_analysis'" class="ml-analysis-method">
-              <h4>机器学习分析</h4>
-              <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
-            </div>
-          </div>
-          <div class="method-actions">
-            <button @click="executeMethod" class="execute-button">执行分析</button>
           </div>
         </div>
       </div>
       
       <!-- 中间：列名列表区域 -->
       <div class="middle-section">
+        <!-- 方法描述和执行按钮移到中栏 -->
+        <div v-if="selectedFile" class="method-description-section">
+          <div class="method-description-content">
+            <div class="method-content">
+              <div v-if="currentMethod === 'basic_info'" class="basic-info-method">
+                <h4>数据集基本信息</h4>
+                <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
+              </div>
+              <div v-else-if="currentMethod === 'statistical_summary'" class="statistical-summary-method">
+                <h4>统计摘要</h4>
+                <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
+              </div>
+              <div v-else-if="currentMethod === 'correlation_analysis'" class="correlation-analysis-method">
+                <h4>相关性分析</h4>
+                <p>分析数据集中各变量之间的相关性。</p>
+              </div>
+              <div v-else-if="currentMethod === 'distribution_analysis'" class="distribution-analysis-method">
+                <h4>分布分析</h4>
+                <p>分析数据集中各变量的分布情况。</p>
+              </div>
+              <div v-else-if="currentMethod === 'visualization'" class="visualization-method">
+                <h4>数据可视化</h4>
+                <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
+              </div>
+              <div v-else-if="currentMethod === 'ml_analysis'" class="ml-analysis-method">
+                <h4>机器学习分析</h4>
+                <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
+              </div>
+              <div v-else-if="currentMethod === 'clustering'" class="clustering-method">
+                <h4>聚类分析</h4>
+                <p>使用聚类算法对数据进行分组分析。</p>
+              </div>
+              <div v-else-if="currentMethod === 'classification'" class="classification-method">
+                <h4>分类分析</h4>
+                <p>使用分类算法对数据进行分类预测。</p>
+              </div>
+              <div v-else-if="currentMethod === 'regression'" class="regression-method">
+                <h4>回归分析</h4>
+                <p>使用回归算法分析变量之间的关系。</p>
+              </div>
+              <div v-else-if="currentMethod === 'text_analysis'" class="text-analysis-method">
+                <h4>文本分析</h4>
+                <p>对文本数据进行分析，提取关键信息和模式。</p>
+              </div>
+              <div v-else-if="currentMethod === 'sentiment_analysis'" class="sentiment-analysis-method">
+                <h4>情感分析</h4>
+                <p>分析文本数据中的情感倾向。</p>
+              </div>
+              <div v-else-if="currentMethod === 'data_cleaning'" class="data-cleaning-method">
+                <h4>数据清洗</h4>
+                <p>清理数据中的噪声和异常值。</p>
+              </div>
+              <div v-else-if="currentMethod === 'data_transformation'" class="data-transformation-method">
+                <h4>数据转换</h4>
+                <p>对数据进行转换操作，如标准化、归一化等。</p>
+              </div>
+            </div>
+            <div class="method-actions">
+              <button @click="executeMethod" class="execute-button">执行分析</button>
+            </div>
+          </div>
+        </div>
+        
         <!-- 列名列表区域 -->
         <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-list-section">
           <h3>列名列表</h3>
@@ -123,7 +178,18 @@
                   <span></span>
                   <span></span>
                 </span>
-                <div v-else v-html="renderMarkdown(message.content)" class="message-content"></div>
+                <div v-else class="message-content-wrapper">
+                  <div v-html="renderMarkdown(message.content)" class="message-content"></div>
+                  <button 
+                    v-if="message.content" 
+                    @click="copyMessageText(message.content)"
+                    class="copy-button"
+                    :class="{ copied: message.copied }"
+                    :title="message.copied ? '已复制' : '复制文本'"
+                  >
+                    {{ message.copied ? '✓ 已复制' : '复制' }}
+                  </button>
+                </div>
               </div>
             </div>
             <div class="input-area">
@@ -244,11 +310,51 @@ export default {
       isWaitingForResponse: false,
       // 新增方法选择相关数据
       currentMethod: 'basic_info',
-      analysisMethods: [
-        { id: 'basic_info', name: '基本信息' },
-        { id: 'statistical_summary', name: '统计摘要' },
-        { id: 'visualization', name: '数据可视化' },
-        { id: 'ml_analysis', name: '机器学习分析' }
+      currentCategory: 'statistics',
+      methodCategories: [
+        {
+          id: 'statistics',
+          name: '统计方法',
+          methods: [
+            { id: 'basic_info', name: '基本信息' },
+            { id: 'statistical_summary', name: '统计摘要' },
+            { id: 'correlation_analysis', name: '相关性分析' },
+            { id: 'distribution_analysis', name: '分布分析' }
+          ]
+        },
+        {
+          id: 'ml',
+          name: '机器学习',
+          methods: [
+            { id: 'ml_analysis', name: '机器学习分析' },
+            { id: 'clustering', name: '聚类分析' },
+            { id: 'classification', name: '分类分析' },
+            { id: 'regression', name: '回归分析' }
+          ]
+        },
+        {
+          id: 'visualization',
+          name: '可视化',
+          methods: [
+            { id: 'visualization', name: '数据可视化' }
+          ]
+        },
+        {
+          id: 'nlp',
+          name: '文本分析',
+          methods: [
+            { id: 'text_analysis', name: '文本分析' },
+            { id: 'sentiment_analysis', name: '情感分析' }
+          ]
+        },
+        {
+          id: 'data_processing',
+          name: '数据处理',
+          methods: [
+            { id: 'data_cleaning', name: '数据清洗' },
+            { id: 'data_transformation', name: '数据转换' }
+          ]
+        }
       ],
       // 数据预览弹窗相关数据
       showPreviewModal: false,
@@ -281,6 +387,8 @@ export default {
     
     toggleFileSection() {
       this.isFileSectionCollapsed = !this.isFileSectionCollapsed;
+      // 保存文件选择区域的展开/收起状态到localStorage
+      localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
     },
     
     async loadUploadedFiles() {
@@ -373,6 +481,24 @@ export default {
     
     selectMethod(methodId) {
       this.currentMethod = methodId;
+      // 保存选中的方法到localStorage
+      localStorage.setItem('selectedMethod', methodId);
+      
+      // 根据选中的方法自动展开对应的大类
+      const category = this.methodCategories.find(cat => 
+        cat.methods.some(method => method.id === methodId)
+      );
+      if (category) {
+        this.currentCategory = category.id;
+        // 保存当前展开的大类
+        localStorage.setItem('selectedCategory', category.id);
+      }
+    },
+    
+    selectCategory(categoryId) {
+      this.currentCategory = this.currentCategory === categoryId ? null : categoryId;
+      // 保存当前展开的大类
+      localStorage.setItem('selectedCategory', this.currentCategory || '');
     },
     
     executeMethod() {
@@ -382,6 +508,13 @@ export default {
       
       // 保存聊天记录到localStorage
       localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
+      
+      // 保存文件选择区域的展开/收起状态
+      localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
+      
+      // 保存当前选中的方法和大类
+      localStorage.setItem('selectedMethod', this.currentMethod);
+      localStorage.setItem('selectedCategory', this.currentCategory);
       
       // 根据选择的方法跳转到相应的分析页面
       this.$router.push({
@@ -403,6 +536,26 @@ export default {
         this.selectFile(savedSelectedFile);
       }
       
+      // 恢复选中的方法
+      const savedSelectedMethod = localStorage.getItem('selectedMethod');
+      if (savedSelectedMethod) {
+        this.currentMethod = savedSelectedMethod;
+      }
+      
+      // 恢复展开的大类
+      const savedSelectedCategory = localStorage.getItem('selectedCategory');
+      if (savedSelectedCategory) {
+        this.currentCategory = savedSelectedCategory;
+      } else if (savedSelectedMethod) {
+        // 如果没有保存的大类状态但有选中的方法，则自动确定大类
+        const category = this.methodCategories.find(cat => 
+          cat.methods.some(method => method.id === savedSelectedMethod)
+        );
+        if (category) {
+          this.currentCategory = category.id;
+        }
+      }
+      
       // 恢复聊天记录
       const savedChatMessages = localStorage.getItem('dashboardChatMessages');
       if (savedChatMessages) {
@@ -411,6 +564,12 @@ export default {
         } catch (e) {
           console.error("解析保存的聊天记录失败:", e);
         }
+      }
+      
+      // 恢复文件选择区域的展开/收起状态
+      const savedFileSectionState = localStorage.getItem('isFileSectionCollapsed');
+      if (savedFileSectionState !== null) {
+        this.isFileSectionCollapsed = savedFileSectionState === 'true';
       }
     },
     
@@ -422,6 +581,11 @@ export default {
         // 如果有刚上传的文件且在文件列表中存在，则默认选中它
         this.selectFile(currentDataId);
       }
+    },
+    
+    // 页面激活时恢复状态（从其他页面返回时调用）
+    activated() {
+      this.restoreState();
     },
     
     async sendMessage() {
@@ -589,6 +753,48 @@ export default {
       }
     },
     
+    // 添加复制消息文本的方法
+    copyMessageText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        // 添加视觉反馈
+        console.log('文本已复制到剪贴板');
+        // 创建一个临时的提示元素
+        this.showCopyNotification('文本已复制到剪贴板');
+      }).catch(err => {
+        console.error('复制失败:', err);
+        this.showCopyNotification('复制失败: ' + err.message, true);
+      });
+    },
+    
+    // 显示复制通知
+    showCopyNotification(message, isError = false) {
+      // 创建通知元素
+      const notification = document.createElement('div');
+      notification.textContent = message;
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background-color: ${isError ? '#f56c6c' : '#67c23a'};
+        color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+        z-index: 2000;
+        font-size: 14px;
+      `;
+      
+      // 添加到页面
+      document.body.appendChild(notification);
+      
+      // 3秒后移除
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 3000);
+    },
+    
     getSelectedFileName() {
       const file = this.files.find(f => f.data_id === this.selectedFile);
       return file ? file.filename : "";
@@ -710,7 +916,7 @@ export default {
       
       // 清理
       document.body.removeChild(link);
-    },
+    }
   }
 }
 </script>
@@ -747,7 +953,7 @@ export default {
 
 .left-section {
   flex: 0.5;
-  padding-left: 10px;
+  padding-left: 0px;
   overflow-y: auto;
   max-height: 100%;
 }
@@ -908,11 +1114,50 @@ export default {
   color: #303133;
 }
 
-.method-tabs {
-  display: flex;
-  gap: 10px;
+.method-categories {
   margin-bottom: 15px;
+}
+
+.method-category {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.method-category.active {
+  border-color: #409eff;
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  cursor: pointer;
+  background-color: #f5f7fa;
+}
+
+.method-category.active .category-header {
+  background-color: #ecf5ff;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.category-header h4 {
+  margin: 0;
+  color: #303133;
+}
+
+.toggle-icon {
+  font-size: 18px;
+  font-weight: bold;
+  color: #909399;
+}
+
+.category-methods {
+  padding: 10px 15px;
+  display: flex;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
 .method-tab {
@@ -938,6 +1183,9 @@ export default {
 .method-content {
   flex: 1;
   margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
 }
 
 .method-content h4 {
@@ -1072,45 +1320,37 @@ export default {
   color: #303133;
 }
 
-.message-content :deep(p) {
-  margin: 0 0 10px 0;
+.message-content-wrapper {
+  position: relative;
 }
 
-.message-content :deep(ul),
-.message-content :deep(ol) {
-  margin: 10px 0;
-  padding-left: 20px;
+.copy-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-.message-content :deep(li) {
-  margin-bottom: 5px;
+.message:hover .copy-button {
+  opacity: 1;
 }
 
-.message-content :deep(strong) {
-  font-weight: bold;
+.copy-button:hover {
+  background-color: #409eff;
+  color: white;
 }
 
-.message-content :deep(em) {
-  font-style: italic;
-}
-
-.message-content :deep(code) {
-  background-color: #f0f0f0;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-family: monospace;
-}
-
-.message-content :deep(pre) {
-  background-color: #f0f0f0;
-  padding: 10px;
-  border-radius: 5px;
-  overflow-x: auto;
-}
-
-.message-content :deep(pre > code) {
-  background: none;
-  padding: 0;
+.copy-button.copied {
+  background-color: #67c23a;
+  color: white;
+  opacity: 1;
 }
 
 .typing-indicator {
@@ -1382,6 +1622,58 @@ export default {
   background-color: #409eff;
   color: white;
   border-color: #409eff;
+}
+
+/* 方法描述区域样式 */
+.method-description-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+  flex: 0 0 auto;
+}
+
+.method-description-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.method-content {
+  flex: 1;
+  margin-bottom: 0;
+  padding: 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.method-content h4 {
+  margin-top: 0;
+}
+
+.method-actions {
+  flex: 0 0 auto;
+  text-align: center;
+  align-self: flex-start;
+  margin-top: 15px;
+}
+
+.execute-button {
+  padding: 10px 20px;
+  background-color: #67c23a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+  white-space: nowrap;
+}
+
+.execute-button:hover {
+  background-color: #85ce61;
 }
 
 @media (max-width: 768px) {

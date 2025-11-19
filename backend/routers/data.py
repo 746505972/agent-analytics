@@ -32,6 +32,53 @@ router = APIRouter(prefix="/data", tags=["data"])
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+def get_user_files_list(session_id: str) -> list:
+    """
+    获取用户上传的文件列表
+    
+    Args:
+        session_id (str): 用户会话ID
+        
+    Returns:
+        list: 文件信息列表
+    """
+    # 构建用户目录路径
+    user_dir = os.path.join("data", session_id)
+    
+    # 检查目录是否存在
+    if not os.path.exists(user_dir):
+        return []
+    
+    # 获取目录中的所有CSV文件
+    files = []
+    for filename in os.listdir(user_dir):
+        if filename.endswith(".csv"):
+            file_path = os.path.join(user_dir, filename)
+            if os.path.isfile(file_path):
+                try:
+                    # 获取文件信息
+                    stat = os.stat(file_path)
+                    df = pd.read_csv(file_path, encoding="utf-8-sig")
+                    # 处理NaN值，将其替换为None以便JSON序列化
+                    df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+                    
+                    files.append({
+                        "data_id": os.path.splitext(filename)[0],
+                        "filename": filename,
+                        "rows": len(df),
+                        "columns": len(df.columns),
+                        "size": stat.st_size,
+                        "modified": stat.st_mtime
+                    })
+                except Exception as e:
+                    # 如果某个文件读取出错，跳过该文件
+                    logger.error(f"读取文件 {filename} 时出错: {str(e)}")
+                    continue
+    
+    return files
+
+
 @router.get("/user/files")
 async def get_user_files(request: Request):
     """
@@ -41,41 +88,7 @@ async def get_user_files(request: Request):
         # 获取session_id
         session_id = request.state.session_id
         
-        # 构建用户目录路径
-        user_dir = os.path.join("data", session_id)
-        
-        # 检查目录是否存在
-        if not os.path.exists(user_dir):
-            return JSONResponse(content={
-                "success": True,
-                "data": []
-            })
-        
-        # 获取目录中的所有CSV文件
-        files = []
-        for filename in os.listdir(user_dir):
-            if filename.endswith(".csv"):
-                file_path = os.path.join(user_dir, filename)
-                if os.path.isfile(file_path):
-                    try:
-                        # 获取文件信息
-                        stat = os.stat(file_path)
-                        df = pd.read_csv(file_path, encoding="utf-8-sig")
-                        # 处理NaN值，将其替换为None以便JSON序列化
-                        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
-                        
-                        files.append({
-                            "data_id": os.path.splitext(filename)[0],
-                            "filename": filename,
-                            "rows": len(df),
-                            "columns": len(df.columns),
-                            "size": stat.st_size,
-                            "modified": stat.st_mtime
-                        })
-                    except Exception as e:
-                        # 如果某个文件读取出错，跳过该文件
-                        logger.error(f"读取文件 {filename} 时出错: {str(e)}")
-                        continue
+        files = get_user_files_list(session_id)
         
         return JSONResponse(content={
             "success": True,
