@@ -106,6 +106,15 @@ class DataAnalysisAgent:
                 return []
         
         self.tools.append(list_user_files)
+        
+        # 注册添加标题行工具
+        @tool
+        def add_header_tool(file_path: str, column_names: list, session_id: str = None) -> dict:
+            """为CSV文件添加标题行并创建新文件，参数为文件路径、列名列表和可选的session_id"""
+            from utils.file_manager import add_header_to_file
+            return add_header_to_file(file_path, column_names, session_id)
+        
+        self.tools.append(add_header_tool)
     
     def register_module_tools(self):
         """

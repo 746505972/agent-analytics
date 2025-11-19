@@ -7,24 +7,19 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Body
 from fastapi.responses import JSONResponse, FileResponse
+from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import logging
 
-# 尝试不同的导入方式
 try:
-    # 首先尝试相对导入
-    from ..utils.file_manager import get_file_path, delete_file, sanitize_filename
+    from utils.file_manager import get_file_path, delete_file, sanitize_filename
 except ImportError:
-    try:
-        # 如果相对导入失败，尝试绝对导入
-        from utils.file_manager import get_file_path, delete_file, sanitize_filename
-    except ImportError:
-        # 最后尝试直接添加到路径并导入
-        sys.path.insert(0, os.path.join(parent_dir, "utils"))
-        from utils.file_manager import get_file_path, delete_file, sanitize_filename
+    # 最后尝试直接添加到路径并导入
+    sys.path.insert(0, os.path.join(parent_dir, "utils"))
+    from utils.file_manager import get_file_path, delete_file, sanitize_filename
 
 router = APIRouter(prefix="/data", tags=["data"])
 
@@ -487,6 +482,63 @@ async def get_data_details(request: Request, data_id: str):
             }
         })
     except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+
+class AddHeaderRequest(BaseModel):
+    column_names: list
+
+
+@router.post("/{data_id}/add_header")
+async def add_header(request: Request, data_id: str, body: AddHeaderRequest):
+    """
+    为文件添加标题行
+    
+    Args:
+        request (Request): FastAPI请求对象
+        data_id (str): 数据文件ID
+        body (AddHeaderRequest): 请求体，包含列名列表
+        
+    Returns:
+        JSONResponse: 新文件的信息
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+        
+        # 构建文件路径
+        file_path = get_file_path(data_id, session_id)
+        if not os.path.exists(file_path):
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "success": False,
+                    "error": "数据文件不存在"
+                }
+            )
+        
+        # 导入并调用添加标题行的函数
+        try:
+            from utils.file_manager import add_header_to_file
+        except ImportError:
+            # 最后尝试直接添加到路径并导入
+            sys.path.insert(0, os.path.join(parent_dir, "utils"))
+            from utils.file_manager import add_header_to_file
+                
+        result = add_header_to_file(file_path, body.column_names, session_id)
+        
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"添加标题行时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={

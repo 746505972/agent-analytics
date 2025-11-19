@@ -1,60 +1,62 @@
 <template>
   <div class="dashboard-container">
     <div class="dashboard-header">
-      <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
+      <div class="header-content">
+        <div class="file-selector-trigger" @click="toggleFileSection">
+          <h3>选择分析文件</h3>
+          <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
+        </div>
+        <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
+      </div>
     </div>
     
-    <div class="dashboard-content">
-      <!-- 左侧：文件选择区域 -->
-      <div class="left-section">
-        <div class="file-selection-section">
-          <div class="section-header" @click="toggleFileSection">
-            <h2>选择分析文件</h2>
-            <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
+    <!-- 文件选择悬浮区域 -->
+    <div v-if="!isFileSectionCollapsed" class="file-selection-overlay" v-click-outside="closeFileSelection">
+      <div class="file-selection-content">
+        <div class="file-list-container">
+          <div v-if="files.length === 0" class="no-files">
+            暂无上传文件，请先上传文件
           </div>
-          
-          <div v-show="!isFileSectionCollapsed" class="file-section-content">
-            <div class="file-list-container">
-              <div v-if="files.length === 0" class="no-files">
-                暂无上传文件，请先上传文件
+          <div v-else class="file-list">
+            <div 
+              v-for="file in files" 
+              :key="file.data_id"
+              class="file-item"
+              :class="{ selected: selectedFile === file.data_id }"
+              @click="selectFile(file.data_id)"
+            >
+              <div class="file-name">
+                {{ file.filename }}
+                <span class="delete-file" @click.stop="deleteFile(file.data_id)">×</span>
               </div>
-              <div v-else class="file-list">
-                <div 
-                  v-for="file in files" 
-                  :key="file.data_id"
-                  class="file-item"
-                  :class="{ selected: selectedFile === file.data_id }"
-                  @click="selectFile(file.data_id)"
-                >
-                  <div class="file-name">
-                    {{ file.filename }}
-                    <span class="delete-file" @click.stop="deleteFile(file.data_id)">×</span>
-                  </div>
-                  <div class="file-info">
-                    <span>行数: {{ file.rows }}</span>
-                    <span>列数: {{ file.columns }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="file-actions">
-              <router-link to="/upload" class="upload-button">上传新文件</router-link>
-            </div>
-            <!-- 添加查看数据链接 -->
-            <div v-if="selectedFile" class="file-actions-container">
-              <div class="view-data-link" @click="showDataPreview">
-                查看数据
-              </div>
-              <div class="download-file-link" @click="downloadFile">
-                下载文件
+              <div class="file-info">
+                <span>行数: {{ file.rows }}</span>
+                <span>列数: {{ file.columns }}</span>
               </div>
             </div>
           </div>
         </div>
-        
+        <div class="file-actions">
+          <router-link to="/upload" class="upload-button">上传新文件</router-link>
+        </div>
+        <!-- 添加查看数据链接 -->
+        <div v-if="selectedFile" class="file-actions-container">
+          <div class="view-data-link" @click="showDataPreview">
+            查看数据
+          </div>
+          <div class="download-file-link" @click="downloadFile">
+            下载文件
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="dashboard-content">
+      <!-- 左侧：方法选择区域 -->
+      <div class="left-section">
         <!-- 方法选择区域移到左栏 -->
         <div v-if="selectedFile" class="method-selection-section">
-          <h3>方法选择</h3>
+
           <div class="method-categories">
             <div 
               v-for="category in methodCategories" 
@@ -140,21 +142,62 @@
                 <h4>数据转换</h4>
                 <p>对数据进行转换操作，如标准化、归一化等。</p>
               </div>
+              <div v-else-if="currentMethod === 'add_header'" class="add-header-method">
+                <h4>添加标题行</h4>
+                <p>为没有标题行的文件添加自定义列名。</p>
+              </div>
             </div>
             <div class="method-actions">
-              <button @click="executeMethod" class="execute-button">执行分析</button>
+              <button 
+                v-if="currentMethod !== 'add_header'" 
+                @click="executeMethod" 
+                class="execute-button"
+              >
+                执行分析
+              </button>
+              <button 
+                v-else
+                @click="applyHeaderNames"
+                class="execute-button"
+              >
+                应用标题
+              </button>
             </div>
           </div>
         </div>
         
-        <!-- 列名列表区域 -->
-        <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-list-section">
-          <h3>列名列表</h3>
-          <ul class="column-list">
-            <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
-              {{ column }}
-            </li>
-          </ul>
+        <!-- 列名列表和添加标题行区域 -->
+        <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
+          <!-- 列名列表区域 -->
+          <div class="column-list-section">
+            <h3>列名列表</h3>
+            <ul class="column-list">
+              <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
+                {{ column }}
+              </li>
+            </ul>
+          </div>
+          
+          <!-- 添加标题行操作区域 -->
+          <div v-if="currentMethod === 'add_header'" class="add-header-section">
+            <h3>设置列名</h3>
+            <div class="add-header-content">
+              <div class="column-inputs">
+                <div 
+                  v-for="(column, index) in selectedFileColumns" 
+                  :key="index" 
+                  class="column-input-item"
+                >
+                  <input 
+                    :id="'column-' + index"
+                    v-model="newColumnNames[index]" 
+                    :placeholder="'列' + (index + 1)"
+                    type="text"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -286,6 +329,19 @@
         </div>
       </div>
     </div>
+    
+    <!-- 添加标题行弹窗 -->
+    <div class="add-header-modal" v-if="showAddHeaderModal">
+      <div class="add-header-modal-content">
+        <div class="add-header-modal-header">
+          <h3>添加标题行</h3>
+          <button class="close-button" @click="closeAddHeaderModal">×</button>
+        </div>
+        <div class="add-header-modal-body">
+          <p>正在为文件添加标题行，请稍候...</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -294,6 +350,30 @@ import { marked } from 'marked';
 
 export default {
   name: "Dashboard",
+  directives: {
+    clickOutside: {
+      bind(el, binding, vnode) {
+        // 确保元素已经被添加到DOM中
+        setTimeout(() => {
+          el.clickOutsideEvent = function(event) {
+            // 检查点击的元素是否在当前元素内部
+            if (!(el === event.target || el.contains(event.target))) {
+              // 调用绑定的方法
+              vnode.context[binding.expression](event);
+            }
+          };
+          // 将事件监听器添加到 document 上
+          document.addEventListener('click', el.clickOutsideEvent);
+        }, 0);
+      },
+      unbind(el) {
+        // 解除事件监听器
+        if (el.clickOutsideEvent) {
+          document.removeEventListener('click', el.clickOutsideEvent);
+        }
+      }
+    }
+  },
   data() {
     return {
       files: [],
@@ -306,7 +386,7 @@ export default {
           content: "您好！我是您的数据分析助手，请选择一个文件并告诉我您需要什么分析？"
         }
       ],
-      isFileSectionCollapsed: false,
+      isFileSectionCollapsed: true, // 默认收起文件选择区域
       isWaitingForResponse: false,
       // 新增方法选择相关数据
       currentMethod: 'basic_info',
@@ -352,7 +432,8 @@ export default {
           name: '数据处理',
           methods: [
             { id: 'data_cleaning', name: '数据清洗' },
-            { id: 'data_transformation', name: '数据转换' }
+            { id: 'data_transformation', name: '数据转换' },
+            { id: 'add_header', name: '添加标题行' }  // 添加新方法
           ]
         }
       ],
@@ -368,7 +449,10 @@ export default {
         currentPage: 1,
         pageSize: 10,
         loading: true
-      }
+      },
+      // 添加标题行相关数据
+      showAddHeaderModal: false,
+      newColumnNames: []
     }
   },
   async mounted() {
@@ -385,12 +469,29 @@ export default {
       return marked.parse(content);
     },
     
-    toggleFileSection() {
+    toggleFileSection(event) {
+      // 阻止事件冒泡，避免触发clickOutside
+      if (event) {
+        event.stopPropagation();
+      }
+      
       this.isFileSectionCollapsed = !this.isFileSectionCollapsed;
       // 保存文件选择区域的展开/收起状态到localStorage
       localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
     },
     
+    // 关闭文件选择区域
+    closeFileSelection(event) {
+      // 防止事件冒泡导致的误关闭
+      if (event && event.target.closest('.file-selector-trigger')) {
+        return;
+      }
+      
+      this.isFileSectionCollapsed = true;
+      // 保存文件选择区域的展开/收起状态到localStorage
+      localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
+    },
+
     async loadUploadedFiles() {
       // 调用后端API获取用户上传的文件列表
       try {
@@ -465,6 +566,8 @@ export default {
           const result = await response.json();
           if (result.success) {
             this.selectedFileColumns = result.data.column_names;
+            // 初始化新的列名数组
+            this.newColumnNames = new Array(result.data.column_names.length).fill('');
           } else {
             console.error("获取列名失败:", result.error);
             this.selectedFileColumns = [];
@@ -506,6 +609,12 @@ export default {
         return;
       }
       
+      // 如果是添加标题行方法，不跳转到分析页面，而是在当前页面处理
+      if (this.currentMethod === 'add_header') {
+        // 显示添加标题行的UI
+        return;
+      }
+      
       // 保存聊天记录到localStorage
       localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
       
@@ -524,6 +633,61 @@ export default {
           method: this.currentMethod
         }
       });
+    },
+    
+    // 应用自定义标题行
+    async applyHeaderNames() {
+      if (!this.selectedFile) return;
+      
+      // 检查是否所有列都已命名
+      const emptyNames = this.newColumnNames.filter(name => !name.trim()).length;
+      if (emptyNames > 0) {
+        alert(`还有 ${emptyNames} 个列未命名，请为所有列提供名称。`);
+        return;
+      }
+      
+      try {
+        this.showAddHeaderModal = true;
+        
+        const response = await fetch(`/data/${this.selectedFile}/add_header`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            column_names: this.newColumnNames
+          }),
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            // 自动选择新生成的文件
+            await this.loadUploadedFiles(); // 刷新文件列表
+            await this.selectFile(result.data.data_id); // 选择新文件
+            
+            // 显示成功消息
+            alert('标题行添加成功，已自动选择新文件');
+          } else {
+            console.error("添加标题行失败:", result.error);
+            alert("添加标题行失败: " + result.error);
+          }
+        } else {
+          console.error("添加标题行请求失败，状态码:", response.status);
+          alert("添加标题行失败，状态码: " + response.status);
+        }
+      } catch (error) {
+        console.error("添加标题行时发生错误:", error);
+        alert("添加标题行时发生错误: " + error.message);
+      } finally {
+        this.showAddHeaderModal = false;
+      }
+    },
+    
+    // 关闭添加标题行弹窗
+    closeAddHeaderModal() {
+      this.showAddHeaderModal = false;
     },
     
     // 新增方法：恢复保存的状态
@@ -570,6 +734,9 @@ export default {
       const savedFileSectionState = localStorage.getItem('isFileSectionCollapsed');
       if (savedFileSectionState !== null) {
         this.isFileSectionCollapsed = savedFileSectionState === 'true';
+      } else {
+        // 默认收起文件选择区域
+        this.isFileSectionCollapsed = true;
       }
     },
     
@@ -926,84 +1093,67 @@ export default {
   padding: 0;
   max-width: 100%;
   margin: 0;
+  position: relative;
 }
 
 .dashboard-header {
   text-align: center;
-  margin-bottom: 20px;
-  padding: 10px;
+  padding: 10px 0 10px 0 ;
+  border-bottom: 1px solid #ebeef5;
+  position: relative;
 }
 
-.dashboard-header h1 {
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 350px;
+  position: relative;
+}
+
+.file-selector-trigger {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background-color: #f5f7fa;
+  transition: background-color 0.3s;
+  position: relative;
+  z-index: 101;
+}
+
+.file-selector-trigger:hover {
+  background-color: #e1e6ee;
+}
+
+.file-selector-trigger h3 {
+  margin: 0;
   color: #303133;
-  margin-bottom: 10px;
-}
-
-.dashboard-header p {
-  color: #606266;
   font-size: 16px;
 }
 
-.dashboard-content {
-  display: flex;
-  height: calc(100vh - 120px);
-  padding: 0 10px;
-  gap: 10px;
-}
-
-.left-section {
-  flex: 0.5;
-  padding-left: 0px;
-  overflow-y: auto;
-  max-height: 100%;
-}
-
-.middle-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 0 10px;
-  overflow-y: auto;
-  max-height: 100%;
-}
-
-.right-section {
-  flex: 1;
-  padding-right: 10px;
-  overflow-y: auto;
-  max-height: 100%;
-}
-
-.file-selection-section {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  margin-bottom: 0;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  cursor: pointer;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.section-header h2 {
-  margin: 0;
+.dashboard-header h2 {
   color: #303133;
+  margin: 0;
 }
 
-.toggle-icon {
-  font-size: 20px;
-  font-weight: bold;
-  color: #909399;
+/* 文件选择悬浮区域样式 */
+.file-selection-overlay {
+  position: absolute;
+  top: 60px;
+  left: 20px;
+  width: 500px;
+  background: white;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  z-index: 100;
+  padding: 10px;
 }
 
 .file-section-content {
-  padding: 0 20px 20px 20px;
+  padding: 0 10px 10px 10px;
 }
 
 .file-list-container {
@@ -1046,6 +1196,146 @@ export default {
   margin-bottom: 5px;
   position: relative;
   padding-right: 20px;
+  white-space: normal; /* 确保允许换行 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word; /* 更智能的断行 */
+}
+
+.delete-file {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: #909399;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.delete-file:hover {
+  color: #f56c6c;
+  background-color: #fef0f0;
+}
+
+.file-info {
+  display: flex;
+  gap: 15px;
+  font-size: 14px;
+  color: #909399;
+}
+
+.file-actions {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.upload-button {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #409eff;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.upload-button:hover {
+  background-color: #66b1ff;
+}
+
+.dashboard-content {
+  display: flex;
+  height: calc(100vh - 120px);
+  padding: 0 1px;
+  gap: 0;
+  margin-top: 0;
+}
+
+.left-section {
+  flex: 0.5;
+  padding-left: 0;
+  overflow-y: auto;
+  max-height: 100%;
+  border-right: 1px solid #ebeef5;
+}
+
+.middle-section {
+  flex: 1.5;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.right-section {
+  flex: 1;
+  padding-right: 10px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #303133;
+}
+
+.toggle-icon {
+  font-size: 20px;
+  font-weight: bold;
+  color: #909399;
+}
+
+.file-list-container {
+  min-height: 200px;
+}
+
+.no-files {
+  text-align: center;
+  color: #909399;
+  padding: 40px 20px;
+}
+
+.file-list {
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.file-item {
+  padding: 15px;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.file-item:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 6px 0 rgba(64, 158, 255, 0.2);
+}
+
+.file-item.selected {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+}
+
+.file-name {
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 5px;
+  position: relative;
+  padding-right: 20px;
+  white-space: normal; /* 确保允许换行 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word; /* 更智能的断行 */
 }
 
 .delete-file {
@@ -1099,9 +1389,7 @@ export default {
 /* 方法选择区域样式 */
 .method-selection-section {
   background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  padding-top: 10px;
   margin-bottom: 0;
   flex: 1;
   display: flex;
@@ -1110,7 +1398,9 @@ export default {
 
 .method-selection-section h3 {
   margin-top: 0;
-  margin-bottom: 15px;
+  padding-left: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
   color: #303133;
 }
 
@@ -1213,12 +1503,12 @@ export default {
 
 .column-list-section {
   background: white;
-  border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);*/
   flex: 1;
   display: flex;
   flex-direction: column;
+  border-top: 1px solid #ededed;
 }
 
 .column-list-section h3 {
@@ -1245,11 +1535,106 @@ export default {
   border-bottom: none;
 }
 
+/* 列名列表和添加标题行容器 */
+.column-add-header-container {
+  display: flex;
+  gap: 0;
+  flex: 1;
+}
+
+/* 添加标题行区域样式 */
+.add-header-section {
+  background: white;
+  padding: 20px;
+  /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #ededed;
+  border-top: 1px solid #ededed;
+}
+
+.add-header-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #303133;
+}
+
+.add-header-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.column-inputs {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+.column-input-item {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #ebeef5;
+  color: #606266;
+  margin-bottom: 0;
+}
+
+.column-input-item label {
+  width: 100px;
+  margin-right: 10px;
+  color: #606266;
+}
+
+.column-input-item input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #dcdfe6;
+  box-sizing: border-box;
+}
+
+/* 添加标题行弹窗样式 */
+.add-header-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.add-header-modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  padding: 20px;
+}
+
+.add-header-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.add-header-modal-header h3 {
+  margin: 0;
+  color: #303133;
+}
+
+.add-header-modal-body {
+  text-align: center;
+  padding: 20px 0;
+}
+
 .chat-section {
   background: white;
   border-radius: 8px;
-
-
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -1259,11 +1644,11 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .chat-header h2 {
-  margin: 0;
+  padding-left: 20px;
   color: #303133;
 }
 
@@ -1627,10 +2012,9 @@ export default {
 /* 方法描述区域样式 */
 .method-description-section {
   background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  margin-bottom: 20px;
+  padding: 0 20 20 20px;
+  /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); */
+  margin-bottom: 0;
   flex: 0 0 auto;
 }
 
@@ -1680,6 +2064,17 @@ export default {
   .dashboard-content {
     flex-direction: column;
     height: auto;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .file-selection-overlay {
+    width: 95%;
+    top: 100px;
+    left: 2.5%;
   }
   
   .left-section,
