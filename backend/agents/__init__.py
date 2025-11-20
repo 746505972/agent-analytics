@@ -88,6 +88,47 @@ class DataAnalysisAgent:
             return delete_file(data_id, session_id)
         
         self.tools.append(delete_file_tool)
+        
+        # 注册获取用户文件列表工具
+        @tool
+        def list_user_files(session_id: str = None) -> list:
+            """获取用户上传的文件列表，参数为可选的session_id"""
+            # 如果没有提供session_id，返回空列表
+            if not session_id:
+                return []
+            
+            # 导入并调用获取用户文件列表的函数
+            try:
+                from routers.data import get_user_files_list
+                return get_user_files_list(session_id)
+            except Exception as e:
+                # 如果出现错误，返回空列表
+                return []
+        
+        self.tools.append(list_user_files)
+        
+        # 注册添加标题行工具
+        @tool
+        def add_header_tool(file_path: str, column_names: list, session_id: str = None, mode: str = "add") -> dict:
+            """为CSV文件添加标题行并创建新文件，参数为文件路径、列名列表、可选的session_id和模式("add"或"modify")"""
+            from utils.file_manager import add_header_to_file, get_file_path
+            import os
+            
+            # 如果提供了session_id参数，优先使用它
+            effective_session_id = session_id
+            
+            # 如果file_path是相对路径或文件名，则构建完整路径
+            if not os.path.isabs(file_path):
+                # 如果file_path包含.csv扩展名，先去除它，因为get_file_path会自动添加.csv扩展名
+                if file_path.endswith('.csv'):
+                    file_path_without_ext = os.path.splitext(file_path)[0]
+                    file_path = get_file_path(file_path_without_ext, effective_session_id)
+                else:
+                    file_path = get_file_path(file_path, effective_session_id)
+            
+            return add_header_to_file(file_path, column_names, effective_session_id, mode)
+        
+        self.tools.append(add_header_tool)
     
     def register_module_tools(self):
         """
@@ -105,13 +146,14 @@ class DataAnalysisAgent:
         register_ml_tools(self)
         register_visualization_tools(self)
     
-    def process_query(self, query: str, data_context=None):
+    def process_query(self, query: str, data_context=None, session_id=None):
         """
         处理用户查询
         
         Args:
             query (str): 用户的自然语言查询
             data_context: 当前数据上下文
+            session_id: 用户会话ID
             
         Returns:
             dict: 处理结果和响应
@@ -151,13 +193,14 @@ class DataAnalysisAgent:
 示例数据: {data_context.get('sample_data', '无')}
 </数据上下文信息>
 """
+                # 移除了数据上下文信息的日志打印，以保护用户隐私
                 messages.append(HumanMessage(content=context_info))
             
             # 添加用户问题
             messages.append(HumanMessage(content=f"<用户问题>{query}</用户问题>"))
             
-            # 执行agent
-            result = self.agent.invoke({"messages": messages})
+            # 执行agent，传递session_id给工具
+            result = self.agent.invoke({"messages": messages, "session_id": session_id})
             
             # 获取最后一条消息作为输出
             output = result['messages'][-1].content
@@ -168,6 +211,8 @@ class DataAnalysisAgent:
                 'status': 'success'
             }
         except Exception as e:
+            import traceback
+            print(f"处理查询时发生错误: {traceback.format_exc()}")
             return {
                 'query': query,
                 'result': f"处理查询时发生错误: {str(e)}",

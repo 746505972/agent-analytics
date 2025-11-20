@@ -2,7 +2,7 @@
   <div class="analysis-container">
     <div class="analysis-header">
       <div class="header-left">
-        <router-link to="/dashboard" class="back-link">返回仪表板</router-link>
+        <a href="/dashboard" @click.prevent="goToDashboard" class="back-link">返回仪表板</a>
       </div>
       <div class="header-center">
         <h2>{{ getMethodName(analysisMethod) }}分析结果</h2>
@@ -114,7 +114,18 @@
               <span></span>
               <span></span>
             </span>
-            <div v-else v-html="renderMarkdown(message.content)" class="message-content"></div>
+            <div v-else class="message-content-wrapper">
+              <div v-html="renderMarkdown(message.content)" class="message-content"></div>
+              <button 
+                v-if="message.content" 
+                @click="copyMessageText(message.content)"
+                class="copy-button"
+                :class="{ copied: message.copied }"
+                :title="message.copied ? '已复制' : '复制文本'"
+              >
+                {{ message.copied ? '✓ 已复制' : '复制' }}
+              </button>
+            </div>
           </div>
         </div>
         <div class="input-area">
@@ -179,6 +190,18 @@ export default {
     renderMarkdown(content) {
       if (!content) return '';
       return marked.parse(content);
+    },
+    
+    // 返回到仪表板
+    goToDashboard() {
+      // 保存当前聊天记录
+      localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
+      // 保存当前分析方法，以便返回时能记住选择
+      if (this.analysisMethod) {
+        localStorage.setItem('selectedMethod', this.analysisMethod);
+      }
+      // 跳转到仪表板
+      this.$router.push({ name: 'Dashboard' });
     },
     
     async loadAnalysisResult() {
@@ -247,6 +270,48 @@ export default {
       }
     },
     
+    // 添加复制消息文本的方法
+    copyMessageText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        // 添加视觉反馈
+        console.log('文本已复制到剪贴板');
+        // 创建一个临时的提示元素
+        this.showCopyNotification('文本已复制到剪贴板');
+      }).catch(err => {
+        console.error('复制失败:', err);
+        this.showCopyNotification('复制失败: ' + err.message, true);
+      });
+    },
+    
+    // 显示复制通知
+    showCopyNotification(message, isError = false) {
+      // 创建通知元素
+      const notification = document.createElement('div');
+      notification.textContent = message;
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background-color: ${isError ? '#f56c6c' : '#67c23a'};
+        color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+        z-index: 2000;
+        font-size: 14px;
+      `;
+      
+      // 添加到页面
+      document.body.appendChild(notification);
+      
+      // 3秒后移除
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 3000);
+    },
+    
     async sendMessage() {
       if (this.userInput.trim() === "" || this.isWaitingForResponse) {
         return;
@@ -284,6 +349,8 @@ export default {
           history: this.chatMessages.slice(0, -1) // 不包括刚添加的AI回复占位符
         };
         
+// 移除了聊天请求数据的日志打印，以保护用户隐私
+        
         // 发起流式请求
         const response = await fetch('/chat/stream', {
           method: 'POST',
@@ -293,6 +360,8 @@ export default {
           body: JSON.stringify(requestData),
           credentials: 'include'
         });
+        
+// 移除了聊天响应的日志打印，以保护用户隐私
         
         if (response.ok && response.body) {
           const reader = response.body.getReader();
@@ -343,6 +412,11 @@ export default {
                   }
                 }
               }
+            }
+            
+            // 触发DOM更新以实现实时显示效果
+            if (accumulatedContent.length % 5 === 0) {  // 每5个字符触发一次更新
+              await this.$nextTick();
             }
           }
         } else {
@@ -696,6 +770,40 @@ export default {
 .input-area button:disabled {
   background-color: #a0cfff;
   cursor: not-allowed;
+}
+
+/* 复制按钮样式 */
+.message-content-wrapper {
+  position: relative;
+}
+
+.copy-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.message:hover .copy-button {
+  opacity: 1;
+}
+
+.copy-button:hover {
+  background-color: #409eff;
+  color: white;
+}
+
+.copy-button.copied {
+  background-color: #67c23a;
+  color: white;
+  opacity: 1;
 }
 
 @media (max-width: 768px) {

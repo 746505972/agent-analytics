@@ -15,12 +15,12 @@ logger = logging.getLogger(__name__)
 # 数据目录
 DATA_DIR = "data"
 
-def clean_expired_sessions(expiration_hours: int = 1):
+def clean_expired_sessions(expiration_hours: int = 10):
     """
     清理过期的session数据
     
     Args:
-        expiration_hours (int): session过期时间（小时），默认1小时
+        expiration_hours (int): session过期时间（小时），默认10小时
     """
     try:
         if not os.path.exists(DATA_DIR):
@@ -53,12 +53,12 @@ def clean_expired_sessions(expiration_hours: int = 1):
     except Exception as e:
         logger.error(f"清理过期session时发生错误: {e}")
 
-def clean_expired_sessions_and_files(expiration_hours: int = 1):
+def clean_expired_sessions_and_files(expiration_hours: int = 10):
     """
     清理过期的session数据和文件
     
     Args:
-        expiration_hours (int): session过期时间（小时），默认1小时
+        expiration_hours (int): session过期时间（小时），默认10小时
     """
     try:
         if not os.path.exists(DATA_DIR):

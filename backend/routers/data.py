@@ -1,35 +1,78 @@
 import sys
 import os
+import urllib.parse
 
 # 添加项目根目录到sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Request, Body
+from fastapi.responses import JSONResponse, FileResponse
+from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import logging
 
-# 尝试不同的导入方式
 try:
-    # 首先尝试相对导入
-    from ..utils.file_manager import get_file_path, delete_file
+    from utils.file_manager import get_file_path, delete_file, sanitize_filename
 except ImportError:
-    try:
-        # 如果相对导入失败，尝试绝对导入
-        from utils.file_manager import get_file_path, delete_file
-    except ImportError:
-        # 最后尝试直接添加到路径并导入
-        sys.path.insert(0, os.path.join(parent_dir, "utils"))
-        from utils.file_manager import get_file_path, delete_file
+    # 最后尝试直接添加到路径并导入
+    sys.path.insert(0, os.path.join(parent_dir, "utils"))
+    from utils.file_manager import get_file_path, delete_file, sanitize_filename
 
 router = APIRouter(prefix="/data", tags=["data"])
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def get_user_files_list(session_id: str) -> list:
+    """
+    获取用户上传的文件列表
+    
+    Args:
+        session_id (str): 用户会话ID
+        
+    Returns:
+        list: 文件信息列表
+    """
+    # 构建用户目录路径
+    user_dir = os.path.join("data", session_id)
+    
+    # 检查目录是否存在
+    if not os.path.exists(user_dir):
+        return []
+    
+    # 获取目录中的所有CSV文件
+    files = []
+    for filename in os.listdir(user_dir):
+        if filename.endswith(".csv"):
+            file_path = os.path.join(user_dir, filename)
+            if os.path.isfile(file_path):
+                try:
+                    # 获取文件信息
+                    stat = os.stat(file_path)
+                    df = pd.read_csv(file_path, encoding="utf-8-sig")
+                    # 处理NaN值，将其替换为None以便JSON序列化
+                    df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+                    
+                    files.append({
+                        "data_id": os.path.splitext(filename)[0],
+                        "filename": filename,
+                        "rows": len(df),
+                        "columns": len(df.columns),
+                        "size": stat.st_size,
+                        "modified": stat.st_mtime
+                    })
+                except Exception as e:
+                    # 如果某个文件读取出错，跳过该文件
+                    logger.error(f"读取文件 {filename} 时出错: {str(e)}")
+                    continue
+    
+    return files
+
 
 @router.get("/user/files")
 async def get_user_files(request: Request):
@@ -40,41 +83,7 @@ async def get_user_files(request: Request):
         # 获取session_id
         session_id = request.state.session_id
         
-        # 构建用户目录路径
-        user_dir = os.path.join("data", session_id)
-        
-        # 检查目录是否存在
-        if not os.path.exists(user_dir):
-            return JSONResponse(content={
-                "success": True,
-                "data": []
-            })
-        
-        # 获取目录中的所有CSV文件
-        files = []
-        for filename in os.listdir(user_dir):
-            if filename.endswith(".csv"):
-                file_path = os.path.join(user_dir, filename)
-                if os.path.isfile(file_path):
-                    try:
-                        # 获取文件信息
-                        stat = os.stat(file_path)
-                        df = pd.read_csv(file_path, encoding="utf-8-sig")
-                        # 处理NaN值，将其替换为None以便JSON序列化
-                        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
-                        
-                        files.append({
-                            "data_id": os.path.splitext(filename)[0],
-                            "filename": filename,
-                            "rows": len(df),
-                            "columns": len(df.columns),
-                            "size": stat.st_size,
-                            "modified": stat.st_mtime
-                        })
-                    except Exception as e:
-                        # 如果某个文件读取出错，跳过该文件
-                        logger.error(f"读取文件 {filename} 时出错: {str(e)}")
-                        continue
+        files = get_user_files_list(session_id)
         
         return JSONResponse(content={
             "success": True,
@@ -303,6 +312,64 @@ async def delete_data(request: Request, data_id: str):
             }
         )
 
+@router.get("/{data_id}/download")
+async def download_data(request: Request, data_id: str):
+    """
+    下载数据文件接口
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+        
+        # 首先尝试使用原始data_id查找文件
+        file_path = get_file_path(data_id, session_id)
+        logger.info(f"尝试使用原始data_id查找文件: {file_path}")
+        
+        # 如果文件不存在，尝试使用清理后的data_id
+        if not os.path.exists(file_path):
+            # 解码URL编码的data_id
+            decoded_data_id = urllib.parse.unquote(data_id)
+            logger.info(f"原始文件未找到，尝试解码后的data_id: {decoded_data_id}")
+            
+            # 再次尝试使用解码后的data_id
+            file_path = get_file_path(decoded_data_id, session_id)
+            if not os.path.exists(file_path):
+                # 如果仍然不存在，尝试清理后的文件名
+                sanitized_data_id = sanitize_filename(decoded_data_id)
+                logger.info(f"解码后的文件未找到，尝试清理后的data_id: {sanitized_data_id}")
+                file_path = get_file_path(sanitized_data_id, session_id)
+        
+        # 检查文件是否存在
+        if not os.path.exists(file_path):
+            logger.warning(f"文件不存在: {file_path}")
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "success": False,
+                    "error": f"数据文件不存在: {file_path}"
+                }
+            )
+        
+        # 从文件路径中提取实际的data_id（文件名不带扩展名）
+        actual_data_id = os.path.splitext(os.path.basename(file_path))[0]
+        logger.info(f"找到文件，实际data_id为: {actual_data_id}")
+        
+        # 返回文件下载响应
+        return FileResponse(
+            path=file_path,
+            filename=f"{actual_data_id}.csv",
+            media_type='text/csv'
+        )
+    except Exception as e:
+        logger.error(f"下载数据文件时出错: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
 @router.get("/{data_id}/details")
 async def get_data_details(request: Request, data_id: str):
     """
@@ -415,6 +482,64 @@ async def get_data_details(request: Request, data_id: str):
             }
         })
     except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+
+class AddHeaderRequest(BaseModel):
+    column_names: list
+    mode: str = "add"  # "add" for adding header, "modify" for modifying existing header
+
+
+@router.post("/{data_id}/add_header")
+async def add_header(request: Request, data_id: str, body: AddHeaderRequest):
+    """
+    为文件添加标题行
+    
+    Args:
+        request (Request): FastAPI请求对象
+        data_id (str): 数据文件ID
+        body (AddHeaderRequest): 请求体，包含列名列表和模式
+        
+    Returns:
+        JSONResponse: 新文件的信息
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+        
+        # 构建文件路径
+        file_path = get_file_path(data_id, session_id)
+        if not os.path.exists(file_path):
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "success": False,
+                    "error": "数据文件不存在"
+                }
+            )
+        
+        # 导入并调用添加标题行的函数
+        try:
+            from utils.file_manager import add_header_to_file
+        except ImportError:
+            # 最后尝试直接添加到路径并导入
+            sys.path.insert(0, os.path.join(parent_dir, "utils"))
+            from utils.file_manager import add_header_to_file
+                
+        result = add_header_to_file(file_path, body.column_names, session_id, mode=body.mode)
+        
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"添加标题行时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={

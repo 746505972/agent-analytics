@@ -1,100 +1,221 @@
 <template>
   <div class="dashboard-container">
     <div class="dashboard-header">
-      <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
+      <div class="header-content">
+        <div class="file-selector-trigger" @click="toggleFileSection">
+          <h3>选择分析文件</h3>
+          <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
+        </div>
+        <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
+      </div>
+    </div>
+    
+    <!-- 文件选择悬浮区域 -->
+    <div v-if="!isFileSectionCollapsed" class="file-selection-overlay" v-click-outside="closeFileSelection">
+      <div class="file-selection-content">
+        <div class="file-list-container">
+          <div v-if="files.length === 0" class="no-files">
+            暂无上传文件，请先上传文件
+          </div>
+          <div v-else class="file-list">
+            <div 
+              v-for="file in files" 
+              :key="file.data_id"
+              class="file-item"
+              :class="{ selected: selectedFile === file.data_id }"
+              @click="selectFile(file.data_id)"
+            >
+              <div class="file-name">
+                {{ file.filename }}
+                <span class="delete-file" @click.stop="deleteFile(file.data_id)">×</span>
+              </div>
+              <div class="file-info">
+                <span>行数: {{ file.rows }}</span>
+                <span>列数: {{ file.columns }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="file-actions">
+          <router-link to="/upload" class="upload-button">上传新文件</router-link>
+        </div>
+        <!-- 添加查看数据链接 -->
+        <div v-if="selectedFile" class="file-actions-container">
+          <div class="view-data-link" @click="showDataPreview">
+            查看数据
+          </div>
+          <div class="download-file-link" @click="downloadFile">
+            下载文件
+          </div>
+        </div>
+      </div>
     </div>
     
     <div class="dashboard-content">
-      <!-- 左侧：文件选择区域 -->
+      <!-- 左侧：方法选择区域 -->
       <div class="left-section">
-        <div class="file-selection-section">
-          <div class="section-header" @click="toggleFileSection">
-            <h2>选择分析文件</h2>
-            <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
-          </div>
-          
-          <div v-show="!isFileSectionCollapsed" class="file-section-content">
-            <div class="file-list-container">
-              <div v-if="files.length === 0" class="no-files">
-                暂无上传文件，请先上传文件
+        <!-- 方法选择区域移到左栏 -->
+        <div v-if="selectedFile" class="method-selection-section">
+
+          <div class="method-categories">
+            <div 
+              v-for="category in methodCategories" 
+              :key="category.id"
+              class="method-category"
+              :class="{ active: currentCategory === category.id }"
+            >
+              <div class="category-header" @click="selectCategory(category.id)">
+                <h4>{{ category.name }}</h4>
+                <span class="toggle-icon">{{ currentCategory === category.id ? '−' : '+' }}</span>
               </div>
-              <div v-else class="file-list">
-                <div 
-                  v-for="file in files" 
-                  :key="file.data_id"
-                  class="file-item"
-                  :class="{ selected: selectedFile === file.data_id }"
-                  @click="selectFile(file.data_id)"
+              <div v-show="currentCategory === category.id" class="category-methods">
+                <button 
+                  v-for="method in category.methods" 
+                  :key="method.id"
+                  :class="{ active: currentMethod === method.id }"
+                  @click="selectMethod(method.id)"
+                  class="method-tab"
                 >
-                  <div class="file-name">
-                    {{ file.filename }}
-                    <span class="delete-file" @click.stop="deleteFile(file.data_id)">×</span>
-                  </div>
-                  <div class="file-info">
-                    <span>行数: {{ file.rows }}</span>
-                    <span>列数: {{ file.columns }}</span>
-                  </div>
-                </div>
+                  {{ method.name }}
+                </button>
               </div>
-            </div>
-            <div class="file-actions">
-              <router-link to="/upload" class="upload-button">上传新文件</router-link>
-            </div>
-            <!-- 添加查看数据链接 -->
-            <div v-if="selectedFile" class="view-data-link" @click="showDataPreview">
-              查看数据
             </div>
           </div>
         </div>
       </div>
       
-      <!-- 中间：方法选择和列名列表区域 -->
+      <!-- 中间：列名列表区域 -->
       <div class="middle-section">
-        <!-- 方法选择区域 -->
-        <div v-if="selectedFile" class="method-selection-section">
-          <h3>方法选择</h3>
-          <div class="method-tabs">
-            <button 
-              v-for="method in analysisMethods" 
-              :key="method.id"
-              :class="{ active: currentMethod === method.id }"
-              @click="selectMethod(method.id)"
-              class="method-tab"
-            >
-              {{ method.name }}
-            </button>
-          </div>
-          <div class="method-content">
-            <div v-if="currentMethod === 'basic_info'" class="basic-info-method">
-              <h4>数据集基本信息</h4>
-              <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
+        <!-- 方法描述和执行按钮移到中栏 -->
+        <div v-if="selectedFile" class="method-description-section">
+          <div class="method-description-content">
+            <div class="method-content">
+              <div v-if="currentMethod === 'basic_info'">
+                <h4>数据集基本信息</h4>
+                <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
+              </div>
+              <div v-else-if="currentMethod === 'statistical_summary'" class="statistical-summary-method">
+                <h4>统计摘要</h4>
+                <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
+              </div>
+              <div v-else-if="currentMethod === 'correlation_analysis'" class="correlation-analysis-method">
+                <h4>相关性分析</h4>
+                <p>分析数据集中各变量之间的相关性。</p>
+              </div>
+              <div v-else-if="currentMethod === 'distribution_analysis'" class="distribution-analysis-method">
+                <h4>分布分析</h4>
+                <p>分析数据集中各变量的分布情况。</p>
+              </div>
+              <div v-else-if="currentMethod === 'visualization'" class="visualization-method">
+                <h4>数据可视化</h4>
+                <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
+              </div>
+              <div v-else-if="currentMethod === 'ml_analysis'" class="ml-analysis-method">
+                <h4>机器学习分析</h4>
+                <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
+              </div>
+              <div v-else-if="currentMethod === 'clustering'" class="clustering-method">
+                <h4>聚类分析</h4>
+                <p>使用聚类算法对数据进行分组分析。</p>
+              </div>
+              <div v-else-if="currentMethod === 'classification'" class="classification-method">
+                <h4>分类分析</h4>
+                <p>使用分类算法对数据进行分类预测。</p>
+              </div>
+              <div v-else-if="currentMethod === 'regression'" class="regression-method">
+                <h4>回归分析</h4>
+                <p>使用回归算法分析变量之间的关系。</p>
+              </div>
+              <div v-else-if="currentMethod === 'text_analysis'" class="text-analysis-method">
+                <h4>文本分析</h4>
+                <p>对文本数据进行分析，提取关键信息和模式。</p>
+              </div>
+              <div v-else-if="currentMethod === 'sentiment_analysis'" class="sentiment-analysis-method">
+                <h4>情感分析</h4>
+                <p>分析文本数据中的情感倾向。</p>
+              </div>
+              <div v-else-if="currentMethod === 'data_cleaning'" class="data-cleaning-method">
+                <h4>数据清洗</h4>
+                <p>清理数据中的噪声和异常值。</p>
+              </div>
+              <div v-else-if="currentMethod === 'data_transformation'" class="data-transformation-method">
+                <h4>数据转换</h4>
+                <p>对数据进行转换操作，如标准化、归一化等。</p>
+              </div>
+              <div v-else-if="currentMethod === 'add_header'" class="add-header-method">
+                <h4>添加/修改标题行</h4>
+                <p>为没有标题行的文件添加自定义列名，或修改现有标题行。</p>
+                <div class="header-mode-toggle">
+                  <label>
+                    <input 
+                      type="radio" 
+                      v-model="headerEditMode" 
+                      :value="false" 
+                      @change="handleHeaderModeChange"
+                    > 添加标题行
+                  </label>
+                  <label>
+                    <input 
+                      type="radio" 
+                      v-model="headerEditMode" 
+                      :value="true" 
+                      @change="handleHeaderModeChange"
+                    > 修改标题行
+                  </label>
+                </div>
+              </div>
             </div>
-            <div v-else-if="currentMethod === 'statistical_summary'" class="statistical-summary-method">
-              <h4>统计摘要</h4>
-              <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
+            <div class="method-actions">
+              <button 
+                v-if="currentMethod !== 'add_header'" 
+                @click="executeMethod" 
+                class="execute-button"
+              >
+                执行分析
+              </button>
+              <button 
+                v-else
+                @click="applyHeaderNames"
+                class="execute-button"
+              >
+                应用标题
+              </button>
             </div>
-            <div v-else-if="currentMethod === 'visualization'" class="visualization-method">
-              <h4>数据可视化</h4>
-              <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
-            </div>
-            <div v-else-if="currentMethod === 'ml_analysis'" class="ml-analysis-method">
-              <h4>机器学习分析</h4>
-              <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
-            </div>
-          </div>
-          <div class="method-actions">
-            <button @click="executeMethod" class="execute-button">执行分析</button>
           </div>
         </div>
         
-        <!-- 列名列表区域 -->
-        <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-list-section">
-          <h3>列名列表</h3>
-          <ul class="column-list">
-            <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
-              {{ column }}
-            </li>
-          </ul>
+        <!-- 列名列表和添加标题行区域 -->
+        <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
+          <!-- 列名列表区域 -->
+          <div class="column-list-section">
+            <h3>列名列表</h3>
+            <ul class="column-list">
+              <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
+                {{ column }}
+              </li>
+            </ul>
+          </div>
+          
+          <!-- 添加标题行操作区域 -->
+          <div v-if="currentMethod === 'add_header'" class="add-header-section">
+            <h3>设置列名</h3>
+            <div class="add-header-content">
+              <div class="column-inputs">
+                <div 
+                  v-for="(column, index) in selectedFileColumns" 
+                  :key="index" 
+                  class="column-input-item"
+                >
+                  <input 
+                    :id="'column-' + index"
+                    v-model="newColumnNames[index]" 
+                    :placeholder="'列' + (index + 1)"
+                    type="text"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       
@@ -118,7 +239,18 @@
                   <span></span>
                   <span></span>
                 </span>
-                <div v-else v-html="renderMarkdown(message.content)" class="message-content"></div>
+                <div v-else class="message-content-wrapper">
+                  <div v-html="renderMarkdown(message.content)" class="message-content"></div>
+                  <button 
+                    v-if="message.content" 
+                    @click="copyMessageText(message.content)"
+                    class="copy-button"
+                    :class="{ copied: message.copied }"
+                    :title="message.copied ? '已复制' : '复制文本'"
+                  >
+                    {{ message.copied ? '✓ 已复制' : '复制' }}
+                  </button>
+                </div>
               </div>
             </div>
             <div class="input-area">
@@ -215,6 +347,19 @@
         </div>
       </div>
     </div>
+    
+    <!-- 添加标题行弹窗 -->
+    <div class="add-header-modal" v-if="showAddHeaderModal">
+      <div class="add-header-modal-content">
+        <div class="add-header-modal-header">
+          <h3>添加标题行</h3>
+          <button class="close-button" @click="closeAddHeaderModal">×</button>
+        </div>
+        <div class="add-header-modal-body">
+          <p>正在为文件添加标题行，请稍候...</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -223,6 +368,34 @@ import { marked } from 'marked';
 
 export default {
   name: "Dashboard",
+  directives: {
+    clickOutside: {
+      mounted(el, binding, vnode) {
+        // 确保元素已经被添加到DOM中
+        setTimeout(() => {
+          el.clickOutsideEvent = function(event) {
+            // 检查点击的元素是否在当前元素内部
+            if (!(el === event.target || el.contains(event.target))) {
+              // 检查绑定的值是否为函数
+              const handler = binding.value;
+              if (typeof handler === 'function') {
+                // 调用绑定的方法
+                handler(event);
+              }
+            }
+          };
+          // 将事件监听器添加到 document 上
+          document.addEventListener('click', el.clickOutsideEvent);
+        }, 0);
+      },
+      unmounted(el) {
+        // 解除事件监听器
+        if (el.clickOutsideEvent) {
+          document.removeEventListener('click', el.clickOutsideEvent);
+        }
+      }
+    }
+  },
   data() {
     return {
       files: [],
@@ -235,15 +408,56 @@ export default {
           content: "您好！我是您的数据分析助手，请选择一个文件并告诉我您需要什么分析？"
         }
       ],
-      isFileSectionCollapsed: false,
+      isFileSectionCollapsed: true, // 默认收起文件选择区域
       isWaitingForResponse: false,
       // 新增方法选择相关数据
       currentMethod: 'basic_info',
-      analysisMethods: [
-        { id: 'basic_info', name: '基本信息' },
-        { id: 'statistical_summary', name: '统计摘要' },
-        { id: 'visualization', name: '数据可视化' },
-        { id: 'ml_analysis', name: '机器学习分析' }
+      currentCategory: 'statistics',
+      methodCategories: [
+        {
+          id: 'statistics',
+          name: '统计方法',
+          methods: [
+            { id: 'basic_info', name: '基本信息' },
+            { id: 'statistical_summary', name: '统计摘要' },
+            { id: 'correlation_analysis', name: '相关性分析' },
+            { id: 'distribution_analysis', name: '分布分析' }
+          ]
+        },
+        {
+          id: 'ml',
+          name: '机器学习',
+          methods: [
+            { id: 'ml_analysis', name: '机器学习分析' },
+            { id: 'clustering', name: '聚类分析' },
+            { id: 'classification', name: '分类分析' },
+            { id: 'regression', name: '回归分析' }
+          ]
+        },
+        {
+          id: 'visualization',
+          name: '可视化',
+          methods: [
+            { id: 'visualization', name: '数据可视化' }
+          ]
+        },
+        {
+          id: 'nlp',
+          name: '文本分析',
+          methods: [
+            { id: 'text_analysis', name: '文本分析' },
+            { id: 'sentiment_analysis', name: '情感分析' }
+          ]
+        },
+        {
+          id: 'data_processing',
+          name: '数据处理',
+          methods: [
+            { id: 'data_cleaning', name: '数据清洗' },
+            { id: 'data_transformation', name: '数据转换' },
+            { id: 'add_header', name: '添加/修改标题行' }  // 修改方法名称
+          ]
+        }
       ],
       // 数据预览弹窗相关数据
       showPreviewModal: false,
@@ -257,7 +471,11 @@ export default {
         currentPage: 1,
         pageSize: 10,
         loading: true
-      }
+      },
+      // 添加标题行相关数据
+      showAddHeaderModal: false,
+      newColumnNames: [],
+      headerEditMode: true  // 修改：默认为修改模式
     }
   },
   async mounted() {
@@ -266,6 +484,14 @@ export default {
     this.restoreState();
     // 检查是否有刚上传的文件需要默认选中
     this.checkAndSelectUploadedFile();
+    
+    // 初始化列名输入框状态
+    if (this.currentMethod === 'add_header') {
+      this.headerEditMode = true;
+      if (this.selectedFileColumns.length > 0) {
+        this.newColumnNames = [...this.selectedFileColumns];
+      }
+    }
   },
   methods: {
     // 添加Markdown渲染方法
@@ -274,10 +500,35 @@ export default {
       return marked.parse(content);
     },
     
-    toggleFileSection() {
-      this.isFileSectionCollapsed = !this.isFileSectionCollapsed;
+    // 处理标题行模式切换
+    handleHeaderModeChange() {
+      if (this.headerEditMode && this.selectedFileColumns.length > 0) {
+        // 修改模式：填入当前列名
+        this.newColumnNames = [...this.selectedFileColumns];
+      } else {
+        // 添加模式：清空列名
+        this.newColumnNames = new Array(this.selectedFileColumns.length).fill('');
+      }
     },
     
+    toggleFileSection(event) {
+      // 阻止事件冒泡，避免触发clickOutside
+      if (event) {
+        event.stopPropagation();
+      }
+      
+      this.isFileSectionCollapsed = !this.isFileSectionCollapsed;
+      // 保存文件选择区域的展开/收起状态到localStorage
+      localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
+    },
+    
+    // 关闭文件选择区域
+    closeFileSelection() {
+      this.isFileSectionCollapsed = true;
+      // 保存文件选择区域的展开/收起状态到localStorage
+      localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
+    },
+
     async loadUploadedFiles() {
       // 调用后端API获取用户上传的文件列表
       try {
@@ -352,6 +603,8 @@ export default {
           const result = await response.json();
           if (result.success) {
             this.selectedFileColumns = result.data.column_names;
+            // 初始化新的列名数组
+            this.newColumnNames = [...result.data.column_names]; // 默认填入原列名
           } else {
             console.error("获取列名失败:", result.error);
             this.selectedFileColumns = [];
@@ -368,6 +621,33 @@ export default {
     
     selectMethod(methodId) {
       this.currentMethod = methodId;
+      // 保存选中的方法到localStorage
+      localStorage.setItem('selectedMethod', methodId);
+      
+      // 根据选中的方法自动展开对应的大类
+      const category = this.methodCategories.find(cat => 
+        cat.methods.some(method => method.id === methodId)
+      );
+      if (category) {
+        this.currentCategory = category.id;
+        // 保存当前展开的大类
+        localStorage.setItem('selectedCategory', category.id);
+      }
+      
+      // 如果选择的是添加标题行方法，设置编辑模式
+      if (methodId === 'add_header') {
+        this.headerEditMode = true; // 修改：默认为修改模式
+        // 初始化列名输入框为当前列名
+        if (this.selectedFileColumns.length > 0) {
+          this.newColumnNames = [...this.selectedFileColumns];
+        }
+      }
+    },
+    
+    selectCategory(categoryId) {
+      this.currentCategory = this.currentCategory === categoryId ? null : categoryId;
+      // 保存当前展开的大类
+      localStorage.setItem('selectedCategory', this.currentCategory || '');
     },
     
     executeMethod() {
@@ -375,8 +655,21 @@ export default {
         return;
       }
       
+      // 如果是添加标题行方法，不跳转到分析页面，而是在当前页面处理
+      if (this.currentMethod === 'add_header') {
+        // 显示添加标题行的UI
+        return;
+      }
+      
       // 保存聊天记录到localStorage
       localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
+      
+      // 保存文件选择区域的展开/收起状态
+      localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
+      
+      // 保存当前选中的方法和大类
+      localStorage.setItem('selectedMethod', this.currentMethod);
+      localStorage.setItem('selectedCategory', this.currentCategory);
       
       // 根据选择的方法跳转到相应的分析页面
       this.$router.push({
@@ -386,6 +679,66 @@ export default {
           method: this.currentMethod
         }
       });
+    },
+    
+    // 应用自定义标题行
+    async applyHeaderNames() {
+      if (!this.selectedFile) return;
+      
+      // 检查是否所有列都已命名
+      const emptyNames = this.newColumnNames.filter(name => !name.trim()).length;
+      if (emptyNames > 0) {
+        alert(`还有 ${emptyNames} 个列未命名，请为所有列提供名称。`);
+        return;
+      }
+      
+      try {
+        this.showAddHeaderModal = true;
+        
+        const response = await fetch(`/data/${this.selectedFile}/add_header`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            column_names: this.newColumnNames,
+            mode: this.headerEditMode ? "modify" : "add"  // 添加模式参数
+          }),
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            // 自动选择新生成的文件
+            await this.loadUploadedFiles(); // 刷新文件列表
+            await this.selectFile(result.data.data_id); // 选择新文件
+            
+            // 显示成功消息
+            if (this.headerEditMode) {
+              alert('标题行修改成功，已自动选择新文件');
+            } else {
+              alert('标题行添加成功，已自动选择新文件');
+            }
+          } else {
+            console.error("添加标题行失败:", result.error);
+            alert("添加标题行失败: " + result.error);
+          }
+        } else {
+          console.error("添加标题行请求失败，状态码:", response.status);
+          alert("添加标题行失败，状态码: " + response.status);
+        }
+      } catch (error) {
+        console.error("添加标题行时发生错误:", error);
+        alert("添加标题行时发生错误: " + error.message);
+      } finally {
+        this.showAddHeaderModal = false;
+      }
+    },
+    
+    // 关闭添加标题行弹窗
+    closeAddHeaderModal() {
+      this.showAddHeaderModal = false;
     },
     
     // 新增方法：恢复保存的状态
@@ -398,6 +751,26 @@ export default {
         this.selectFile(savedSelectedFile);
       }
       
+      // 恢复选中的方法
+      const savedSelectedMethod = localStorage.getItem('selectedMethod');
+      if (savedSelectedMethod) {
+        this.currentMethod = savedSelectedMethod;
+      }
+      
+      // 恢复展开的大类
+      const savedSelectedCategory = localStorage.getItem('selectedCategory');
+      if (savedSelectedCategory) {
+        this.currentCategory = savedSelectedCategory;
+      } else if (savedSelectedMethod) {
+        // 如果没有保存的大类状态但有选中的方法，则自动确定大类
+        const category = this.methodCategories.find(cat => 
+          cat.methods.some(method => method.id === savedSelectedMethod)
+        );
+        if (category) {
+          this.currentCategory = category.id;
+        }
+      }
+      
       // 恢复聊天记录
       const savedChatMessages = localStorage.getItem('dashboardChatMessages');
       if (savedChatMessages) {
@@ -405,6 +778,23 @@ export default {
           this.chatMessages = JSON.parse(savedChatMessages);
         } catch (e) {
           console.error("解析保存的聊天记录失败:", e);
+        }
+      }
+      
+      // 恢复文件选择区域的展开/收起状态
+      const savedFileSectionState = localStorage.getItem('isFileSectionCollapsed');
+      if (savedFileSectionState !== null) {
+        this.isFileSectionCollapsed = savedFileSectionState === 'true';
+      } else {
+        // 默认收起文件选择区域
+        this.isFileSectionCollapsed = true;
+      }
+      
+      // 初始化添加/修改标题行模式
+      if (this.currentMethod === 'add_header') {
+        this.headerEditMode = true; // 修改：默认为修改模式
+        if (this.selectedFileColumns.length > 0) {
+          this.newColumnNames = [...this.selectedFileColumns];
         }
       }
     },
@@ -417,6 +807,11 @@ export default {
         // 如果有刚上传的文件且在文件列表中存在，则默认选中它
         this.selectFile(currentDataId);
       }
+    },
+    
+    // 页面激活时恢复状态（从其他页面返回时调用）
+    activated() {
+      this.restoreState();
     },
     
     async sendMessage() {
@@ -508,13 +903,18 @@ export default {
                       console.log("更新内容:", accumulatedContent);
                       // 更新AI回复内容
                       this.chatMessages[aiMessageIndex].content = accumulatedContent;
-                      // 滚动到底部
-                      this.$nextTick(() => {
+                      // 滚动到底部并触发更新
+                      await this.$nextTick(() => {
                         const messagesContainer = document.querySelector('.messages');
                         if (messagesContainer) {
                           messagesContainer.scrollTop = messagesContainer.scrollHeight;
                         }
                       });
+                                          
+                      // 每累积一定字符数就强制更新DOM以实现实时显示效果
+                      if (accumulatedContent.length % 5 === 0) {
+                        await this.$nextTick();
+                      }
                     } else if (parsed.error) {
                       console.error("流式响应错误:", parsed.error);
                       this.chatMessages[aiMessageIndex].content = `错误: ${parsed.error}`;
@@ -524,6 +924,9 @@ export default {
                     console.error("解析流数据错误:", e, "原始数据:", data);
                     // 即使解析失败，也尝试显示原始内容
                     this.chatMessages[aiMessageIndex].content = `解析错误: ${data}`;
+                    
+                    // 强制更新DOM
+                    await this.$nextTick();
                   }
                 } else {
                   // 处理不以 'data: ' 开头的行，可能是错误信息
@@ -574,6 +977,48 @@ export default {
         // 清除localStorage中的聊天记录
         localStorage.removeItem('dashboardChatMessages');
       }
+    },
+    
+    // 添加复制消息文本的方法
+    copyMessageText(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        // 添加视觉反馈
+        console.log('文本已复制到剪贴板');
+        // 创建一个临时的提示元素
+        this.showCopyNotification('文本已复制到剪贴板');
+      }).catch(err => {
+        console.error('复制失败:', err);
+        this.showCopyNotification('复制失败: ' + err.message, true);
+      });
+    },
+    
+    // 显示复制通知
+    showCopyNotification(message, isError = false) {
+      // 创建通知元素
+      const notification = document.createElement('div');
+      notification.textContent = message;
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background-color: ${isError ? '#f56c6c' : '#67c23a'};
+        color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+        z-index: 2000;
+        font-size: 14px;
+      `;
+      
+      // 添加到页面
+      document.body.appendChild(notification);
+      
+      // 3秒后移除
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 3000);
     },
     
     getSelectedFileName() {
@@ -673,6 +1118,31 @@ export default {
         this.changePage(this.previewData.currentPage + 1);
       }
     },
+    
+    // 下载文件方法
+    downloadFile() {
+      if (!this.selectedFile) return;
+      
+      // 获取选中的文件信息
+      const selectedFile = this.files.find(file => file.data_id === this.selectedFile);
+      if (!selectedFile) return;
+      
+      // 构造下载链接
+      const downloadUrl = `/data/${this.selectedFile}/download`;
+      
+      // 创建一个隐藏的a标签用于下载
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = selectedFile.filename;
+      link.style.display = 'none';
+      
+      // 添加到页面并触发点击
+      document.body.appendChild(link);
+      link.click();
+      
+      // 清理
+      document.body.removeChild(link);
+    }
   }
 }
 </script>
@@ -682,84 +1152,63 @@ export default {
   padding: 0;
   max-width: 100%;
   margin: 0;
+  position: relative;
 }
 
 .dashboard-header {
   text-align: center;
-  margin-bottom: 20px;
-  padding: 10px;
+  padding: 10px 0 10px 0 ;
+  border-bottom: 1px solid #ebeef5;
+  position: relative;
 }
 
-.dashboard-header h1 {
+.header-content {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 350px;
+  position: relative;
+}
+
+.file-selector-trigger {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 4px;
+  background-color: #f5f7fa;
+  transition: background-color 0.3s;
+  position: relative;
+  z-index: 101;
+}
+
+.file-selector-trigger:hover {
+  background-color: #e1e6ee;
+}
+
+.file-selector-trigger h3 {
+  margin: 0;
   color: #303133;
-  margin-bottom: 10px;
-}
-
-.dashboard-header p {
-  color: #606266;
   font-size: 16px;
 }
 
-.dashboard-content {
-  display: flex;
-  height: calc(100vh - 120px);
-  padding: 0 10px;
-  gap: 10px;
-}
-
-.left-section {
-  flex: 0.5;
-  padding-left: 10px;
-  overflow-y: auto;
-  max-height: 100%;
-}
-
-.middle-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding: 0 10px;
-  overflow-y: auto;
-  max-height: 100%;
-}
-
-.right-section {
-  flex: 1;
-  padding-right: 10px;
-  overflow-y: auto;
-  max-height: 100%;
-}
-
-.file-selection-section {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  margin-bottom: 0;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  cursor: pointer;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.section-header h2 {
-  margin: 0;
+.dashboard-header h2 {
   color: #303133;
+  margin: 0;
 }
 
-.toggle-icon {
-  font-size: 20px;
-  font-weight: bold;
-  color: #909399;
-}
-
-.file-section-content {
-  padding: 0 20px 20px 20px;
+/* 文件选择悬浮区域样式 */
+.file-selection-overlay {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  width: 300px;
+  background: white;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  z-index: 100;
+  padding: 10px;
 }
 
 .file-list-container {
@@ -802,6 +1251,146 @@ export default {
   margin-bottom: 5px;
   position: relative;
   padding-right: 20px;
+  white-space: normal; /* 确保允许换行 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word; /* 更智能的断行 */
+}
+
+.delete-file {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: #909399;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s;
+}
+
+.delete-file:hover {
+  color: #f56c6c;
+  background-color: #fef0f0;
+}
+
+.file-info {
+  display: flex;
+  gap: 15px;
+  font-size: 14px;
+  color: #909399;
+}
+
+.file-actions {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.upload-button {
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #409eff;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.3s;
+}
+
+.upload-button:hover {
+  background-color: #66b1ff;
+}
+
+.dashboard-content {
+  display: flex;
+  height: calc(100vh - 120px);
+  padding: 0 1px;
+  gap: 0;
+  margin-top: 0;
+}
+
+.left-section {
+  flex: 0.5;
+  padding-left: 0;
+  overflow-y: auto;
+  max-height: 100%;
+  border-right: 1px solid #ebeef5;
+}
+
+.middle-section {
+  flex: 1.5;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.right-section {
+  flex: 1;
+  padding-right: 10px;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.section-header h3 {
+  margin: 0;
+  color: #303133;
+}
+
+.toggle-icon {
+  font-size: 20px;
+  font-weight: bold;
+  color: #909399;
+}
+
+.file-list-container {
+  min-height: 200px;
+}
+
+.no-files {
+  text-align: center;
+  color: #909399;
+  padding: 40px 20px;
+}
+
+.file-list {
+  max-height: calc(100vh - 300px);
+  overflow-y: auto;
+}
+
+.file-item {
+  padding: 15px;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.file-item:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 6px 0 rgba(64, 158, 255, 0.2);
+}
+
+.file-item.selected {
+  border-color: #409eff;
+  background-color: #ecf5ff;
+}
+
+.file-name {
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 5px;
+  position: relative;
+  padding-right: 20px;
+  white-space: normal; /* 确保允许换行 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: break-word; /* 更智能的断行 */
 }
 
 .delete-file {
@@ -855,9 +1444,7 @@ export default {
 /* 方法选择区域样式 */
 .method-selection-section {
   background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  padding-top: 10px;
   margin-bottom: 0;
   flex: 1;
   display: flex;
@@ -866,15 +1453,56 @@ export default {
 
 .method-selection-section h3 {
   margin-top: 0;
-  margin-bottom: 15px;
+  padding-left: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
   color: #303133;
 }
 
-.method-tabs {
-  display: flex;
-  gap: 10px;
+.method-categories {
   margin-bottom: 15px;
+}
+
+.method-category {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  margin-bottom: 10px;
+}
+
+.method-category.active {
+  border-color: #409eff;
+}
+
+.category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  cursor: pointer;
+  background-color: #f5f7fa;
+}
+
+.method-category.active .category-header {
+  background-color: #ecf5ff;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.category-header h4 {
+  margin: 0;
+  color: #303133;
+}
+
+.toggle-icon {
+  font-size: 18px;
+  font-weight: bold;
+  color: #909399;
+}
+
+.category-methods {
+  padding: 10px 15px;
+  display: flex;
   flex-wrap: wrap;
+  gap: 10px;
 }
 
 .method-tab {
@@ -900,6 +1528,9 @@ export default {
 .method-content {
   flex: 1;
   margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
 }
 
 .method-content h4 {
@@ -927,12 +1558,12 @@ export default {
 
 .column-list-section {
   background: white;
-  border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);*/
   flex: 1;
   display: flex;
   flex-direction: column;
+  border-top: 1px solid #ededed;
 }
 
 .column-list-section h3 {
@@ -959,11 +1590,140 @@ export default {
   border-bottom: none;
 }
 
+/* 列名列表和添加标题行容器 */
+.column-add-header-container {
+  display: flex;
+  gap: 0;
+  flex: 1;
+}
+
+/* 添加标题行区域样式 */
+.add-header-section {
+  background: white;
+  padding: 20px;
+  /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); */
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #ededed;
+  border-top: 1px solid #ededed;
+}
+
+.add-header-section h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  color: #303133;
+}
+
+.add-header-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.header-mode-toggle {
+  margin-bottom: 15px;
+}
+
+.header-mode-toggle label {
+  margin-right: 15px;
+  font-weight: normal;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.header-mode-toggle input[type="radio"] {
+  margin-right: 5px;
+}
+
+.column-inputs {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 20px;
+}
+
+.column-input-item {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #ebeef5;
+  color: #606266;
+  margin-bottom: 0;
+}
+
+.column-input-item label {
+  width: 100px;
+  margin-right: 10px;
+  color: #606266;
+}
+
+.column-input-item input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #dcdfe6;
+  box-sizing: border-box;
+}
+
+/* 添加标题行弹窗样式 */
+.add-header-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.add-header-modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90%;
+  padding: 20px;
+}
+
+.add-header-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.add-header-modal-header h3 {
+  margin: 0;
+  color: #303133;
+}
+
+.header-mode-toggle {
+  margin-top: 10px;
+}
+
+.header-mode-toggle label {
+  margin-right: 15px;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #909399;
+}
+
+.add-header-modal-body {
+  text-align: center;
+  padding: 20px 0;
+}
+
 .chat-section {
   background: white;
   border-radius: 8px;
-
-
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -973,11 +1733,11 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 .chat-header h2 {
-  margin: 0;
+  padding-left: 20px;
   color: #303133;
 }
 
@@ -1034,45 +1794,37 @@ export default {
   color: #303133;
 }
 
-.message-content :deep(p) {
-  margin: 0 0 10px 0;
+.message-content-wrapper {
+  position: relative;
 }
 
-.message-content :deep(ul),
-.message-content :deep(ol) {
-  margin: 10px 0;
-  padding-left: 20px;
+.copy-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
 }
 
-.message-content :deep(li) {
-  margin-bottom: 5px;
+.message:hover .copy-button {
+  opacity: 1;
 }
 
-.message-content :deep(strong) {
-  font-weight: bold;
+.copy-button:hover {
+  background-color: #409eff;
+  color: white;
 }
 
-.message-content :deep(em) {
-  font-style: italic;
-}
-
-.message-content :deep(code) {
-  background-color: #f0f0f0;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-family: monospace;
-}
-
-.message-content :deep(pre) {
-  background-color: #f0f0f0;
-  padding: 10px;
-  border-radius: 5px;
-  overflow-x: auto;
-}
-
-.message-content :deep(pre > code) {
-  background: none;
-  padding: 0;
+.copy-button.copied {
+  background-color: #67c23a;
+  color: white;
+  opacity: 1;
 }
 
 .typing-indicator {
@@ -1142,11 +1894,24 @@ export default {
   cursor: not-allowed;
 }
 
+/* 文件操作链接容器 */
+.file-actions-container {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 15px;
+}
+
 /* 查看数据链接样式 */
 .view-data-link {
-  text-align: center;
-  margin-top: 15px;
   color: #409eff;
+  cursor: pointer;
+  font-size: 14px;
+  text-decoration: underline;
+}
+
+/* 下载文件链接样式 */
+.download-file-link {
+  color: #67c23a;
   cursor: pointer;
   font-size: 14px;
   text-decoration: underline;
@@ -1333,10 +2098,71 @@ export default {
   border-color: #409eff;
 }
 
+/* 方法描述区域样式 */
+.method-description-section {
+  background: white;
+  padding: 0;
+  /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); */
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}
+
+.method-description-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.method-content {
+  flex: 1;
+  margin-bottom: 0;
+  background-color: white;
+  border-radius: 4px;
+}
+
+.method-content h4 {
+  margin-top: 0;
+}
+
+.method-actions {
+  flex: 0 0 auto;
+  text-align: center;
+  align-self: flex-start;
+  margin-top: 15px;
+}
+
+.execute-button {
+  padding: 10px 20px;
+  background-color: #67c23a;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+  white-space: nowrap;
+}
+
+.execute-button:hover {
+  background-color: #85ce61;
+}
+
 @media (max-width: 768px) {
   .dashboard-content {
     flex-direction: column;
     height: auto;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .file-selection-overlay {
+    width: 95%;
+    top: 100px;
+    left: 2.5%;
   }
   
   .left-section,
