@@ -142,7 +142,7 @@ def delete_file(data_id: str, session_id: str = None):
         os.remove(file_path)
 
 
-def add_header_to_file(file_path: str, column_names: list, session_id: str = None) -> dict:
+def add_header_to_file(file_path: str, column_names: list, session_id: str = None, mode: str = "add") -> dict:
     """
     为没有标题行的CSV文件添加标题行，创建新文件而不覆盖原文件
     
@@ -150,6 +150,7 @@ def add_header_to_file(file_path: str, column_names: list, session_id: str = Non
         file_path (str): 原始文件路径
         column_names (list): 列名列表
         session_id (str, optional): 用户会话ID
+        mode (str): 操作模式，"add"表示添加标题行，"modify"表示修改现有标题行
         
     Returns:
         dict: 包含新文件信息的字典
@@ -163,8 +164,13 @@ def add_header_to_file(file_path: str, column_names: list, session_id: str = Non
     if not os.path.isfile(file_path):
         raise FileNotFoundError(f"文件不存在: {file_path}")
 
-    # 读取没有标题行的文件
-    df = pd.read_csv(file_path, header=None, encoding="utf-8-sig")
+    # 读取文件
+    if mode == "add":
+        # 添加模式：读取没有标题行的文件
+        df = pd.read_csv(file_path, header=None, encoding="utf-8-sig")
+    else:
+        # 修改模式：读取已有标题行的文件
+        df = pd.read_csv(file_path, encoding="utf-8-sig")
     
     # 检查列数是否匹配
     if len(column_names) != len(df.columns):
@@ -176,10 +182,13 @@ def add_header_to_file(file_path: str, column_names: list, session_id: str = Non
     # 获取原始文件名（不含扩展名）
     original_filename = os.path.splitext(os.path.basename(file_path))[0]
     
-    # 生成新文件名，格式为"原文件名_add_header_N"
+    # 生成新文件名，格式为"原文件名_add_header_N" 或 "原文件名_modify_header_N"
     counter = 1
     while True:
-        new_filename = f"{original_filename}_add_header_{counter}"
+        if mode == "add":
+            new_filename = f"{original_filename}_add_header_{counter}"
+        else:
+            new_filename = f"{original_filename}_modify_header_{counter}"
         new_file_path = get_file_path(new_filename, session_id)
         if not os.path.exists(new_file_path):
             break

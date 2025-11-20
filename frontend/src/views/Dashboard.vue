@@ -90,7 +90,7 @@
         <div v-if="selectedFile" class="method-description-section">
           <div class="method-description-content">
             <div class="method-content">
-              <div v-if="currentMethod === 'basic_info'" class="basic-info-method">
+              <div v-if="currentMethod === 'basic_info'">
                 <h4>数据集基本信息</h4>
                 <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
               </div>
@@ -143,8 +143,26 @@
                 <p>对数据进行转换操作，如标准化、归一化等。</p>
               </div>
               <div v-else-if="currentMethod === 'add_header'" class="add-header-method">
-                <h4>添加标题行</h4>
-                <p>为没有标题行的文件添加自定义列名。</p>
+                <h4>添加/修改标题行</h4>
+                <p>为没有标题行的文件添加自定义列名，或修改现有标题行。</p>
+                <div class="header-mode-toggle">
+                  <label>
+                    <input 
+                      type="radio" 
+                      v-model="headerEditMode" 
+                      :value="false" 
+                      @change="handleHeaderModeChange"
+                    > 添加标题行
+                  </label>
+                  <label>
+                    <input 
+                      type="radio" 
+                      v-model="headerEditMode" 
+                      :value="true" 
+                      @change="handleHeaderModeChange"
+                    > 修改标题行
+                  </label>
+                </div>
               </div>
             </div>
             <div class="method-actions">
@@ -352,21 +370,25 @@ export default {
   name: "Dashboard",
   directives: {
     clickOutside: {
-      bind(el, binding, vnode) {
+      mounted(el, binding, vnode) {
         // 确保元素已经被添加到DOM中
         setTimeout(() => {
           el.clickOutsideEvent = function(event) {
             // 检查点击的元素是否在当前元素内部
             if (!(el === event.target || el.contains(event.target))) {
-              // 调用绑定的方法
-              vnode.context[binding.expression](event);
+              // 检查绑定的值是否为函数
+              const handler = binding.value;
+              if (typeof handler === 'function') {
+                // 调用绑定的方法
+                handler(event);
+              }
             }
           };
           // 将事件监听器添加到 document 上
           document.addEventListener('click', el.clickOutsideEvent);
         }, 0);
       },
-      unbind(el) {
+      unmounted(el) {
         // 解除事件监听器
         if (el.clickOutsideEvent) {
           document.removeEventListener('click', el.clickOutsideEvent);
@@ -433,7 +455,7 @@ export default {
           methods: [
             { id: 'data_cleaning', name: '数据清洗' },
             { id: 'data_transformation', name: '数据转换' },
-            { id: 'add_header', name: '添加标题行' }  // 添加新方法
+            { id: 'add_header', name: '添加/修改标题行' }  // 修改方法名称
           ]
         }
       ],
@@ -452,7 +474,8 @@ export default {
       },
       // 添加标题行相关数据
       showAddHeaderModal: false,
-      newColumnNames: []
+      newColumnNames: [],
+      headerEditMode: true  // 修改：默认为修改模式
     }
   },
   async mounted() {
@@ -461,12 +484,31 @@ export default {
     this.restoreState();
     // 检查是否有刚上传的文件需要默认选中
     this.checkAndSelectUploadedFile();
+    
+    // 初始化列名输入框状态
+    if (this.currentMethod === 'add_header') {
+      this.headerEditMode = true;
+      if (this.selectedFileColumns.length > 0) {
+        this.newColumnNames = [...this.selectedFileColumns];
+      }
+    }
   },
   methods: {
     // 添加Markdown渲染方法
     renderMarkdown(content) {
       if (!content) return '';
       return marked.parse(content);
+    },
+    
+    // 处理标题行模式切换
+    handleHeaderModeChange() {
+      if (this.headerEditMode && this.selectedFileColumns.length > 0) {
+        // 修改模式：填入当前列名
+        this.newColumnNames = [...this.selectedFileColumns];
+      } else {
+        // 添加模式：清空列名
+        this.newColumnNames = new Array(this.selectedFileColumns.length).fill('');
+      }
     },
     
     toggleFileSection(event) {
@@ -481,12 +523,7 @@ export default {
     },
     
     // 关闭文件选择区域
-    closeFileSelection(event) {
-      // 防止事件冒泡导致的误关闭
-      if (event && event.target.closest('.file-selector-trigger')) {
-        return;
-      }
-      
+    closeFileSelection() {
       this.isFileSectionCollapsed = true;
       // 保存文件选择区域的展开/收起状态到localStorage
       localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
@@ -567,7 +604,7 @@ export default {
           if (result.success) {
             this.selectedFileColumns = result.data.column_names;
             // 初始化新的列名数组
-            this.newColumnNames = new Array(result.data.column_names.length).fill('');
+            this.newColumnNames = [...result.data.column_names]; // 默认填入原列名
           } else {
             console.error("获取列名失败:", result.error);
             this.selectedFileColumns = [];
@@ -595,6 +632,15 @@ export default {
         this.currentCategory = category.id;
         // 保存当前展开的大类
         localStorage.setItem('selectedCategory', category.id);
+      }
+      
+      // 如果选择的是添加标题行方法，设置编辑模式
+      if (methodId === 'add_header') {
+        this.headerEditMode = true; // 修改：默认为修改模式
+        // 初始化列名输入框为当前列名
+        if (this.selectedFileColumns.length > 0) {
+          this.newColumnNames = [...this.selectedFileColumns];
+        }
       }
     },
     
@@ -655,7 +701,8 @@ export default {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            column_names: this.newColumnNames
+            column_names: this.newColumnNames,
+            mode: this.headerEditMode ? "modify" : "add"  // 添加模式参数
           }),
           credentials: 'include'
         });
@@ -668,7 +715,11 @@ export default {
             await this.selectFile(result.data.data_id); // 选择新文件
             
             // 显示成功消息
-            alert('标题行添加成功，已自动选择新文件');
+            if (this.headerEditMode) {
+              alert('标题行修改成功，已自动选择新文件');
+            } else {
+              alert('标题行添加成功，已自动选择新文件');
+            }
           } else {
             console.error("添加标题行失败:", result.error);
             alert("添加标题行失败: " + result.error);
@@ -737,6 +788,14 @@ export default {
       } else {
         // 默认收起文件选择区域
         this.isFileSectionCollapsed = true;
+      }
+      
+      // 初始化添加/修改标题行模式
+      if (this.currentMethod === 'add_header') {
+        this.headerEditMode = true; // 修改：默认为修改模式
+        if (this.selectedFileColumns.length > 0) {
+          this.newColumnNames = [...this.selectedFileColumns];
+        }
       }
     },
     
@@ -845,7 +904,7 @@ export default {
                       // 更新AI回复内容
                       this.chatMessages[aiMessageIndex].content = accumulatedContent;
                       // 滚动到底部并触发更新
-                      this.$nextTick(() => {
+                      await this.$nextTick(() => {
                         const messagesContainer = document.querySelector('.messages');
                         if (messagesContainer) {
                           messagesContainer.scrollTop = messagesContainer.scrollHeight;
@@ -1143,17 +1202,13 @@ export default {
 .file-selection-overlay {
   position: absolute;
   top: 60px;
-  left: 20px;
-  width: 500px;
+  left: 0;
+  width: 300px;
   background: white;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   border-radius: 4px;
   z-index: 100;
   padding: 10px;
-}
-
-.file-section-content {
-  padding: 0 10px 10px 10px;
 }
 
 .file-list-container {
@@ -1566,6 +1621,22 @@ export default {
   flex-direction: column;
 }
 
+.header-mode-toggle {
+  margin-bottom: 15px;
+}
+
+.header-mode-toggle label {
+  margin-right: 15px;
+  font-weight: normal;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.header-mode-toggle input[type="radio"] {
+  margin-right: 5px;
+}
+
 .column-inputs {
   flex: 1;
   overflow-y: auto;
@@ -1625,6 +1696,24 @@ export default {
 .add-header-modal-header h3 {
   margin: 0;
   color: #303133;
+}
+
+.header-mode-toggle {
+  margin-top: 10px;
+}
+
+.header-mode-toggle label {
+  margin-right: 15px;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #909399;
 }
 
 .add-header-modal-body {
@@ -2012,7 +2101,7 @@ export default {
 /* 方法描述区域样式 */
 .method-description-section {
   background: white;
-  padding: 0 20 20 20px;
+  padding: 0;
   /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); */
   margin-bottom: 0;
   flex: 0 0 auto;
@@ -2028,8 +2117,7 @@ export default {
 .method-content {
   flex: 1;
   margin-bottom: 0;
-  padding: 15px;
-  background-color: #f5f7fa;
+  background-color: white;
   border-radius: 4px;
 }
 

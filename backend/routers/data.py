@@ -493,6 +493,7 @@ async def get_data_details(request: Request, data_id: str):
 
 class AddHeaderRequest(BaseModel):
     column_names: list
+    mode: str = "add"  # "add" for adding header, "modify" for modifying existing header
 
 
 @router.post("/{data_id}/add_header")
@@ -503,7 +504,7 @@ async def add_header(request: Request, data_id: str, body: AddHeaderRequest):
     Args:
         request (Request): FastAPI请求对象
         data_id (str): 数据文件ID
-        body (AddHeaderRequest): 请求体，包含列名列表
+        body (AddHeaderRequest): 请求体，包含列名列表和模式
         
     Returns:
         JSONResponse: 新文件的信息
@@ -531,7 +532,7 @@ async def add_header(request: Request, data_id: str, body: AddHeaderRequest):
             sys.path.insert(0, os.path.join(parent_dir, "utils"))
             from utils.file_manager import add_header_to_file
                 
-        result = add_header_to_file(file_path, body.column_names, session_id)
+        result = add_header_to_file(file_path, body.column_names, session_id, mode=body.mode)
         
         return JSONResponse(content={
             "success": True,

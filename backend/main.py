@@ -69,13 +69,13 @@ async def periodic_cleanup():
     while True:
         try:
             logger.info("开始执行定期清理任务...")
-            clean_expired_sessions_and_files(expiration_hours=1)  # 1小时过期
+            clean_expired_sessions_and_files(expiration_hours=10)  # 10小时过期
             logger.info("定期清理任务执行完成")
         except Exception as e:
             logger.error(f"定期清理任务执行出错: {e}")
         
         # 每隔10分钟执行一次清理
-        await asyncio.sleep(600)  # 600秒 = 10分钟
+        await asyncio.sleep(3600)  # 600秒 = 10分钟
 
 @app.on_event("startup")
 async def startup_event():

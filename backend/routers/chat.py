@@ -47,6 +47,10 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
     """
     async def generate():
         try:
+            # 调试：打印从cookie获取的session_id
+            session_id = request.state.session_id
+            logger.info(f"调试信息 - Session ID: {session_id}")
+            
             logger.info("开始处理聊天请求")
             # 移除了聊天请求数据的日志打印，以保护用户隐私
             
@@ -56,7 +60,6 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                 try:
                     from utils.file_manager import get_file_path
                     # 获取session_id
-                    session_id = request.state.session_id
                     file_path = get_file_path(chat_request.data_id, session_id)
                     # 移除了文件路径的日志打印，以保护用户隐私
                     if os.path.exists(file_path):
@@ -84,7 +87,8 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                             "shape": df.shape,
                             "columns": list(df.columns),
                             "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
-                            "sample_data": df.head().to_dict()
+                            "sample_data": df.head().to_dict(),
+                            "session_id": session_id  # 添加session_id到数据上下文
                         }
                         # 移除了数据上下文的日志打印，以保护用户隐私
                     else:
@@ -94,8 +98,8 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     import traceback
                     logger.error(traceback.format_exc())
             
-            # 使用agent处理查询
-            result = agent.process_query(chat_request.message, data_context)
+            # 使用agent处理查询，传递session_id
+            result = agent.process_query(chat_request.message, data_context, session_id)
             
             # 模拟流式输出
             response_text = result['result']
@@ -119,6 +123,10 @@ async def execute_command(request: Request, chat_request: ChatRequest):
     执行特定命令接口
     """
     try:
+        # 调试：打印从cookie获取的session_id
+        session_id = request.state.session_id
+        logger.info(f"调试信息 - Session ID: {session_id}")
+        
         logger.info("开始处理命令执行请求")
         
         # 如果有data_id，获取文件路径并读取数据作为上下文
@@ -127,7 +135,6 @@ async def execute_command(request: Request, chat_request: ChatRequest):
             try:
                 from utils.file_manager import get_file_path
                 # 获取session_id
-                session_id = request.state.session_id
                 file_path = get_file_path(chat_request.data_id, session_id)
                 if os.path.exists(file_path):
                     import pandas as pd
@@ -154,13 +161,14 @@ async def execute_command(request: Request, chat_request: ChatRequest):
                         "shape": df.shape,
                         "columns": list(df.columns),
                         "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
-                        "sample_data": df.head().to_dict()
+                        "sample_data": df.head().to_dict(),
+                        "session_id": session_id  # 添加session_id到数据上下文
                     }
             except Exception as e:
                 logger.warning(f"读取数据上下文时出错: {e}")
         
-        # 使用agent处理查询
-        result = agent.process_query(chat_request.message, data_context)
+        # 使用agent处理查询，传递session_id
+        result = agent.process_query(chat_request.message, data_context, session_id)
         
         return JSONResponse(content={
             "success": True,
