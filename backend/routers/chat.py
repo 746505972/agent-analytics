@@ -84,6 +84,7 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                         data_context = {
                             "data_id": chat_request.data_id,
                             "filename": f"{chat_request.data_id}.csv",
+                            "file_path":f"data/{session_id}/{chat_request.data_id}.csv",
                             "shape": df.shape,
                             "columns": list(df.columns),
                             "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
@@ -98,7 +99,7 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     import traceback
                     logger.error(traceback.format_exc())
             
-            # 使用agent处理查询，传递session_id
+            # 执行agent，传递session_id给工具
             result = agent.process_query(chat_request.message, data_context, session_id)
             
             # 模拟流式输出

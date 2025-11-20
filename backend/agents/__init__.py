@@ -59,24 +59,16 @@ class DataAnalysisAgent:
         
         # 注册文件读取工具
         @tool
-        def read_file(file_path: str) -> dict:
-            """读取CSV/Excel文件的前10行数据，参数为文件路径"""
-            return read_any_file(file_path).head(10).to_dict()
+        def read_file(file_path: str,n : int = 10) -> dict:
+            """读取CSV/Excel文件的前n行数据，参数为文件路径和行数n"""
+            return read_any_file(file_path).head(n).to_dict()
         
         self.tools.append(read_file)
-        
-        # 注册获取文件路径工具
-        @tool
-        def get_file_path_tool(data_id: str, session_id: str = None) -> str:
-            """根据data_id获取文件完整路径，参数为data_id和可选的session_id"""
-            return get_file_path(data_id, session_id)
-        
-        self.tools.append(get_file_path_tool)
-        
+
         # 注册文件上传工具
         @tool
         def upload_file_tool(file_path: str, original_filename: str = None, session_id: str = None) -> dict:
-            """上传文件，参数为文件路径、原始文件名和可选的session_id"""
+            """上传文件，参数为文件路径、原始文件名和session_id"""
             return upload_file(file_path, original_filename, session_id)
         
         self.tools.append(upload_file_tool)
@@ -84,7 +76,7 @@ class DataAnalysisAgent:
         # 注册文件删除工具
         @tool
         def delete_file_tool(data_id: str, session_id: str = None) -> None:
-            """删除指定的数据文件，参数为data_id和可选的session_id"""
+            """删除指定的数据文件，参数为data_id和session_id"""
             return delete_file(data_id, session_id)
         
         self.tools.append(delete_file_tool)
@@ -92,7 +84,7 @@ class DataAnalysisAgent:
         # 注册获取用户文件列表工具
         @tool
         def list_user_files(session_id: str = None) -> list:
-            """获取用户上传的文件列表，参数为可选的session_id"""
+            """获取用户上传的文件列表，参数为session_id"""
             # 如果没有提供session_id，返回空列表
             if not session_id:
                 return []
@@ -110,23 +102,14 @@ class DataAnalysisAgent:
         # 注册添加标题行工具
         @tool
         def add_header_tool(file_path: str, column_names: list, session_id: str = None, mode: str = "add") -> dict:
-            """为CSV文件添加标题行并创建新文件，参数为文件路径、列名列表、可选的session_id和模式("add"或"modify")"""
+            """为CSV文件添加/修改标题行并创建新文件，参数为文件路径、列名列表、session_id和模式("add"代表添加模式；"modify"代表修改模式，将新列名替换原列名)"""
             from utils.file_manager import add_header_to_file, get_file_path
-            import os
+
+            # 检查文件是否存在
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"文件不存在: {file_path}")
             
-            # 如果提供了session_id参数，优先使用它
-            effective_session_id = session_id
-            
-            # 如果file_path是相对路径或文件名，则构建完整路径
-            if not os.path.isabs(file_path):
-                # 如果file_path包含.csv扩展名，先去除它，因为get_file_path会自动添加.csv扩展名
-                if file_path.endswith('.csv'):
-                    file_path_without_ext = os.path.splitext(file_path)[0]
-                    file_path = get_file_path(file_path_without_ext, effective_session_id)
-                else:
-                    file_path = get_file_path(file_path, effective_session_id)
-            
-            return add_header_to_file(file_path, column_names, effective_session_id, mode)
+            return add_header_to_file(file_path, column_names, session_id, mode)
         
         self.tools.append(add_header_tool)
     
@@ -185,7 +168,9 @@ class DataAnalysisAgent:
                 # 构造更清晰的提示信息
                 context_info = f"""
 <数据上下文信息>
-文件ID: {data_context.get('data_id', '未知')}
+文件ID(data_id): {data_context.get('data_id', '未知')}
+session_id: {session_id}
+文件路径:{data_context.get('file_path', '未知')}
 文件名: {data_context.get('filename', '未知')}
 数据形状: {data_context.get('shape', '未知')} (行数, 列数)
 列名: {', '.join(data_context.get('columns', []))}
