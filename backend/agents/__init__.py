@@ -1,8 +1,4 @@
-"""
-LLM-Agent 核心模块
-使用 LangChain 为核心，负责协调各分析模块，处理自然语言指令，生成分析报告
-"""
-
+import json
 from langgraph.prebuilt import create_react_agent
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -185,14 +181,39 @@ session_id: {session_id}
             messages.append(HumanMessage(content=f"<用户问题>{query}</用户问题>"))
             
             # 执行agent，传递session_id给工具
-            result = self.agent.invoke({"messages": messages, "session_id": session_id})
+            config = {"recursion_limit": 50}
+            if session_id:
+                config["session_id"] = session_id
+                
+            # 使用stream模式获取工具调用的详细信息
+            tool_calls_info = []
+            final_response = ""
             
-            # 获取最后一条消息作为输出
-            output = result['messages'][-1].content
+            for chunk in self.agent.stream(
+                {"messages": messages}, 
+                config=config, 
+                stream_mode="updates"
+            ):
+                # 检查是否有工具调用信息
+                if "agent" in chunk and "messages" in chunk["agent"]:
+                    message = chunk["agent"]["messages"][0]
+                    if hasattr(message, 'tool_calls') and message.tool_calls:
+                        for tool_call in message.tool_calls:
+                            tool_calls_info.append({
+                                "name": tool_call["name"],
+                                "args": tool_call["args"]
+                            })
+                
+                # 收集最终响应
+                if "agent" in chunk and "messages" in chunk["agent"]:
+                    message = chunk["agent"]["messages"][0]
+                    if hasattr(message, 'content') and message.content:
+                        final_response += message.content
             
             return {
                 'query': query,
-                'result': output,
+                'result': final_response,
+                'tool_calls': tool_calls_info,
                 'status': 'success'
             }
         except Exception as e:
@@ -201,6 +222,7 @@ session_id: {session_id}
             return {
                 'query': query,
                 'result': f"处理查询时发生错误: {str(e)}",
+                'tool_calls': [],
                 'status': 'error'
             }
     

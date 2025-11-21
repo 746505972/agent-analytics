@@ -6,10 +6,38 @@
           <h3>选择分析文件</h3>
           <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
         </div>
+        <div v-if="selectedFile" class="selected-file-info">
+          当前选中: {{ getSelectedFileName() }}
+        </div>
         <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
       </div>
     </div>
     
+    <!-- 分析历史区域 -->
+    <div class="analysis-history" v-if="analysisHistory.length > 0">
+      <div class="history-title">分析历史:</div>
+      <div class="history-buttons">
+        <div
+          v-for="(historyItem, index) in analysisHistory"
+          :key="index"
+          class="history-item"
+        >
+          <button
+            @click="goToAnalysis(historyItem.dataId, historyItem.method)"
+            class="history-button"
+          >
+            {{ getMethodName(historyItem.method) }}{{ index + 1 }}
+          </button>
+          <button
+            @click="removeFromHistory(index)"
+            class="delete-history-button"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- 文件选择悬浮区域 -->
     <div v-if="!isFileSectionCollapsed" class="file-selection-overlay" v-click-outside="closeFileSelection">
       <div class="file-selection-content">
@@ -475,7 +503,9 @@ export default {
       // 添加标题行相关数据
       showAddHeaderModal: false,
       newColumnNames: [],
-      headerEditMode: true  // 修改：默认为修改模式
+      headerEditMode: true,  // 修改：默认为修改模式
+      // 分析历史相关数据
+      analysisHistory: []
     }
   },
   async mounted() {
@@ -492,8 +522,65 @@ export default {
         this.newColumnNames = [...this.selectedFileColumns];
       }
     }
+
+    // 恢复分析历史
+    this.restoreAnalysisHistory();
   },
   methods: {
+    // 添加获取方法名称的方法
+    getMethodName(methodId) {
+      const methods = {
+        'basic_info': '基本信息',
+        'statistical_summary': '统计摘要',
+        'correlation_analysis': '相关性分析',
+        'distribution_analysis': '分布分析',
+        'visualization': '数据可视化',
+        'ml_analysis': '机器学习分析',
+        'clustering': '聚类分析',
+        'classification': '分类分析',
+        'regression': '回归分析',
+        'text_analysis': '文本分析',
+        'sentiment_analysis': '情感分析',
+        'data_cleaning': '数据清洗',
+        'data_transformation': '数据转换',
+        'add_header': '添加/修改标题行'
+      };
+      return methods[methodId] || '未知分析';
+    },
+
+
+    removeFromHistory(index) {
+      // 从历史记录中移除
+      this.analysisHistory.splice(index, 1);
+
+      // 更新localStorage
+      localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
+    },
+
+    restoreAnalysisHistory() {
+      // 从localStorage恢复分析历史
+      const savedHistory = localStorage.getItem('analysisHistory');
+      if (savedHistory) {
+        try {
+          this.analysisHistory = JSON.parse(savedHistory);
+        } catch (e) {
+          console.error("解析分析历史失败:", e);
+          this.analysisHistory = [];
+        }
+      }
+    },
+
+    goToAnalysis(dataId, method) {
+      // 跳转到分析页面
+      this.$router.push({
+        name: 'Analysis',
+        query: {
+          data_id: dataId,
+          method: method
+        }
+      });
+    },
+
     // 添加Markdown渲染方法
     renderMarkdown(content) {
       if (!content) return '';
@@ -650,7 +737,7 @@ export default {
       localStorage.setItem('selectedCategory', this.currentCategory || '');
     },
     
-    executeMethod() {
+    async executeMethod() {
       if (!this.selectedFile || !this.currentMethod) {
         return;
       }
@@ -671,6 +758,14 @@ export default {
       localStorage.setItem('selectedMethod', this.currentMethod);
       localStorage.setItem('selectedCategory', this.currentCategory);
       
+      // 直接调用API获取分析结果
+      const result = await this.fetchAnalysisResult(this.selectedFile, this.currentMethod);
+      
+      // 将结果保存到历史记录中
+      if (result) {
+        this.addToHistory(this.selectedFile, this.currentMethod, result);
+      }
+
       // 根据选择的方法跳转到相应的分析页面
       this.$router.push({
         name: 'Analysis',
@@ -679,6 +774,48 @@ export default {
           method: this.currentMethod
         }
       });
+    },
+    
+    // 新增方法：调用API获取分析结果
+    async fetchAnalysisResult(dataId, method) {
+      try {
+        if (method === 'basic_info') {
+          const response = await fetch(`/data/${dataId}/details`, {
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+              return result.data;
+            } else {
+              console.error("获取分析结果失败:", result.error);
+              return null;
+            }
+          } else {
+            console.error("获取分析结果失败，状态码:", response.status);
+            return null;
+          }
+        }
+        // 其他分析方法可以在这里添加
+        return null;
+      } catch (error) {
+        console.error("加载分析结果失败:", error);
+        return null;
+      }
+    },
+    
+    // 修改添加到历史记录的方法，增加result参数
+    addToHistory(dataId, method, result) {
+      // 添加到历史记录
+      this.analysisHistory.push({
+        dataId,
+        method,
+        result // 保存结果
+      });
+
+      // 保存到localStorage
+      localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
     },
     
     // 应用自定义标题行
@@ -863,15 +1000,12 @@ export default {
           credentials: 'include'
         });
         
-        console.log("收到响应:", response);
-        
         if (response.ok && response.body) {
           const reader = response.body.getReader();
           const decoder = new TextDecoder('utf-8');
           let done = false;
           let accumulatedContent = "";
-          
-          console.log("开始读取流式响应");
+          let toolCalls = [];
           
           // 逐步接收流式响应
           while (!done) {
@@ -880,27 +1014,21 @@ export default {
             
             if (value) {
               const chunk = decoder.decode(value, { stream: true });
-              console.log("收到原始数据块:", JSON.stringify(chunk));
               const lines = chunk.split('\n');
               
               for (const line of lines) {
-                console.log("处理行:", JSON.stringify(line));
                 if (line.startsWith('data: ')) {
                   const data = line.slice(6);
-                  console.log("解析数据:", JSON.stringify(data));
                   
                   if (data === '[DONE]') {
-                    console.log("接收完成");
                     done = true;
                     break;
                   }
                   
                   try {
                     const parsed = JSON.parse(data);
-                    console.log("解析后的数据:", parsed);
                     if (parsed.content !== undefined) {
                       accumulatedContent += parsed.content;
-                      console.log("更新内容:", accumulatedContent);
                       // 更新AI回复内容
                       this.chatMessages[aiMessageIndex].content = accumulatedContent;
                       // 滚动到底部并触发更新
@@ -915,48 +1043,65 @@ export default {
                       if (accumulatedContent.length % 5 === 0) {
                         await this.$nextTick();
                       }
+                    } else if (parsed.tool_calls !== undefined) {
+                      // 处理工具调用信息
+                      toolCalls = parsed.tool_calls;
+                      
+                      // 如果是添加标题行工具，需要刷新文件列表并选中新文件
+                      for (const toolCall of toolCalls) {
+                        if (toolCall.name === 'add_header_tool') {
+                          // 显示工具调用信息
+                          const toolInfo = `
+                            **工具调用详情:**
+                            - 工具名称: ${toolCall.name}
+                            - 参数: ${JSON.stringify(toolCall.args, null, 2)}`;
+                          this.chatMessages[aiMessageIndex].content += toolInfo;
+                          
+                          // 等待一段时间后刷新文件列表
+                          setTimeout(async () => {
+                            await this.loadUploadedFiles();
+                            // 查找新创建的文件并选中
+                            const files = this.files;
+                            // 查找最近添加的文件（根据文件名判断）
+                            const newFile = files.find(file => 
+                              file.filename.includes('_add_header_') || 
+                              file.filename.includes('_modify_header_')
+                            );
+                            
+                            if (newFile) {
+                              await this.selectFile(newFile.data_id);
+                              // 显示通知
+                              this.showCopyNotification(`工具执行成功，已自动选中新文件: ${newFile.filename}`, false);
+                            }
+                          }, 1000);
+                        } else {
+                          // 显示其他工具调用信息
+                          const toolInfo = `
+                            **工具调用详情:**
+                            - 工具名称: ${toolCall.name}
+                            - 参数: ${JSON.stringify(toolCall.args, null, 2)}`;
+                          this.chatMessages[aiMessageIndex].content += toolInfo;
+                        }
+                      }
                     } else if (parsed.error) {
-                      console.error("流式响应错误:", parsed.error);
                       this.chatMessages[aiMessageIndex].content = `错误: ${parsed.error}`;
                       done = true;
                     }
                   } catch (e) {
-                    console.error("解析流数据错误:", e, "原始数据:", data);
                     // 即使解析失败，也尝试显示原始内容
                     this.chatMessages[aiMessageIndex].content = `解析错误: ${data}`;
                     
                     // 强制更新DOM
                     await this.$nextTick();
                   }
-                } else {
-                  // 处理不以 'data: ' 开头的行，可能是错误信息
-                  if (line.trim() !== '') {
-                    console.log("处理非data行:", line);
-                    try {
-                      const parsed = JSON.parse(line);
-                      if (parsed.error) {
-                        console.error("直接错误响应:", parsed.error);
-                        this.chatMessages[aiMessageIndex].content = `错误: ${parsed.error}`;
-                        done = true;
-                      }
-                    } catch (e) {
-                      console.log("非JSON格式行，跳过");
-                    }
-                  }
-                  console.log("跳过非data行:", line);
                 }
               }
-            } else {
-              console.log("收到空值");
             }
           }
-          console.log("流处理完成，最终内容:", accumulatedContent);
         } else {
-          console.error("响应失败，状态码:", response.status);
           this.chatMessages[aiMessageIndex].content = `抱歉，无法连接到AI助手。状态码: ${response.status}`;
         }
       } catch (error) {
-        console.error("发送消息时发生错误:", error);
         this.chatMessages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;
       } finally {
         this.isWaitingForResponse = false;
@@ -979,7 +1124,7 @@ export default {
       }
     },
     
-    // 添加复制消息文本的方法
+    // 复制消息文本
     copyMessageText(text) {
       navigator.clipboard.writeText(text).then(() => {
         // 添加视觉反馈
@@ -1162,12 +1307,76 @@ export default {
   position: relative;
 }
 
+/* 分析历史区域样式 */
+.analysis-history {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.history-title {
+  font-weight: bold;
+  margin-right: 15px;
+  color: #303133;
+}
+
+.history-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+}
+
+.history-button {
+  padding: 5px 10px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px 0 0 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.history-button:hover {
+  background-color: #66b1ff;
+}
+
+.delete-history-button {
+  padding: 5px;
+  background-color: #f56c6c;
+  color: white;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.delete-history-button:hover {
+  background-color: #ff4d4f;
+}
+
 .header-content {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 350px;
+  gap: 30px;
   position: relative;
+}
+
+.selected-file-info {
+  display: flex;
+  color: #909399;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .file-selector-trigger {

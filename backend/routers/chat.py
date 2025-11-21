@@ -102,7 +102,11 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
             # 执行agent，传递session_id给工具
             result = agent.process_query(chat_request.message, data_context, session_id)
             
-            # 模拟流式输出
+            # 发送工具调用信息
+            if result.get('tool_calls'):
+                yield f"data: {json.dumps({'tool_calls': result['tool_calls']})}\n\n"
+            
+            # 发送结果信息
             response_text = result['result']
             for i in range(0, len(response_text), 10):
                 chunk = response_text[i:i+10]
@@ -173,7 +177,8 @@ async def execute_command(request: Request, chat_request: ChatRequest):
         
         return JSONResponse(content={
             "success": True,
-            "result": result['result']
+            "result": result['result'],
+            "tool_calls": result.get('tool_calls', [])
         })
     except Exception as e:
         error_msg = f'执行命令时出错: {str(e)}'
