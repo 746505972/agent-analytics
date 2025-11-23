@@ -98,7 +98,13 @@ class DataAnalysisAgent:
         # 注册添加标题行工具
         @tool
         def add_header_tool(file_path: str, column_names: list, session_id: str = None, mode: str = "add") -> dict:
-            """为CSV文件添加/修改标题行并创建新文件，参数为文件路径、列名列表、session_id和模式("add"代表添加模式；"modify"代表修改模式，将新列名替换原列名)"""
+            """
+            Args:
+            file_path (str): 文件路径
+            column_names (list): 列名列表
+            session_id: session_id
+            mode (str): 操作模式，"add"表示添加标题行(产生新行)，"modify"表示修改现有标题行(不产生新行)
+            """
             from utils.file_manager import add_header_to_file, get_file_path
 
             # 检查文件是否存在

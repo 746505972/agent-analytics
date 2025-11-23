@@ -21,9 +21,10 @@
           v-for="(historyItem, index) in analysisHistory"
           :key="index"
           class="history-item"
+          :class="{ active: isHistoryItemActive(historyItem) }"
         >
           <button
-            @click="goToAnalysis(historyItem.dataId, historyItem.method)"
+            @click="loadAnalysisFromHistory(historyItem)"
             class="history-button"
           >
             {{ getMethodName(historyItem.method) }}{{ index + 1 }}
@@ -114,138 +115,235 @@
       
       <!-- 中间：列名列表区域 -->
       <div class="middle-section">
-        <!-- 方法描述和执行按钮移到中栏 -->
-        <div v-if="selectedFile" class="method-description-section">
-          <div class="method-description-content">
-            <div class="method-content">
-              <div v-if="currentMethod === 'basic_info'">
-                <h4>数据集基本信息</h4>
-                <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
-              </div>
-              <div v-else-if="currentMethod === 'statistical_summary'" class="statistical-summary-method">
-                <h4>统计摘要</h4>
-                <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
-              </div>
-              <div v-else-if="currentMethod === 'correlation_analysis'" class="correlation-analysis-method">
-                <h4>相关性分析</h4>
-                <p>分析数据集中各变量之间的相关性。</p>
-              </div>
-              <div v-else-if="currentMethod === 'distribution_analysis'" class="distribution-analysis-method">
-                <h4>分布分析</h4>
-                <p>分析数据集中各变量的分布情况。</p>
-              </div>
-              <div v-else-if="currentMethod === 'visualization'" class="visualization-method">
-                <h4>数据可视化</h4>
-                <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
-              </div>
-              <div v-else-if="currentMethod === 'ml_analysis'" class="ml-analysis-method">
-                <h4>机器学习分析</h4>
-                <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
-              </div>
-              <div v-else-if="currentMethod === 'clustering'" class="clustering-method">
-                <h4>聚类分析</h4>
-                <p>使用聚类算法对数据进行分组分析。</p>
-              </div>
-              <div v-else-if="currentMethod === 'classification'" class="classification-method">
-                <h4>分类分析</h4>
-                <p>使用分类算法对数据进行分类预测。</p>
-              </div>
-              <div v-else-if="currentMethod === 'regression'" class="regression-method">
-                <h4>回归分析</h4>
-                <p>使用回归算法分析变量之间的关系。</p>
-              </div>
-              <div v-else-if="currentMethod === 'text_analysis'" class="text-analysis-method">
-                <h4>文本分析</h4>
-                <p>对文本数据进行分析，提取关键信息和模式。</p>
-              </div>
-              <div v-else-if="currentMethod === 'sentiment_analysis'" class="sentiment-analysis-method">
-                <h4>情感分析</h4>
-                <p>分析文本数据中的情感倾向。</p>
-              </div>
-              <div v-else-if="currentMethod === 'data_cleaning'" class="data-cleaning-method">
-                <h4>数据清洗</h4>
-                <p>清理数据中的噪声和异常值。</p>
-              </div>
-              <div v-else-if="currentMethod === 'data_transformation'" class="data-transformation-method">
-                <h4>数据转换</h4>
-                <p>对数据进行转换操作，如标准化、归一化等。</p>
-              </div>
-              <div v-else-if="currentMethod === 'add_header'" class="add-header-method">
-                <h4>添加/修改标题行</h4>
-                <p>为没有标题行的文件添加自定义列名，或修改现有标题行。</p>
-                <div class="header-mode-toggle">
-                  <label>
-                    <input 
-                      type="radio" 
-                      v-model="headerEditMode" 
-                      :value="false" 
-                      @change="handleHeaderModeChange"
-                    > 添加标题行
-                  </label>
-                  <label>
-                    <input 
-                      type="radio" 
-                      v-model="headerEditMode" 
-                      :value="true" 
-                      @change="handleHeaderModeChange"
-                    > 修改标题行
-                  </label>
+        <!-- 结果渲染区 -->
+        <div v-if="middleSectionView === 'result'" class="result-section">
+          <div class="result-header">
+            <button @click="switchToConfigView" class="back-button">← 返回参数配置</button>
+            <h2>{{ getMethodName(currentMethod) }}分析结果</h2>
+          </div>
+          
+          <div class="result-content">
+            <!-- 基本信息分析结果 -->
+            <div v-if="currentMethod === 'basic_info' && datasetDetails" class="analysis-section">
+              <div class="basic-info-details">
+                <h3>数据集基本信息</h3>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="info-label">文件名:</span>
+                    <span class="info-value">{{ datasetDetails.filename }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">行数:</span>
+                    <span class="info-value">{{ datasetDetails.rows }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">列数:</span>
+                    <span class="info-value">{{ datasetDetails.columns }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">完整性:</span>
+                    <span class="info-value">{{ (datasetDetails.completeness * 100).toFixed(2) }}%</span>
+                  </div>
+                </div>
+                
+                <h4>列信息:</h4>
+                <div class="column-details">
+                  <div 
+                    v-for="(dtype, columnName) in datasetDetails.dtypes" 
+                    :key="columnName"
+                    class="column-item"
+                  >
+                    <span class="column-name">{{ columnName }}</span>
+                    <span class="column-type">{{ dtype }}</span>
+                  </div>
+                </div>
+                
+                <h4>前5行数据预览:</h4>
+                <div class="data-preview">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th v-for="col in datasetDetails.column_names" :key="col">{{ col }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(row, index) in datasetDetails.head" :key="index">
+                        <td v-for="col in datasetDetails.column_names" :key="col">{{ row[col] }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
-            <div class="method-actions">
-              <button 
-                v-if="currentMethod !== 'add_header'" 
-                @click="executeMethod" 
-                class="execute-button"
-              >
-                执行分析
-              </button>
-              <button 
-                v-else
-                @click="applyHeaderNames"
-                class="execute-button"
-              >
-                应用标题
-              </button>
+            
+            <!-- 统计摘要分析结果 -->
+            <div v-else-if="currentMethod === 'statistical_summary'" class="analysis-section">
+              <h3>统计摘要</h3>
+              <p>此功能正在开发中...</p>
+            </div>
+            
+            <!-- 数据可视化分析结果 -->
+            <div v-else-if="currentMethod === 'visualization'" class="analysis-section">
+              <h3>数据可视化</h3>
+              <p>此功能正在开发中...</p>
+            </div>
+            
+            <!-- 机器学习分析结果 -->
+            <div v-else-if="currentMethod === 'ml_analysis'" class="analysis-section">
+              <h3>机器学习分析</h3>
+              <p>此功能正在开发中...</p>
+            </div>
+            
+            <!-- 加载状态 -->
+            <div v-else-if="loadingDetails" class="analysis-section">
+              <div class="loading-spinner">加载分析结果中...</div>
+            </div>
+            
+            <!-- 错误状态 -->
+            <div v-else class="analysis-section">
+              <p>无法加载分析结果</p>
             </div>
           </div>
         </div>
         
-        <!-- 列名列表和添加标题行区域 -->
-        <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
-          <!-- 列名列表区域 -->
-          <div class="column-list-section">
-            <h3>列名列表</h3>
-            <ul class="column-list">
-              <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
-                {{ column }}
-              </li>
-            </ul>
+        <!-- 参数配置区 -->
+        <div v-else class="config-section">
+          <!-- 方法描述和执行按钮移到中栏 -->
+          <div v-if="selectedFile" class="method-description-section">
+            <div class="method-description-content">
+              <div class="method-content">
+                <div v-if="currentMethod === 'basic_info'">
+                  <h4>数据集基本信息</h4>
+                  <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
+                </div>
+                <div v-else-if="currentMethod === 'statistical_summary'" class="statistical-summary-method">
+                  <h4>统计摘要</h4>
+                  <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
+                </div>
+                <div v-else-if="currentMethod === 'correlation_analysis'" class="correlation-analysis-method">
+                  <h4>相关性分析</h4>
+                  <p>分析数据集中各变量之间的相关性。</p>
+                </div>
+                <div v-else-if="currentMethod === 'distribution_analysis'" class="distribution-analysis-method">
+                  <h4>分布分析</h4>
+                  <p>分析数据集中各变量的分布情况。</p>
+                </div>
+                <div v-else-if="currentMethod === 'visualization'" class="visualization-method">
+                  <h4>数据可视化</h4>
+                  <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
+                </div>
+                <div v-else-if="currentMethod === 'ml_analysis'" class="ml-analysis-method">
+                  <h4>机器学习分析</h4>
+                  <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
+                </div>
+                <div v-else-if="currentMethod === 'clustering'" class="clustering-method">
+                  <h4>聚类分析</h4>
+                  <p>使用聚类算法对数据进行分组分析。</p>
+                </div>
+                <div v-else-if="currentMethod === 'classification'" class="classification-method">
+                  <h4>分类分析</h4>
+                  <p>使用分类算法对数据进行分类预测。</p>
+                </div>
+                <div v-else-if="currentMethod === 'regression'" class="regression-method">
+                  <h4>回归分析</h4>
+                  <p>使用回归算法分析变量之间的关系。</p>
+                </div>
+                <div v-else-if="currentMethod === 'text_analysis'" class="text-analysis-method">
+                  <h4>文本分析</h4>
+                  <p>对文本数据进行分析，提取关键信息和模式。</p>
+                </div>
+                <div v-else-if="currentMethod === 'sentiment_analysis'" class="sentiment-analysis-method">
+                  <h4>情感分析</h4>
+                  <p>分析文本数据中的情感倾向。</p>
+                </div>
+                <div v-else-if="currentMethod === 'data_cleaning'" class="data-cleaning-method">
+                  <h4>数据清洗</h4>
+                  <p>清理数据中的噪声和异常值。</p>
+                </div>
+                <div v-else-if="currentMethod === 'data_transformation'" class="data-transformation-method">
+                  <h4>数据转换</h4>
+                  <p>对数据进行转换操作，如标准化、归一化等。</p>
+                </div>
+                <div v-else-if="currentMethod === 'add_header'" class="add-header-method">
+                  <h4>添加/修改标题行</h4>
+                  <p>为没有标题行的文件添加自定义列名，或修改现有标题行。</p>
+                  <div class="header-mode-toggle">
+                    <label>
+                      <input 
+                        type="radio" 
+                        v-model="headerEditMode" 
+                        :value="false" 
+                        @change="handleHeaderModeChange"
+                      > 添加标题行
+                    </label>
+                    <label>
+                      <input 
+                        type="radio" 
+                        v-model="headerEditMode" 
+                        :value="true" 
+                        @change="handleHeaderModeChange"
+                      > 修改标题行
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div class="method-actions">
+                <button 
+                  v-if="currentMethod !== 'add_header'" 
+                  @click="executeMethod" 
+                  class="execute-button"
+                >
+                  执行分析
+                </button>
+                <button 
+                  v-else
+                  @click="applyHeaderNames"
+                  class="execute-button"
+                >
+                  应用标题
+                </button>
+              </div>
+            </div>
           </div>
           
-          <!-- 添加标题行操作区域 -->
-          <div v-if="currentMethod === 'add_header'" class="add-header-section">
-            <h3>设置列名</h3>
-            <div class="add-header-content">
-              <div class="column-inputs">
-                <div 
-                  v-for="(column, index) in selectedFileColumns" 
-                  :key="index" 
-                  class="column-input-item"
-                >
-                  <input 
-                    :id="'column-' + index"
-                    v-model="newColumnNames[index]" 
-                    :placeholder="'列' + (index + 1)"
-                    type="text"
-                  />
+          <!-- 列名列表和添加标题行区域 -->
+          <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
+            <!-- 列名列表区域 -->
+            <div class="column-list-section">
+              <h3>列名列表</h3>
+              <ul class="column-list">
+                <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
+                  {{ column }}
+                </li>
+              </ul>
+            </div>
+            
+            <!-- 添加标题行操作区域 -->
+            <div v-if="currentMethod === 'add_header'" class="add-header-section">
+              <h3>设置列名</h3>
+              <div class="add-header-content">
+                <div class="column-inputs">
+                  <div 
+                    v-for="(column, index) in selectedFileColumns" 
+                    :key="index" 
+                    class="column-input-item"
+                  >
+                    <input 
+                      :id="'column-' + index"
+                      v-model="newColumnNames[index]" 
+                      :placeholder="'列' + (index + 1)"
+                      type="text"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+
+
       
       <!-- 右侧：聊天分析区域 -->
       <div class="right-section">
@@ -294,7 +392,7 @@
           </div>
         </div>
       </div>
-    </div>
+  </div>
     
     <!-- 数据预览弹窗 -->
     <div class="preview-modal" v-if="showPreviewModal">
@@ -505,7 +603,12 @@ export default {
       newColumnNames: [],
       headerEditMode: true,  // 修改：默认为修改模式
       // 分析历史相关数据
-      analysisHistory: []
+      analysisHistory: [],
+      // 控制中间区域显示内容的状态
+      middleSectionView: 'config', // 'config' 表示参数配置区，'result' 表示结果渲染区
+      // 数据集详情
+      datasetDetails: null,
+      loadingDetails: false
     }
   },
   async mounted() {
@@ -593,6 +696,34 @@ export default {
       });
     },
 
+    // 从历史记录加载分析结果
+    async loadAnalysisFromHistory(historyItem) {
+      // 设置当前选中的文件和方法
+      this.selectedFile = historyItem.dataId;
+      this.currentMethod = historyItem.method;
+      
+      // 保存选中的文件和方法到localStorage
+      localStorage.setItem('selectedFile', this.selectedFile);
+      localStorage.setItem('selectedMethod', this.currentMethod);
+      
+      // 获取文件的列名信息
+      await this.selectFile(this.selectedFile);
+      
+      // 如果历史记录中有结果数据，则直接显示
+      if (historyItem.result) {
+        this.datasetDetails = historyItem.result;
+        this.switchToResultView();
+      } else {
+        // 否则执行方法获取结果
+        await this.executeMethod();
+      }
+    },
+
+    // 添加检查历史记录项是否为当前选中项的方法
+    isHistoryItemActive(historyItem) {
+      return this.selectedFile === historyItem.dataId && this.currentMethod === historyItem.method;
+    },
+    
     // 添加Markdown渲染方法
     renderMarkdown(content) {
       if (!content) return '';
@@ -771,21 +902,28 @@ export default {
       localStorage.setItem('selectedCategory', this.currentCategory);
       
       // 直接调用API获取分析结果
+      this.loadingDetails = true;
       const result = await this.fetchAnalysisResult(this.selectedFile, this.currentMethod);
+      this.loadingDetails = false;
       
-      // 将结果保存到历史记录中
       if (result) {
+        // 将结果保存到历史记录中
         this.addToHistory(this.selectedFile, this.currentMethod, result);
+        
+        // 设置分析结果数据
+        this.datasetDetails = result;
+        
+        // 切换到结果视图
+        this.switchToResultView();
       }
-
-      // 根据选择的方法跳转到相应的分析页面
-      this.$router.push({
-        name: 'Analysis',
-        query: {
-          data_id: this.selectedFile,
-          method: this.currentMethod
-        }
-      });
+    },
+    
+    switchToResultView() {
+      this.middleSectionView = 'result';
+    },
+    
+    switchToConfigView() {
+      this.middleSectionView = 'config';
     },
     
     // 新增方法：调用API获取分析结果
@@ -829,18 +967,18 @@ export default {
       // 保存到localStorage
       localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
     },
-    
+
     // 应用自定义标题行
     async applyHeaderNames() {
       if (!this.selectedFile) return;
-      
+
       // 检查是否所有列都已命名
       const emptyNames = this.newColumnNames.filter(name => !name.trim()).length;
       if (emptyNames > 0) {
         alert(`还有 ${emptyNames} 个列未命名，请为所有列提供名称。`);
         return;
       }
-      
+
       try {
         this.showAddHeaderModal = true;
         
@@ -1332,9 +1470,18 @@ export default {
   align-items: center;
 }
 
+.history-item:not(.active) .history-button {
+  background-color: #909399; /* 灰色 */
+  color: #ffffff;
+}
+
+.history-item:not(.active) .history-button:hover {
+  background-color: #a0a3a9;
+}
+
 .history-button {
   padding: 5px 10px;
-  background-color: #409eff;
+  background-color: #409eff; /* 蓝色 */
   color: white;
   border: none;
   border-radius: 4px 0 0 4px;
@@ -1542,6 +1689,13 @@ export default {
   padding-right: 10px;
   overflow-y: auto;
   max-height: 100%;
+}
+
+.config-section,
+.result-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .section-header h3 {
@@ -1800,6 +1954,128 @@ export default {
   gap: 0;
   flex: 1;
 }
+
+.result-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+  gap: 20px;
+}
+
+.result-header h2 {
+  margin: 0;
+  color: #303133;
+}
+
+.back-button {
+  padding: 8px 16px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.back-button:hover {
+  background-color: #66b1ff;
+}
+
+.result-content {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.analysis-section {
+  min-height: 500px;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 50px;
+  color: #409eff;
+  font-size: 16px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  padding: 15px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 5px;
+}
+
+.info-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.column-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.column-item {
+  display: flex;
+  padding: 8px 12px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.column-name {
+  font-weight: bold;
+  margin-right: 8px;
+  color: #303133;
+}
+
+.column-type {
+  color: #606266;
+}
+
+.data-preview {
+  overflow-x: auto;
+}
+
+.data-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.data-preview th,
+.data-preview td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-preview th {
+  background-color: #f5f7fa;
+  font-weight: bold;
+}
+
 
 /* 添加标题行区域样式 */
 .add-header-section {
