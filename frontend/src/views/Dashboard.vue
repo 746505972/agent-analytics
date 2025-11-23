@@ -90,13 +90,13 @@
               v-for="category in methodCategories" 
               :key="category.id"
               class="method-category"
-              :class="{ active: currentCategory === category.id }"
+              :class="{ active: expandedCategories.includes(category.id) }"
             >
-              <div class="category-header" @click="selectCategory(category.id)">
+              <div class="category-header" @click="toggleCategory(category.id)">
                 <h4>{{ category.name }}</h4>
-                <span class="toggle-icon">{{ currentCategory === category.id ? '−' : '+' }}</span>
+                <span class="toggle-icon">{{ expandedCategories.includes(category.id) ? '−' : '+' }}</span>
               </div>
-              <div v-show="currentCategory === category.id" class="category-methods">
+              <div v-show="expandedCategories.includes(category.id)" class="category-methods">
                 <button 
                   v-for="method in category.methods" 
                   :key="method.id"
@@ -440,8 +440,17 @@ export default {
       isWaitingForResponse: false,
       // 新增方法选择相关数据
       currentMethod: 'basic_info',
-      currentCategory: 'statistics',
+      expandedCategories: ['statistics', 'ml', 'visualization', 'nlp', 'data_processing'], // 默认全部展开
       methodCategories: [
+        {
+          id: 'data_processing',
+          name: '数据处理',
+          methods: [
+            { id: 'data_cleaning', name: '数据清洗' },
+            { id: 'data_transformation', name: '数据转换' },
+            { id: 'add_header', name: '添加/修改标题行' }
+          ]
+        },
         {
           id: 'statistics',
           name: '统计方法',
@@ -477,15 +486,6 @@ export default {
             { id: 'sentiment_analysis', name: '情感分析' }
           ]
         },
-        {
-          id: 'data_processing',
-          name: '数据处理',
-          methods: [
-            { id: 'data_cleaning', name: '数据清洗' },
-            { id: 'data_transformation', name: '数据转换' },
-            { id: 'add_header', name: '添加/修改标题行' }  // 修改方法名称
-          ]
-        }
       ],
       // 数据预览弹窗相关数据
       showPreviewModal: false,
@@ -734,10 +734,10 @@ export default {
       const category = this.methodCategories.find(cat => 
         cat.methods.some(method => method.id === methodId)
       );
-      if (category) {
-        this.currentCategory = category.id;
-        // 保存当前展开的大类
-        localStorage.setItem('selectedCategory', category.id);
+      if (category && !this.expandedCategories.includes(category.id)) {
+        this.expandedCategories.push(category.id);
+        // 保存展开状态到localStorage
+        localStorage.setItem('expandedCategories', JSON.stringify(this.expandedCategories));
       }
       
       // 如果选择的是添加标题行方法，设置编辑模式
@@ -749,13 +749,6 @@ export default {
         }
       }
     },
-    
-    selectCategory(categoryId) {
-      this.currentCategory = this.currentCategory === categoryId ? null : categoryId;
-      // 保存当前展开的大类
-      localStorage.setItem('selectedCategory', this.currentCategory || '');
-    },
-    
     async executeMethod() {
       if (!this.selectedFile || !this.currentMethod) {
         return;
@@ -914,36 +907,9 @@ export default {
       }
       
       // 恢复展开的大类
-      const savedSelectedCategory = localStorage.getItem('selectedCategory');
-      if (savedSelectedCategory) {
-        this.currentCategory = savedSelectedCategory;
-      } else if (savedSelectedMethod) {
-        // 如果没有保存的大类状态但有选中的方法，则自动确定大类
-        const category = this.methodCategories.find(cat => 
-          cat.methods.some(method => method.id === savedSelectedMethod)
-        );
-        if (category) {
-          this.currentCategory = category.id;
-        }
-      }
-      
-      // 恢复聊天记录
-      const savedChatMessages = localStorage.getItem('dashboardChatMessages');
-      if (savedChatMessages) {
-        try {
-          this.chatMessages = JSON.parse(savedChatMessages);
-        } catch (e) {
-          console.error("解析保存的聊天记录失败:", e);
-        }
-      }
-      
-      // 恢复文件选择区域的展开/收起状态
-      const savedFileSectionState = localStorage.getItem('isFileSectionCollapsed');
-      if (savedFileSectionState !== null) {
-        this.isFileSectionCollapsed = savedFileSectionState === 'true';
-      } else {
-        // 默认收起文件选择区域
-        this.isFileSectionCollapsed = true;
+      const savedExpandedCategories = localStorage.getItem('expandedCategories');
+      if (savedExpandedCategories) {
+        this.expandedCategories = JSON.parse(savedExpandedCategories);
       }
       
       // 初始化添加/修改标题行模式
@@ -964,6 +930,20 @@ export default {
         this.selectFile(currentDataId);
       }
     },
+    
+    toggleCategory(categoryId) {
+      const index = this.expandedCategories.indexOf(categoryId);
+      if (index > -1) {
+        // 如果已经展开，则收起
+        this.expandedCategories.splice(index, 1);
+      } else {
+        // 如果收起，则展开
+        this.expandedCategories.push(categoryId);
+      }
+      // 保存展开状态到localStorage
+      localStorage.setItem('expandedCategories', JSON.stringify(this.expandedCategories));
+    },
+
     
     // 页面激活时恢复状态（从其他页面返回时调用）
     activated() {
@@ -1695,10 +1675,6 @@ export default {
   border: 1px solid #ebeef5;
   border-radius: 4px;
   margin-bottom: 10px;
-}
-
-.method-category.active {
-  border-color: #409eff;
 }
 
 .category-header {
