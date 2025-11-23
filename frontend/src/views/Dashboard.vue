@@ -527,6 +527,18 @@ export default {
     this.restoreAnalysisHistory();
   },
   methods: {
+    // 清除localStorage中的数据
+    clearLocalStorage() {
+      // 清除与文件相关的localStorage项
+      localStorage.removeItem('currentDataId');
+      localStorage.removeItem('dashboardChatMessages');
+      localStorage.removeItem('analysisHistory');
+      localStorage.removeItem('selectedMethod');
+      localStorage.removeItem('selectedFile');
+      localStorage.removeItem('isFileSectionCollapsed');
+      localStorage.removeItem('session_id');
+    },
+
     // 添加获取方法名称的方法
     getMethodName(methodId) {
       const methods = {
@@ -627,6 +639,13 @@ export default {
           const result = await response.json();
           if (result.success) {
             this.files = result.data;
+            this.session_id = result.session_id;
+            const storedSessionId = localStorage.getItem('session_id');
+            if (storedSessionId && this.session_id !== storedSessionId) {
+              // 如果session_id变化，清除localStorage中的数据
+              this.clearLocalStorage();
+              localStorage.setItem('session_id', this.session_id);
+            }
           } else {
             console.error("获取文件列表失败:", result.error);
           }
@@ -936,7 +955,7 @@ export default {
       }
     },
     
-    // 新增方法：检查并选中刚上传的文件
+    // 检查并选中刚上传的文件
     checkAndSelectUploadedFile() {
       // 从localStorage获取刚上传的文件ID
       const currentDataId = localStorage.getItem('currentDataId');
@@ -1168,7 +1187,7 @@ export default {
     
     getSelectedFileName() {
       const file = this.files.find(f => f.data_id === this.selectedFile);
-      return file ? file.filename : "";
+      return file ? file.filename : "无";
     },
     
     // 显示数据预览弹窗

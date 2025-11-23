@@ -32,10 +32,9 @@ async def get_user_files(request: Request):
     """
     获取用户上传的文件列表
     """
+    # 获取session_id
+    session_id = request.state.session_id
     try:
-        # 获取session_id
-        session_id = request.state.session_id
-        
         # 构建用户目录路径
         user_dir = os.path.join("data", session_id)
         
@@ -43,7 +42,8 @@ async def get_user_files(request: Request):
         if not os.path.exists(user_dir):
             return JSONResponse(content={
                 "success": True,
-                "data": []
+                "data": [],
+                "session_id": session_id
             })
         
         # 获取目录中的所有CSV文件
@@ -87,13 +87,15 @@ async def get_user_files(request: Request):
         
         return JSONResponse(content={
             "success": True,
-            "data": files
+            "data": files,
+            "session_id": session_id
         })
     except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
                 "success": False,
-                "error": str(e)
+                "error": str(e),
+                "session_id": session_id
             }
         )
