@@ -259,18 +259,3 @@ session_id: {session_id}
         
         response = self.llm.invoke(prompt)
         return response.content
-    
-    def register_tool(self, tool_func, tool_name, tool_description):
-        """
-        注册分析工具
-        
-        Args:
-            tool_func: 工具函数
-            tool_name (str): 工具名称
-            tool_description (str): 工具描述
-        """
-        # 使用装饰器创建工具
-        decorated_tool = tool(tool_func)
-        decorated_tool.name = tool_name
-        decorated_tool.description = tool_description
-        self.tools.append(decorated_tool)

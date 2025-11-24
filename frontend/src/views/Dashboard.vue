@@ -10,6 +10,9 @@
           当前选中: {{ getSelectedFileName() }}
         </div>
         <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
+          <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="20" alt="GitHub">
+          </a>
       </div>
     </div>
     
@@ -102,7 +105,7 @@
                   v-for="method in category.methods" 
                   :key="method.id"
                   :class="{ active: currentMethod === method.id }"
-                  @click="selectMethod(method.id)"
+                  @click="selectMethod(method.id) ; switchToConfigView()"
                   class="method-tab"
                 >
                   {{ method.name }}
@@ -166,6 +169,7 @@
                         <th>列名</th>
                         <th>数据类型</th>
                         <th>缺失值数量</th>
+                        <th>列完整性</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -173,6 +177,7 @@
                         <td>{{ columnName }}</td>
                         <td>{{ dtype }}</td>
                         <td>{{ datasetDetails.missing_values[columnName].toLocaleString() || 0 }}</td>
+                        <td>{{ (datasetDetails.completeness_values[columnName] * 100).toFixed(2) + '%' || 'unknown' }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -364,7 +369,7 @@
               <div class="method-actions">
                 <button 
                   v-if="currentMethod !== 'add_header'" 
-                  @click="executeMethod" 
+                  @click="executeMethod"
                   class="execute-button"
                 >
                   执行分析
@@ -416,9 +421,6 @@
         </div>
       </div>
 
-
-
-      
       <!-- 右侧：聊天分析区域 -->
       <div class="right-section">
         <div class="chat-section">
@@ -2086,9 +2088,9 @@ export default {
   display: flex;
   flex-direction: column;
   overflow-wrap: break-word;
-  padding: 15px;
+  padding: 10px;
   background-color: #f5f7fa;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 .info-label {

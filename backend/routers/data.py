@@ -130,79 +130,25 @@ async def clean_data(request: Request, data_id: str, cleaning_params: DataCleani
                     "error": result
                 }
             )
-        
-        df = result
-        
-        # 记录清洗前的信息
-        original_shape = df.shape
-        original_rows = original_shape[0]
-        original_cols = original_shape[1]
-        
-        # 1. 去除重复行（如果启用）
-        if cleaning_params.remove_duplicates:
-            df = df.drop_duplicates()
-            logger.info(f"去重后数据形状: {df.shape}")
-        
-        # 2. 处理缺失值 - 行处理
-        if cleaning_params.row_handling == "delete":
-            # 删除缺失值比例超过阈值的行
-            row_missing_ratio = df.isnull().sum(axis=1) / df.shape[1]
-            df = df[row_missing_ratio <= cleaning_params.row_missing_threshold]
-        elif cleaning_params.row_handling == "interpolate":
-            # 对数值列进行插值处理
-            numeric_columns = df.select_dtypes(include=[np.number]).columns
-            df[numeric_columns] = df[numeric_columns].interpolate()
-        
-        # 3. 处理缺失值 - 列处理
-        if cleaning_params.col_handling == "delete":
-            # 删除缺失值比例超过阈值的列
-            col_missing_ratio = df.isnull().sum() / df.shape[0]
-            df = df.loc[:, col_missing_ratio <= cleaning_params.col_missing_threshold]
-        elif cleaning_params.col_handling == "interpolate":
-            # 对数值列进行插值处理
-            numeric_columns = df.select_dtypes(include=[np.number]).columns
-            df[numeric_columns] = df[numeric_columns].interpolate()
-        
-        # 生成新的文件名
-        base_name = os.path.splitext(os.path.basename(file_path))[0]
-        new_filename = f"{base_name}_cleaned.csv"
-        new_file_path = get_file_path(os.path.splitext(new_filename)[0], session_id)
-        
-        # 保存清洗后的数据
-        df.to_csv(new_file_path, index=False, encoding="utf-8-sig")
-        
-        # 处理NaN值，将其替换为None以便JSON序列化
-        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
-        
-        # 再次确保所有值都可以被JSON序列化
-        for col in df.columns:
-            def convert_value(x):
-                if pd.isna(x) or x is None:
-                    return None
-                if hasattr(x, 'item'):
-                    try:
-                        return x.item()
-                    except (ValueError, OverflowError):
-                        return str(x)
-                return x
-            df[col] = df[col].apply(convert_value)
-        
+
+        # 导入并调用添加标题行的函数
+        try:
+            from utils.file_manager import clean_data_file
+        except ImportError:
+            # 最后尝试直接添加到路径并导入
+            sys.path.insert(0, os.path.join(parent_dir, "utils"))
+            from utils.file_manager import clean_data_file
+
+        result = clean_data_file(get_file_path(data_id, session_id), session_id, cleaning_params.remove_duplicates,
+                                 cleaning_params.row_missing_threshold, cleaning_params.col_missing_threshold,
+                                 cleaning_params.row_handling, cleaning_params.col_handling)
+
         return JSONResponse(content={
             "success": True,
-            "data": {
-                "original_rows": original_rows,
-                "original_cols": original_cols,
-                "cleaned_rows": df.shape[0],
-                "cleaned_cols": df.shape[1],
-                "removed_rows": original_rows - df.shape[0],
-                "removed_cols": original_cols - df.shape[1],
-                "new_data_id": os.path.splitext(new_filename)[0],
-                "new_filename": new_filename,
-                "preview": df.head().to_dict('records')
-            }
+            "data": result
         })
     except Exception as e:
-        logger.error(f"数据清洗时出错: {str(e)}")
+        logger.error(f"添加标题行时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={
@@ -443,7 +389,15 @@ async def get_data_details(request: Request, data_id: str):
             }
 
         # 缺失值统计
-        missing_values = {col: int(df[col].isnull().sum()) for col in df.columns}
+        missing_values = {}
+        completeness_values = {}  # 存储每列的完整性
+        total_rows = len(df)
+        
+        for col in df.columns:
+            missing_count = int(df[col].isnull().sum())
+            missing_values[col] = missing_count
+            # 计算每列的完整性（1 - 缺失比例）
+            completeness_values[col] = (total_rows - missing_count) / total_rows if total_rows > 0 else 0
 
         # 总体统计
         total_missing = int(df.isnull().sum().sum())
@@ -451,6 +405,44 @@ async def get_data_details(request: Request, data_id: str):
 
         # 再次处理可能遗漏的NaN值
         df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+        
+        # 确保所有的数据都可以被JSON序列化
+        for col in df.columns:
+            def convert_value(x):
+                if pd.isna(x) or x is None:
+                    return None
+                # 处理特殊浮点值
+                if isinstance(x, float):
+                    if np.isnan(x) or np.isinf(x):
+                        return None
+                if hasattr(x, 'item'):  # numpy标量类型
+                    try:
+                        val = x.item()
+                        # 再次检查特殊值
+                        if isinstance(val, float) and (np.isnan(val) or np.isinf(val)):
+                            return None
+                        return val
+                    except (ValueError, OverflowError):
+                        return str(x)
+                return x
+            df[col] = df[col].apply(convert_value)
+        
+        # 确保head_data也可以被JSON序列化
+        for record in head_data:
+            for key, value in record.items():
+                if pd.isna(value) or value is None:
+                    record[key] = None
+                elif isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+                    record[key] = None
+                elif hasattr(value, 'item'):  # numpy标量类型
+                    try:
+                        val = value.item()
+                        if isinstance(val, float) and (np.isnan(val) or np.isinf(val)):
+                            record[key] = None
+                        else:
+                            record[key] = val
+                    except (ValueError, OverflowError):
+                        record[key] = str(value)
 
         return JSONResponse(content={
             "success": True,
@@ -465,17 +457,20 @@ async def get_data_details(request: Request, data_id: str):
                 "numeric_stats": numeric_stats,
                 "categorical_stats": categorical_stats,
                 "missing_values": missing_values,
+                "completeness_values": completeness_values,  # 添加每列的完整性数据
                 "total_missing": total_missing,
                 "total_cells": total_cells,
                 "completeness": (total_cells - total_missing) / total_cells if total_cells > 0 else 0
             }
         })
     except Exception as e:
+        logger.error(f"处理文件 {data_id} 的详细信息时发生错误: {str(e)}", exc_info=True)
         return JSONResponse(
             status_code=500,
             content={
                 "success": False,
-                "error": str(e)
+                "error": str(e),
+                "error_type": type(e).__name__
             }
         )
 
