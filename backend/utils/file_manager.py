@@ -4,8 +4,6 @@ import uuid
 import pandas as pd
 import numpy as np
 
-# 全局操作计数器
-_operation_counter = 0
 
 DATA_DIR = "data"
 
@@ -21,14 +19,6 @@ def ensure_session_dir(session_id: str):
     os.makedirs(session_dir, exist_ok=True)
     return session_dir
 
-
-def _get_next_operation_number() -> int:
-    """
-    获取下一个操作编号，确保在同一次会话中操作编号是连续且唯一的
-    """
-    global _operation_counter
-    _operation_counter += 1
-    return _operation_counter
 
 def read_any_file(file_path: str) -> pd.DataFrame:
     """
@@ -193,12 +183,14 @@ def add_header_to_file(file_path: str, column_names: list, session_id: str = Non
     # 获取原始文件名（不含扩展名）
     original_filename = os.path.splitext(os.path.basename(file_path))[0]
     
-    # 生成新文件名，格式为"原文件名_add_header_N" 或 "原文件名_modify_header_N"
-    counter = _get_next_operation_number()
-    if mode == "add":
-        new_filename = f"{original_filename}_add_header_{counter}"
+    # 根据文件名决定新文件名
+    if original_filename.endswith('_edit'):
+        # 如果已经是编辑过的文件，则在原文件基础上修改
+        new_filename = original_filename
     else:
-        new_filename = f"{original_filename}_modify_header_{counter}"
+        # 第一次编辑，添加 _edit 后缀
+        new_filename = f"{original_filename}_edit"
+    
     new_file_path = get_file_path(new_filename, session_id)
     
     # 保存新文件
@@ -269,10 +261,17 @@ def clean_data_file(file_path: str, session_id: str = None, remove_duplicates: b
         numeric_columns = df.select_dtypes(include=[np.number]).columns
         df[numeric_columns] = df[numeric_columns].interpolate()
     
-    # 生成新的文件名
+    # 获取原始文件名（不含扩展名）
     base_name = os.path.splitext(os.path.basename(file_path))[0]
-    counter = _get_next_operation_number()
-    new_filename = f"{base_name}_clean_{counter}"
+    
+    # 根据文件名决定新文件名
+    if base_name.endswith('_edit'):
+        # 如果已经是编辑过的文件，则在原文件基础上修改
+        new_filename = base_name
+    else:
+        # 第一次编辑，添加 _edit 后缀
+        new_filename = f"{base_name}_edit"
+    
     new_file_path = get_file_path(new_filename, session_id)
     
     # 保存清洗后的数据
@@ -302,5 +301,74 @@ def clean_data_file(file_path: str, session_id: str = None, remove_duplicates: b
         "removed_rows": original_rows - df.shape[0],
         "removed_cols": original_cols - df.shape[1],
         "data_id": new_filename,
+        "saved_path": new_file_path,
+    }
+
+
+def edit_file_data(file_path: str, edit_func, session_id: str = None, *args, **kwargs) -> dict:
+    """
+    通用文件编辑函数，在文件上应用自定义编辑操作
+    
+    Args:
+        file_path (str): 要编辑的文件路径
+        edit_func (callable): 执行实际数据编辑的函数，应该接受DataFrame作为第一个参数
+        session_id (str, optional): 用户会话ID
+        *args, **kwargs: 传递给edit_func的额外参数
+        
+    Returns:
+        dict: 包含新文件信息的字典
+    """
+    # 确保数据目录存在
+    ensure_data_dir()
+    
+    if session_id:
+        ensure_session_dir(session_id)
+
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+
+    # 读取文件
+    df = pd.read_csv(file_path, encoding="utf-8-sig")
+    
+    # 应用编辑函数
+    df = edit_func(df, *args, **kwargs)
+    
+    # 获取原始文件名（不含扩展名）
+    base_name = os.path.splitext(os.path.basename(file_path))[0]
+    
+    # 根据文件名决定新文件名
+    if base_name.endswith('_edit'):
+        # 如果已经是编辑过的文件，则在原文件基础上修改
+        new_filename = base_name
+    else:
+        # 第一次编辑，添加 _edit 后缀
+        new_filename = f"{base_name}_edit"
+    
+    new_file_path = get_file_path(new_filename, session_id)
+    
+    # 保存编辑后的数据
+    df.to_csv(new_file_path, index=False, encoding="utf-8-sig")
+    
+    # 处理NaN值，将其替换为None以便JSON序列化
+    df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+    
+    # 再次确保所有值都可以被JSON序列化
+    for col in df.columns:
+        def convert_value(x):
+            if pd.isna(x) or x is None:
+                return None
+            if hasattr(x, 'item'):
+                try:
+                    return x.item()
+                except (ValueError, OverflowError):
+                    return str(x)
+            return x
+        df[col] = df[col].apply(convert_value)
+    
+    return {
+        "data_id": new_filename,
+        "rows": df.shape[0],
+        "cols": df.shape[1],
+        "columns": list(df.columns),
         "saved_path": new_file_path,
     }

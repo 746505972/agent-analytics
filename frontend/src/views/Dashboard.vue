@@ -368,18 +368,25 @@
               </div>
               <div class="method-actions">
                 <button 
-                  v-if="currentMethod !== 'add_header'" 
-                  @click="executeMethod"
-                  class="execute-button"
-                >
-                  执行分析
-                </button>
-                <button 
-                  v-else
+                  v-if="currentMethod === 'add_header'"
                   @click="applyHeaderNames"
                   class="execute-button"
                 >
                   应用标题
+                </button>
+                <button
+                  v-else-if="currentMethod === 'data_cleaning'"
+                  @click=""
+                  class="execute-button"
+                >
+                  执行清洗
+                </button>
+                <button 
+                  v-else
+                  @click="executeMethod"
+                  class="execute-button"
+                >
+                  执行分析
                 </button>
               </div>
             </div>
@@ -413,6 +420,47 @@
                       :placeholder="'列' + (index + 1)"
                       type="text"
                     />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="currentMethod === 'data_cleaning'" class="add-header-section">
+              <h3>设置参数</h3>
+              <div class="add-header-content">
+                <div class="data-cleaning-options">
+                  <div class="option-row">
+                    <label>
+                      <input 
+                        type="checkbox" 
+                        v-model="removeDuplicates"
+                      /> 去除重复行
+                    </label>
+                  </div>
+                  <div class="option-row">
+                    <label>
+                      行缺失阈值:
+                      <input 
+                        type="number" 
+                        v-model="rowMissingThreshold" 
+                        min="0" 
+                        max="1" 
+                        step="0.01"
+                        class="threshold-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="option-row">
+                    <label>
+                      列缺失阈值:
+                      <input 
+                        type="number" 
+                        v-model="columnMissingThreshold" 
+                        min="0" 
+                        max="1" 
+                        step="0.01"
+                        class="threshold-input"
+                      />
+                    </label>
                   </div>
                 </div>
               </div>
@@ -684,7 +732,11 @@ export default {
       middleSectionView: 'config', // 'config' 表示参数配置区，'result' 表示结果渲染区
       // 数据集详情
       datasetDetails: null,
-      loadingDetails: false
+      loadingDetails: false,
+      // 数据清洗参数
+      removeDuplicates: false,
+      rowMissingThreshold: 1,
+      columnMissingThreshold: 1
     }
   },
   async mounted() {
@@ -2371,8 +2423,8 @@ export default {
 }
 
 .chat-section h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
   color: #303133;
 }
 
@@ -2581,6 +2633,33 @@ export default {
   flex: 1;
   padding: 20px;
   overflow: auto;
+}
+
+/* 数据清洗选项样式 */
+.data-cleaning-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+}
+
+.option-row label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: normal;
+  margin: 0;
+}
+
+.threshold-input {
+  width: 80px;
+  padding: 5px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
 }
 
 /* 预览部分样式（复用Preview.vue的样式） */
