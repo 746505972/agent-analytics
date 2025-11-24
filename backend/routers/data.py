@@ -74,22 +74,135 @@ def get_user_files_list(session_id: str) -> list:
     return files
 
 
-@router.get("/user/files")
-async def get_user_files(request: Request):
+def load_csv_file(data_id: str, session_id: str) -> tuple:
     """
-    获取用户上传的文件列表
+    加载CSV文件的通用函数
+    
+    Args:
+        data_id (str): 数据文件ID
+        session_id (str): 用户会话ID
+        
+    Returns:
+        tuple: (success: bool, result: DataFrame or error_message: str, status_code: int)
+    """
+    # 构建文件路径
+    file_path = get_file_path(data_id, session_id)
+    if not os.path.exists(file_path):
+        return False, "数据文件不存在", 404
+    
+    # 读取CSV文件
+    try:
+        df = pd.read_csv(file_path, encoding="utf-8-sig")
+        return True, df, 200
+    except Exception as e:
+        error_msg = f"读取文件失败: {str(e)}"
+        logger.error(f"读取文件 {file_path} 失败: {str(e)}")
+        return False, error_msg, 500
+
+
+class DataCleaningRequest(BaseModel):
+    """
+    数据清洗请求模型
+    """
+    remove_duplicates: bool = True
+    row_missing_threshold: float = 0.5
+    col_missing_threshold: float = 0.5
+    row_handling: str = "delete"  # "delete" or "interpolate"
+    col_handling: str = "delete"  # "delete" or "interpolate"
+
+
+@router.post("/{data_id}/clean")
+async def clean_data(request: Request, data_id: str, cleaning_params: DataCleaningRequest):
+    """
+    数据清洗接口
     """
     try:
         # 获取session_id
         session_id = request.state.session_id
         
-        files = get_user_files_list(session_id)
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+        
+        df = result
+        
+        # 记录清洗前的信息
+        original_shape = df.shape
+        original_rows = original_shape[0]
+        original_cols = original_shape[1]
+        
+        # 1. 去除重复行（如果启用）
+        if cleaning_params.remove_duplicates:
+            df = df.drop_duplicates()
+            logger.info(f"去重后数据形状: {df.shape}")
+        
+        # 2. 处理缺失值 - 行处理
+        if cleaning_params.row_handling == "delete":
+            # 删除缺失值比例超过阈值的行
+            row_missing_ratio = df.isnull().sum(axis=1) / df.shape[1]
+            df = df[row_missing_ratio <= cleaning_params.row_missing_threshold]
+        elif cleaning_params.row_handling == "interpolate":
+            # 对数值列进行插值处理
+            numeric_columns = df.select_dtypes(include=[np.number]).columns
+            df[numeric_columns] = df[numeric_columns].interpolate()
+        
+        # 3. 处理缺失值 - 列处理
+        if cleaning_params.col_handling == "delete":
+            # 删除缺失值比例超过阈值的列
+            col_missing_ratio = df.isnull().sum() / df.shape[0]
+            df = df.loc[:, col_missing_ratio <= cleaning_params.col_missing_threshold]
+        elif cleaning_params.col_handling == "interpolate":
+            # 对数值列进行插值处理
+            numeric_columns = df.select_dtypes(include=[np.number]).columns
+            df[numeric_columns] = df[numeric_columns].interpolate()
+        
+        # 生成新的文件名
+        base_name = os.path.splitext(os.path.basename(file_path))[0]
+        new_filename = f"{base_name}_cleaned.csv"
+        new_file_path = get_file_path(os.path.splitext(new_filename)[0], session_id)
+        
+        # 保存清洗后的数据
+        df.to_csv(new_file_path, index=False, encoding="utf-8-sig")
+        
+        # 处理NaN值，将其替换为None以便JSON序列化
+        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+        
+        # 再次确保所有值都可以被JSON序列化
+        for col in df.columns:
+            def convert_value(x):
+                if pd.isna(x) or x is None:
+                    return None
+                if hasattr(x, 'item'):
+                    try:
+                        return x.item()
+                    except (ValueError, OverflowError):
+                        return str(x)
+                return x
+            df[col] = df[col].apply(convert_value)
         
         return JSONResponse(content={
             "success": True,
-            "data": files
+            "data": {
+                "original_rows": original_rows,
+                "original_cols": original_cols,
+                "cleaned_rows": df.shape[0],
+                "cleaned_cols": df.shape[1],
+                "removed_rows": original_rows - df.shape[0],
+                "removed_cols": original_cols - df.shape[1],
+                "new_data_id": os.path.splitext(new_filename)[0],
+                "new_filename": new_filename,
+                "preview": df.head().to_dict('records')
+            }
         })
     except Exception as e:
+        logger.error(f"数据清洗时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={
@@ -101,35 +214,24 @@ async def get_user_files(request: Request):
 @router.get("/{data_id}")
 async def get_data_preview(request: Request, data_id: str, page: int = 1, page_size: int = 10):
     """
-    获取数据预览接口
+    获取数据预览接口，用于数据预览弹窗的查询
     """
     try:
         # 获取session_id
         session_id = request.state.session_id
         
-        # 构建文件路径
-        file_path = get_file_path(data_id, session_id)
-        if not os.path.exists(file_path):
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
             return JSONResponse(
-                status_code=404,
+                status_code=status_code,
                 content={
                     "success": False,
-                    "error": "数据文件不存在"
+                    "error": result
                 }
             )
         
-        # 读取CSV文件
-        try:
-            df = pd.read_csv(file_path, encoding="utf-8-sig")
-        except Exception as e:
-            logger.error(f"读取文件 {file_path} 失败: {str(e)}")
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "success": False,
-                    "error": f"读取文件失败: {str(e)}"
-                }
-            )
+        df = result
         
         # 检查DataFrame是否为空
         if df.empty:
@@ -200,29 +302,18 @@ async def get_data_info(request: Request, data_id: str):
         # 获取session_id
         session_id = request.state.session_id
         
-        # 构建文件路径
-        file_path = get_file_path(data_id, session_id)
-        if not os.path.exists(file_path):
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
             return JSONResponse(
-                status_code=404,
+                status_code=status_code,
                 content={
                     "success": False,
-                    "error": "数据文件不存在"
+                    "error": result
                 }
             )
         
-        # 读取CSV文件
-        try:
-            df = pd.read_csv(file_path, encoding="utf-8-sig")
-        except Exception as e:
-            logger.error(f"读取文件 {file_path} 失败: {str(e)}")
-            return JSONResponse(
-                status_code=500,
-                content={
-                    "success": False,
-                    "error": f"读取文件失败: {str(e)}"
-                }
-            )
+        df = result
         
         # 检查DataFrame是否为空
         if df.empty:
@@ -263,6 +354,123 @@ async def get_data_info(request: Request, data_id: str):
         })
     except Exception as e:
         logger.error(f"获取数据信息时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+@router.get("/{data_id}/details")
+async def get_data_details(request: Request, data_id: str):
+    """
+    获取数据文件详细信息接口（包括前5行、每列类型、数据范围、缺失值等统计信息），用于“基本信息”方法
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+
+        df = result
+
+        # 获取前5行数据
+        head_data = df.head(5).to_dict('records')
+
+        # 获取每列的数据类型
+        dtypes = {col: str(dtype) for col, dtype in df.dtypes.items()}
+
+        # 获取数值列的统计信息
+        numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
+        numeric_stats = {}
+        for col in numeric_columns:
+            min_val = df[col].min()
+            max_val = df[col].max()
+            mean_val = df[col].mean()
+            std_val = df[col].std()
+
+            # 处理可能的NaN值和无穷大值
+            def safe_float_convert(val):
+                if pd.isna(val) or val is None:
+                    return None
+                try:
+                    # 检查是否为无穷大
+                    if np.isinf(val):
+                        return None
+                    return float(val)
+                except (ValueError, OverflowError):
+                    return None
+
+            numeric_stats[col] = {
+                "min": safe_float_convert(min_val),
+                "max": safe_float_convert(max_val),
+                "mean": safe_float_convert(mean_val),
+                "std": safe_float_convert(std_val),
+            }
+
+        # 获取分类列的统计信息
+        categorical_columns = df.select_dtypes(include=['object']).columns.tolist()
+        categorical_stats = {}
+        for col in categorical_columns:
+            value_counts = df[col].value_counts()
+            # 处理可能的NaN值
+            value_counts = value_counts.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+            top_values = value_counts.head(5).to_dict()
+
+            # 确保所有值都可以被JSON序列化
+            safe_top_values = {}
+            for k, v in top_values.items():
+                if pd.isna(k):
+                    safe_key = None
+                else:
+                    safe_key = str(k) if not isinstance(k, (str, int, float, bool)) else k
+
+                safe_top_values[safe_key] = v
+
+            categorical_stats[col] = {
+                "unique_count": int(df[col].nunique()),
+                "top_values": safe_top_values,
+            }
+
+        # 缺失值统计
+        missing_values = {col: int(df[col].isnull().sum()) for col in df.columns}
+
+        # 总体统计
+        total_missing = int(df.isnull().sum().sum())
+        total_cells = int(df.size)
+
+        # 再次处理可能遗漏的NaN值
+        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+
+        return JSONResponse(content={
+            "success": True,
+            "data": {
+                "data_id": data_id,
+                "filename": f"{data_id}.csv",
+                "rows": len(df),
+                "columns": len(df.columns),
+                "column_names": list(df.columns),
+                "head": head_data,
+                "dtypes": dtypes,
+                "numeric_stats": numeric_stats,
+                "categorical_stats": categorical_stats,
+                "missing_values": missing_values,
+                "total_missing": total_missing,
+                "total_cells": total_cells,
+                "completeness": (total_cells - total_missing) / total_cells if total_cells > 0 else 0
+            }
+        })
+    except Exception as e:
         return JSONResponse(
             status_code=500,
             content={
@@ -370,127 +578,6 @@ async def download_data(request: Request, data_id: str):
             }
         )
 
-@router.get("/{data_id}/details")
-async def get_data_details(request: Request, data_id: str):
-    """
-    获取数据文件详细信息接口（包括前5行、每列类型、数据范围、缺失值等统计信息）
-    """
-    try:
-        # 获取session_id
-        session_id = request.state.session_id
-        
-        # 构建文件路径
-        file_path = get_file_path(data_id, session_id)
-        if not os.path.exists(file_path):
-            return JSONResponse(
-                status_code=404,
-                content={
-                    "success": False,
-                    "error": "数据文件不存在"
-                }
-            )
-        
-        # 读取CSV文件
-        df = pd.read_csv(file_path, encoding="utf-8-sig")
-        # 处理NaN值，将其替换为None以便JSON序列化
-        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
-        
-        # 获取前5行数据
-        head_data = df.head(5).to_dict('records')
-        
-        # 获取每列的数据类型
-        dtypes = {col: str(dtype) for col, dtype in df.dtypes.items()}
-        
-        # 获取数值列的统计信息
-        numeric_columns = df.select_dtypes(include=['number']).columns.tolist()
-        numeric_stats = {}
-        for col in numeric_columns:
-            min_val = df[col].min()
-            max_val = df[col].max()
-            mean_val = df[col].mean()
-            std_val = df[col].std()
-            
-            # 处理可能的NaN值和无穷大值
-            def safe_float_convert(val):
-                if pd.isna(val) or val is None:
-                    return None
-                try:
-                    # 检查是否为无穷大
-                    if np.isinf(val):
-                        return None
-                    return float(val)
-                except (ValueError, OverflowError):
-                    return None
-            
-            numeric_stats[col] = {
-                "min": safe_float_convert(min_val),
-                "max": safe_float_convert(max_val),
-                "mean": safe_float_convert(mean_val),
-                "std": safe_float_convert(std_val),
-            }
-        
-        # 获取分类列的统计信息
-        categorical_columns = df.select_dtypes(include=['object']).columns.tolist()
-        categorical_stats = {}
-        for col in categorical_columns:
-            value_counts = df[col].value_counts()
-            # 处理可能的NaN值
-            value_counts = value_counts.replace({pd.NA: None, pd.NaT: None, np.nan: None})
-            top_values = value_counts.head(5).to_dict()
-            
-            # 确保所有值都可以被JSON序列化
-            safe_top_values = {}
-            for k, v in top_values.items():
-                if pd.isna(k):
-                    safe_key = None
-                else:
-                    safe_key = str(k) if not isinstance(k, (str, int, float, bool)) else k
-                
-                safe_top_values[safe_key] = v
-            
-            categorical_stats[col] = {
-                "unique_count": int(df[col].nunique()),
-                "top_values": safe_top_values,
-            }
-        
-        # 缺失值统计
-        missing_values = {col: int(df[col].isnull().sum()) for col in df.columns}
-        
-        # 总体统计
-        total_missing = int(df.isnull().sum().sum())
-        total_cells = int(df.size)
-        
-        # 再次处理可能遗漏的NaN值
-        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
-        
-        return JSONResponse(content={
-            "success": True,
-            "data": {
-                "data_id": data_id,
-                "filename": f"{data_id}.csv",
-                "rows": len(df),
-                "columns": len(df.columns),
-                "column_names": list(df.columns),
-                "head": head_data,
-                "dtypes": dtypes,
-                "numeric_stats": numeric_stats,
-                "categorical_stats": categorical_stats,
-                "missing_values": missing_values,
-                "total_missing": total_missing,
-                "total_cells": total_cells,
-                "completeness": (total_cells - total_missing) / total_cells if total_cells > 0 else 0
-            }
-        })
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": str(e)
-            }
-        )
-
-
 class AddHeaderRequest(BaseModel):
     column_names: list
     mode: str = "add"  # "add" for adding header, "modify" for modifying existing header
@@ -513,14 +600,14 @@ async def add_header(request: Request, data_id: str, body: AddHeaderRequest):
         # 获取session_id
         session_id = request.state.session_id
         
-        # 构建文件路径
-        file_path = get_file_path(data_id, session_id)
-        if not os.path.exists(file_path):
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
             return JSONResponse(
-                status_code=404,
+                status_code=status_code,
                 content={
                     "success": False,
-                    "error": "数据文件不存在"
+                    "error": result
                 }
             )
         
@@ -532,7 +619,7 @@ async def add_header(request: Request, data_id: str, body: AddHeaderRequest):
             sys.path.insert(0, os.path.join(parent_dir, "utils"))
             from utils.file_manager import add_header_to_file
                 
-        result = add_header_to_file(file_path, body.column_names, session_id, mode=body.mode)
+        result = add_header_to_file(get_file_path(data_id, session_id), body.column_names, session_id, mode=body.mode)
         
         return JSONResponse(content={
             "success": True,

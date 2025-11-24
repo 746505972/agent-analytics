@@ -56,23 +56,25 @@ class DataAnalysisAgent:
         # 注册文件读取工具
         @tool
         def read_file(file_path: str,n : int = 10) -> dict:
-            """读取CSV/Excel文件的前n行数据，参数为文件路径和行数n"""
+            """
+            读取文件的前n行数据
+            Args:
+            file_path (str): 文件路径
+            n (int): 行数，默认为10
+            """
             return read_any_file(file_path).head(n).to_dict()
         
         self.tools.append(read_file)
-
-        # 注册文件上传工具
-        @tool
-        def upload_file_tool(file_path: str, original_filename: str = None, session_id: str = None) -> dict:
-            """上传文件，参数为文件路径、原始文件名和session_id"""
-            return upload_file(file_path, original_filename, session_id)
-        
-        self.tools.append(upload_file_tool)
         
         # 注册文件删除工具
         @tool
         def delete_file_tool(data_id: str, session_id: str = None) -> None:
-            """删除指定的数据文件，参数为data_id和session_id"""
+            """
+            删除指定的数据文件
+            Args:
+            data_id (str): 文件ID
+            session_id (str): session_id
+            """
             return delete_file(data_id, session_id)
         
         self.tools.append(delete_file_tool)
@@ -80,7 +82,11 @@ class DataAnalysisAgent:
         # 注册获取用户文件列表工具
         @tool
         def list_user_files(session_id: str = None) -> list:
-            """获取用户上传的文件列表，参数为session_id"""
+            """
+            获取用户上传的文件列表
+            Args:
+            session_id (str): session_id
+            """
             # 如果没有提供session_id，返回空列表
             if not session_id:
                 return []
@@ -99,6 +105,7 @@ class DataAnalysisAgent:
         @tool
         def add_header_tool(file_path: str, column_names: list, session_id: str = None, mode: str = "add") -> dict:
             """
+            为文件添加/修改标题行并创建新文件
             Args:
             file_path (str): 文件路径
             column_names (list): 列名列表
@@ -173,7 +180,6 @@ class DataAnalysisAgent:
 文件ID(data_id): {data_context.get('data_id', '未知')}
 session_id: {session_id}
 文件路径:{data_context.get('file_path', '未知')}
-文件名: {data_context.get('filename', '未知')}
 数据形状: {data_context.get('shape', '未知')} (行数, 列数)
 列名: {', '.join(data_context.get('columns', []))}
 数据类型: {data_context.get('dtypes', '未知')}

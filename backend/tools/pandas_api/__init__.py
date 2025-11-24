@@ -4,33 +4,43 @@ Pandas API 模块
 """
 
 import pandas as pd
+import numpy as np
 from langchain_core.tools import tool
 
 # 数据清洗工具
 @tool
-def clean_data(df: dict) -> dict:
+def clean_data(
+    data_id: str,
+    remove_duplicates: bool = True,
+    row_missing_threshold: float = 0.5,
+    col_missing_threshold: float = 0.5,
+    row_handling: str = "delete",
+    col_handling: str = "delete"
+) -> dict:
     """
-    基础数据清洗功能
+    数据清洗功能
     
     Args:
-        df (dict): 输入数据（字典格式）
+        data_id (str): 数据文件ID
+        remove_duplicates (bool): 是否去除重复行，默认True
+        row_missing_threshold (float): 行缺失值阈值(0-1)，默认0.5
+        col_missing_threshold (float): 列缺失值阈值(0-1)，默认0.5
+        row_handling (str): 行处理方式("delete" 或 "interpolate")，默认"delete"
+        col_handling (str): 列处理方式("delete" 或 "interpolate")，默认"delete"
         
     Returns:
-        dict: 清洗后的数据
+        dict: 清洗结果信息
     """
-    # 转换为DataFrame
-    df = pd.DataFrame(df)
-    
-    # 删除完全重复的行
-    df = df.drop_duplicates()
-    
-    # 删除完全为空的列
-    df = df.dropna(axis=1, how='all')
-    
-    # 删除完全为空的行
-    df = df.dropna(axis=0, how='all')
-    
-    return df.to_dict()
+    # 这里只是一个占位实现，实际实现将在 routers/data.py 中完成
+    return {
+        "data_id": data_id,
+        "remove_duplicates": remove_duplicates,
+        "row_missing_threshold": row_missing_threshold,
+        "col_missing_threshold": col_missing_threshold,
+        "row_handling": row_handling,
+        "col_handling": col_handling,
+        "status": "placeholder"
+    }
 
 # 聚类分析工具
 @tool

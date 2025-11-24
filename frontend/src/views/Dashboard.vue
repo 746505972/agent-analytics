@@ -133,29 +133,103 @@
                     <span class="info-value">{{ datasetDetails.filename }}</span>
                   </div>
                   <div class="info-item">
-                    <span class="info-label">行数:</span>
-                    <span class="info-value">{{ datasetDetails.rows }}</span>
+                    <div>
+                      <span class="info-label">行数:</span>
+                      <span class="info-value">{{ datasetDetails.rows.toLocaleString() }}</span>
+                    </div>
+                    <div>
+                      <span class="info-label">列数:</span>
+                      <span class="info-value">{{ datasetDetails.columns.toLocaleString() }}</span>
+                    </div>
                   </div>
                   <div class="info-item">
-                    <span class="info-label">列数:</span>
-                    <span class="info-value">{{ datasetDetails.columns }}</span>
-                  </div>
-                  <div class="info-item">
-                    <span class="info-label">完整性:</span>
-                    <span class="info-value">{{ (datasetDetails.completeness * 100).toFixed(2) }}%</span>
+                    <div>
+                      <span class="info-label">完整性:</span>
+                      <span class="info-value">{{ (datasetDetails.completeness * 100).toFixed(2) }}%</span>
+                    </div>
+                    <div>
+                      <span class="info-label">总单元格数:</span>
+                      <span class="info-value">{{ datasetDetails.total_cells.toLocaleString() }}</span>
+                    </div>
+                    <div>
+                      <span class="info-label">缺失值总数:</span>
+                      <span class="info-value">{{ datasetDetails.total_missing.toLocaleString() }}</span>
+                    </div>
                   </div>
                 </div>
                 
                 <h4>列信息:</h4>
-                <div class="column-details">
-                  <div 
-                    v-for="(dtype, columnName) in datasetDetails.dtypes" 
-                    :key="columnName"
-                    class="column-item"
-                  >
-                    <span class="column-name">{{ columnName }}</span>
-                    <span class="column-type">{{ dtype }}</span>
-                  </div>
+                <div class="column-table-container">
+                  <table class="column-table">
+                    <thead>
+                      <tr>
+                        <th>列名</th>
+                        <th>数据类型</th>
+                        <th>缺失值数量</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(dtype, columnName) in datasetDetails.dtypes" :key="columnName">
+                        <td>{{ columnName }}</td>
+                        <td>{{ dtype }}</td>
+                        <td>{{ datasetDetails.missing_values[columnName].toLocaleString() || 0 }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <h4>数值型列统计信息:</h4>
+                <div class="stats-table-container">
+                  <table class="stats-table">
+                    <thead>
+                      <tr>
+                        <th>列名</th>
+                        <th>最小值</th>
+                        <th>最大值</th>
+                        <th>平均值</th>
+                        <th>标准差</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(stats, columnName) in datasetDetails.numeric_stats" :key="columnName">
+                        <td>{{ columnName }}</td>
+                        <td>{{ stats.min !== null ? stats.min.toLocaleString() : 'N/A' }}</td>
+                        <td>{{ stats.max !== null ? stats.max.toLocaleString() : 'N/A' }}</td>
+                        <td>{{ stats.mean !== null ? Number(stats.mean.toFixed(2)).toLocaleString() : 'N/A' }}</td>
+                        <td>{{ stats.std !== null ? Number(stats.std.toFixed(2)).toLocaleString() : 'N/A' }}</td>
+                      </tr>
+                      <tr v-if="Object.keys(datasetDetails.numeric_stats).length === 0">
+                        <td colspan="5" class="no-data">无数值型列</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <h4>分类型列统计信息:</h4>
+                <div class="stats-table-container">
+                  <table class="stats-table">
+                    <thead>
+                      <tr>
+                        <th>列名</th>
+                        <th>唯一值数量</th>
+                        <th>常见值</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(stats, columnName) in datasetDetails.categorical_stats" :key="columnName">
+                        <td>{{ columnName }}</td>
+                        <td>{{ stats.unique_count }}</td>
+                        <td>
+                          <div v-for="(count, value) in stats.top_values" :key="value" class="top-value-item">
+                            <span class="highlight-param">{{ value }}</span> 出现 <span class="highlight-param">{{ count }}</span> 次
+                          </div>
+                        </td>
+                      </tr>
+                      <tr v-if="Object.keys(datasetDetails.categorical_stats).length === 0">
+                        <td colspan="3" class="no-data">无分类型列</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
                 
                 <h4>前5行数据预览:</h4>
@@ -685,16 +759,17 @@ export default {
       }
     },
 
-    goToAnalysis(dataId, method) {
-      // 跳转到分析页面
-      this.$router.push({
-        name: 'Analysis',
-        query: {
-          data_id: dataId,
-          method: method
-        }
-      });
-    },
+    // goToAnalysis(dataId, method) {
+    //   // 跳转到分析页面
+    //   // Analysis.vue已弃用
+    //   this.$router.push({
+    //     name: 'Analysis',
+    //     query: {
+    //       data_id: dataId,
+    //       method: method
+    //     }
+    //   });
+    // },
 
     // 从历史记录加载分析结果
     async loadAnalysisFromHistory(historyItem) {
@@ -897,9 +972,8 @@ export default {
       // 保存文件选择区域的展开/收起状态
       localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
       
-      // 保存当前选中的方法和大类
+      // 保存当前选中的方法
       localStorage.setItem('selectedMethod', this.currentMethod);
-      localStorage.setItem('selectedCategory', this.currentCategory);
       
       // 直接调用API获取分析结果
       this.loadingDetails = true;
@@ -926,7 +1000,7 @@ export default {
       this.middleSectionView = 'config';
     },
     
-    // 新增方法：调用API获取分析结果
+    // 调用API获取分析结果
     async fetchAnalysisResult(dataId, method) {
       try {
         if (method === 'basic_info') {
@@ -2011,6 +2085,7 @@ export default {
 .info-item {
   display: flex;
   flex-direction: column;
+  overflow-wrap: break-word;
   padding: 15px;
   background-color: #f5f7fa;
   border-radius: 4px;
@@ -2019,7 +2094,6 @@ export default {
 .info-label {
   font-size: 14px;
   color: #606266;
-  margin-bottom: 5px;
 }
 
 .info-value {
@@ -2076,6 +2150,65 @@ export default {
   font-weight: bold;
 }
 
+.stats-table-container {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.stats-table th,
+.stats-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.stats-table th {
+  background-color: #f5f7fa;
+  font-weight: bold;
+}
+
+.no-data {
+  text-align: center;
+  color: #909399;
+  font-style: italic;
+}
+
+.top-value-item {
+  margin-bottom: 3px;
+}
+
+.column-table-container {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.column-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.column-table th,
+.column-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.column-table th {
+  background-color: #f5f7fa;
+  font-weight: bold;
+}
+
+.highlight-param {
+  font-family: 'Courier New', monospace;
+}
 
 /* 添加标题行区域样式 */
 .add-header-section {
