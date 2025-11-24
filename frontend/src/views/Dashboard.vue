@@ -6,10 +6,42 @@
           <h3>选择分析文件</h3>
           <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
         </div>
+        <div v-if="selectedFile" class="selected-file-info">
+          当前选中: {{ getSelectedFileName() }}
+        </div>
         <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
+          <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="20" alt="GitHub">
+          </a>
       </div>
     </div>
     
+    <!-- 分析历史区域 -->
+    <div class="analysis-history" v-if="analysisHistory.length > 0">
+      <div class="history-title">分析历史:</div>
+      <div class="history-buttons">
+        <div
+          v-for="(historyItem, index) in analysisHistory"
+          :key="index"
+          class="history-item"
+          :class="{ active: isHistoryItemActive(historyItem) }"
+        >
+          <button
+            @click="loadAnalysisFromHistory(historyItem)"
+            class="history-button"
+          >
+            {{ getMethodName(historyItem.method) }}{{ index + 1 }}
+          </button>
+          <button
+            @click="removeFromHistory(index)"
+            class="delete-history-button"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- 文件选择悬浮区域 -->
     <div v-if="!isFileSectionCollapsed" class="file-selection-overlay" v-click-outside="closeFileSelection">
       <div class="file-selection-content">
@@ -62,18 +94,18 @@
               v-for="category in methodCategories" 
               :key="category.id"
               class="method-category"
-              :class="{ active: currentCategory === category.id }"
+              :class="{ active: expandedCategories.includes(category.id) }"
             >
-              <div class="category-header" @click="selectCategory(category.id)">
+              <div class="category-header" @click="toggleCategory(category.id)">
                 <h4>{{ category.name }}</h4>
-                <span class="toggle-icon">{{ currentCategory === category.id ? '−' : '+' }}</span>
+                <span class="toggle-icon">{{ expandedCategories.includes(category.id) ? '−' : '+' }}</span>
               </div>
-              <div v-show="currentCategory === category.id" class="category-methods">
+              <div v-show="expandedCategories.includes(category.id)" class="category-methods">
                 <button 
                   v-for="method in category.methods" 
                   :key="method.id"
                   :class="{ active: currentMethod === method.id }"
-                  @click="selectMethod(method.id)"
+                  @click="selectMethod(method.id) ; switchToConfigView()"
                   class="method-tab"
                 >
                   {{ method.name }}
@@ -86,139 +118,309 @@
       
       <!-- 中间：列名列表区域 -->
       <div class="middle-section">
-        <!-- 方法描述和执行按钮移到中栏 -->
-        <div v-if="selectedFile" class="method-description-section">
-          <div class="method-description-content">
-            <div class="method-content">
-              <div v-if="currentMethod === 'basic_info'">
-                <h4>数据集基本信息</h4>
-                <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
-              </div>
-              <div v-else-if="currentMethod === 'statistical_summary'" class="statistical-summary-method">
-                <h4>统计摘要</h4>
-                <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
-              </div>
-              <div v-else-if="currentMethod === 'correlation_analysis'" class="correlation-analysis-method">
-                <h4>相关性分析</h4>
-                <p>分析数据集中各变量之间的相关性。</p>
-              </div>
-              <div v-else-if="currentMethod === 'distribution_analysis'" class="distribution-analysis-method">
-                <h4>分布分析</h4>
-                <p>分析数据集中各变量的分布情况。</p>
-              </div>
-              <div v-else-if="currentMethod === 'visualization'" class="visualization-method">
-                <h4>数据可视化</h4>
-                <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
-              </div>
-              <div v-else-if="currentMethod === 'ml_analysis'" class="ml-analysis-method">
-                <h4>机器学习分析</h4>
-                <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
-              </div>
-              <div v-else-if="currentMethod === 'clustering'" class="clustering-method">
-                <h4>聚类分析</h4>
-                <p>使用聚类算法对数据进行分组分析。</p>
-              </div>
-              <div v-else-if="currentMethod === 'classification'" class="classification-method">
-                <h4>分类分析</h4>
-                <p>使用分类算法对数据进行分类预测。</p>
-              </div>
-              <div v-else-if="currentMethod === 'regression'" class="regression-method">
-                <h4>回归分析</h4>
-                <p>使用回归算法分析变量之间的关系。</p>
-              </div>
-              <div v-else-if="currentMethod === 'text_analysis'" class="text-analysis-method">
-                <h4>文本分析</h4>
-                <p>对文本数据进行分析，提取关键信息和模式。</p>
-              </div>
-              <div v-else-if="currentMethod === 'sentiment_analysis'" class="sentiment-analysis-method">
-                <h4>情感分析</h4>
-                <p>分析文本数据中的情感倾向。</p>
-              </div>
-              <div v-else-if="currentMethod === 'data_cleaning'" class="data-cleaning-method">
-                <h4>数据清洗</h4>
-                <p>清理数据中的噪声和异常值。</p>
-              </div>
-              <div v-else-if="currentMethod === 'data_transformation'" class="data-transformation-method">
-                <h4>数据转换</h4>
-                <p>对数据进行转换操作，如标准化、归一化等。</p>
-              </div>
-              <div v-else-if="currentMethod === 'add_header'" class="add-header-method">
-                <h4>添加/修改标题行</h4>
-                <p>为没有标题行的文件添加自定义列名，或修改现有标题行。</p>
-                <div class="header-mode-toggle">
-                  <label>
-                    <input 
-                      type="radio" 
-                      v-model="headerEditMode" 
-                      :value="false" 
-                      @change="handleHeaderModeChange"
-                    > 添加标题行
-                  </label>
-                  <label>
-                    <input 
-                      type="radio" 
-                      v-model="headerEditMode" 
-                      :value="true" 
-                      @change="handleHeaderModeChange"
-                    > 修改标题行
-                  </label>
+        <!-- 结果渲染区 -->
+        <div v-if="middleSectionView === 'result'" class="result-section">
+          <div class="result-header">
+            <button @click="switchToConfigView" class="back-button">← 返回参数配置</button>
+            <h2>{{ getMethodName(currentMethod) }}分析结果</h2>
+          </div>
+          
+          <div class="result-content">
+            <!-- 基本信息分析结果 -->
+            <div v-if="currentMethod === 'basic_info' && datasetDetails" class="analysis-section">
+              <div class="basic-info-details">
+                <h3>数据集基本信息</h3>
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="info-label">文件名:</span>
+                    <span class="info-value">{{ datasetDetails.filename }}</span>
+                  </div>
+                  <div class="info-item">
+                    <div>
+                      <span class="info-label">行数:</span>
+                      <span class="info-value">{{ datasetDetails.rows.toLocaleString() }}</span>
+                    </div>
+                    <div>
+                      <span class="info-label">列数:</span>
+                      <span class="info-value">{{ datasetDetails.columns.toLocaleString() }}</span>
+                    </div>
+                  </div>
+                  <div class="info-item">
+                    <div>
+                      <span class="info-label">完整性:</span>
+                      <span class="info-value">{{ (datasetDetails.completeness * 100).toFixed(2) }}%</span>
+                    </div>
+                    <div>
+                      <span class="info-label">总单元格数:</span>
+                      <span class="info-value">{{ datasetDetails.total_cells.toLocaleString() }}</span>
+                    </div>
+                    <div>
+                      <span class="info-label">缺失值总数:</span>
+                      <span class="info-value">{{ datasetDetails.total_missing.toLocaleString() }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <h4>列信息:</h4>
+                <div class="column-table-container">
+                  <table class="column-table">
+                    <thead>
+                      <tr>
+                        <th>列名</th>
+                        <th>数据类型</th>
+                        <th>缺失值数量</th>
+                        <th>列完整性</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(dtype, columnName) in datasetDetails.dtypes" :key="columnName">
+                        <td>{{ columnName }}</td>
+                        <td>{{ dtype }}</td>
+                        <td>{{ datasetDetails.missing_values[columnName].toLocaleString() || 0 }}</td>
+                        <td>{{ (datasetDetails.completeness_values[columnName] * 100).toFixed(2) + '%' || 'unknown' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <h4>数值型列统计信息:</h4>
+                <div class="stats-table-container">
+                  <table class="stats-table">
+                    <thead>
+                      <tr>
+                        <th>列名</th>
+                        <th>最小值</th>
+                        <th>最大值</th>
+                        <th>平均值</th>
+                        <th>标准差</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(stats, columnName) in datasetDetails.numeric_stats" :key="columnName">
+                        <td>{{ columnName }}</td>
+                        <td>{{ stats.min !== null ? stats.min.toLocaleString() : 'N/A' }}</td>
+                        <td>{{ stats.max !== null ? stats.max.toLocaleString() : 'N/A' }}</td>
+                        <td>{{ stats.mean !== null ? Number(stats.mean.toFixed(2)).toLocaleString() : 'N/A' }}</td>
+                        <td>{{ stats.std !== null ? Number(stats.std.toFixed(2)).toLocaleString() : 'N/A' }}</td>
+                      </tr>
+                      <tr v-if="Object.keys(datasetDetails.numeric_stats).length === 0">
+                        <td colspan="5" class="no-data">无数值型列</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <h4>分类型列统计信息:</h4>
+                <div class="stats-table-container">
+                  <table class="stats-table">
+                    <thead>
+                      <tr>
+                        <th>列名</th>
+                        <th>唯一值数量</th>
+                        <th>常见值</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(stats, columnName) in datasetDetails.categorical_stats" :key="columnName">
+                        <td>{{ columnName }}</td>
+                        <td>{{ stats.unique_count }}</td>
+                        <td>
+                          <div v-for="(count, value) in stats.top_values" :key="value" class="top-value-item">
+                            <span class="highlight-param">{{ value }}</span> 出现 <span class="highlight-param">{{ count }}</span> 次
+                          </div>
+                        </td>
+                      </tr>
+                      <tr v-if="Object.keys(datasetDetails.categorical_stats).length === 0">
+                        <td colspan="3" class="no-data">无分类型列</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <h4>前5行数据预览:</h4>
+                <div class="data-preview">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th v-for="col in datasetDetails.column_names" :key="col">{{ col }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(row, index) in datasetDetails.head" :key="index">
+                        <td v-for="col in datasetDetails.column_names" :key="col">{{ row[col] }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
-            <div class="method-actions">
-              <button 
-                v-if="currentMethod !== 'add_header'" 
-                @click="executeMethod" 
-                class="execute-button"
-              >
-                执行分析
-              </button>
-              <button 
-                v-else
-                @click="applyHeaderNames"
-                class="execute-button"
-              >
-                应用标题
-              </button>
+            
+            <!-- 统计摘要分析结果 -->
+            <div v-else-if="currentMethod === 'statistical_summary'" class="analysis-section">
+              <h3>统计摘要</h3>
+              <p>此功能正在开发中...</p>
+            </div>
+            
+            <!-- 数据可视化分析结果 -->
+            <div v-else-if="currentMethod === 'visualization'" class="analysis-section">
+              <h3>数据可视化</h3>
+              <p>此功能正在开发中...</p>
+            </div>
+            
+            <!-- 机器学习分析结果 -->
+            <div v-else-if="currentMethod === 'ml_analysis'" class="analysis-section">
+              <h3>机器学习分析</h3>
+              <p>此功能正在开发中...</p>
+            </div>
+            
+            <!-- 加载状态 -->
+            <div v-else-if="loadingDetails" class="analysis-section">
+              <div class="loading-spinner">加载分析结果中...</div>
+            </div>
+            
+            <!-- 错误状态 -->
+            <div v-else class="analysis-section">
+              <p>无法加载分析结果</p>
             </div>
           </div>
         </div>
         
-        <!-- 列名列表和添加标题行区域 -->
-        <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
-          <!-- 列名列表区域 -->
-          <div class="column-list-section">
-            <h3>列名列表</h3>
-            <ul class="column-list">
-              <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
-                {{ column }}
-              </li>
-            </ul>
+        <!-- 参数配置区 -->
+        <div v-else class="config-section">
+          <!-- 方法描述和执行按钮移到中栏 -->
+          <div v-if="selectedFile" class="method-description-section">
+            <div class="method-description-content">
+              <div class="method-content">
+                <div v-if="currentMethod === 'basic_info'">
+                  <h4>数据集基本信息</h4>
+                  <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
+                </div>
+                <div v-else-if="currentMethod === 'statistical_summary'" class="statistical-summary-method">
+                  <h4>统计摘要</h4>
+                  <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
+                </div>
+                <div v-else-if="currentMethod === 'correlation_analysis'" class="correlation-analysis-method">
+                  <h4>相关性分析</h4>
+                  <p>分析数据集中各变量之间的相关性。</p>
+                </div>
+                <div v-else-if="currentMethod === 'distribution_analysis'" class="distribution-analysis-method">
+                  <h4>分布分析</h4>
+                  <p>分析数据集中各变量的分布情况。</p>
+                </div>
+                <div v-else-if="currentMethod === 'visualization'" class="visualization-method">
+                  <h4>数据可视化</h4>
+                  <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
+                </div>
+                <div v-else-if="currentMethod === 'ml_analysis'" class="ml-analysis-method">
+                  <h4>机器学习分析</h4>
+                  <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
+                </div>
+                <div v-else-if="currentMethod === 'clustering'" class="clustering-method">
+                  <h4>聚类分析</h4>
+                  <p>使用聚类算法对数据进行分组分析。</p>
+                </div>
+                <div v-else-if="currentMethod === 'classification'" class="classification-method">
+                  <h4>分类分析</h4>
+                  <p>使用分类算法对数据进行分类预测。</p>
+                </div>
+                <div v-else-if="currentMethod === 'regression'" class="regression-method">
+                  <h4>回归分析</h4>
+                  <p>使用回归算法分析变量之间的关系。</p>
+                </div>
+                <div v-else-if="currentMethod === 'text_analysis'" class="text-analysis-method">
+                  <h4>文本分析</h4>
+                  <p>对文本数据进行分析，提取关键信息和模式。</p>
+                </div>
+                <div v-else-if="currentMethod === 'sentiment_analysis'" class="sentiment-analysis-method">
+                  <h4>情感分析</h4>
+                  <p>分析文本数据中的情感倾向。</p>
+                </div>
+                <div v-else-if="currentMethod === 'data_cleaning'" class="data-cleaning-method">
+                  <h4>数据清洗</h4>
+                  <p>清理数据中的噪声和异常值。</p>
+                </div>
+                <div v-else-if="currentMethod === 'data_transformation'" class="data-transformation-method">
+                  <h4>数据转换</h4>
+                  <p>对数据进行转换操作，如标准化、归一化等。</p>
+                </div>
+                <div v-else-if="currentMethod === 'add_header'" class="add-header-method">
+                  <h4>添加/修改标题行</h4>
+                  <p>为没有标题行的文件添加自定义列名，或修改现有标题行。</p>
+                  <div class="header-mode-toggle">
+                    <label>
+                      <input 
+                        type="radio" 
+                        v-model="headerEditMode" 
+                        :value="false" 
+                        @change="handleHeaderModeChange"
+                      > 添加标题行
+                    </label>
+                    <label>
+                      <input 
+                        type="radio" 
+                        v-model="headerEditMode" 
+                        :value="true" 
+                        @change="handleHeaderModeChange"
+                      > 修改标题行
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div class="method-actions">
+                <button 
+                  v-if="currentMethod !== 'add_header'" 
+                  @click="executeMethod"
+                  class="execute-button"
+                >
+                  执行分析
+                </button>
+                <button 
+                  v-else
+                  @click="applyHeaderNames"
+                  class="execute-button"
+                >
+                  应用标题
+                </button>
+              </div>
+            </div>
           </div>
           
-          <!-- 添加标题行操作区域 -->
-          <div v-if="currentMethod === 'add_header'" class="add-header-section">
-            <h3>设置列名</h3>
-            <div class="add-header-content">
-              <div class="column-inputs">
-                <div 
-                  v-for="(column, index) in selectedFileColumns" 
-                  :key="index" 
-                  class="column-input-item"
-                >
-                  <input 
-                    :id="'column-' + index"
-                    v-model="newColumnNames[index]" 
-                    :placeholder="'列' + (index + 1)"
-                    type="text"
-                  />
+          <!-- 列名列表和添加标题行区域 -->
+          <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
+            <!-- 列名列表区域 -->
+            <div class="column-list-section">
+              <h3>列名列表</h3>
+              <ul class="column-list">
+                <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
+                  {{ column }}
+                </li>
+              </ul>
+            </div>
+            
+            <!-- 添加标题行操作区域 -->
+            <div v-if="currentMethod === 'add_header'" class="add-header-section">
+              <h3>设置列名</h3>
+              <div class="add-header-content">
+                <div class="column-inputs">
+                  <div 
+                    v-for="(column, index) in selectedFileColumns" 
+                    :key="index" 
+                    class="column-input-item"
+                  >
+                    <input 
+                      :id="'column-' + index"
+                      v-model="newColumnNames[index]" 
+                      :placeholder="'列' + (index + 1)"
+                      type="text"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      
+
       <!-- 右侧：聊天分析区域 -->
       <div class="right-section">
         <div class="chat-section">
@@ -266,7 +468,7 @@
           </div>
         </div>
       </div>
-    </div>
+  </div>
     
     <!-- 数据预览弹窗 -->
     <div class="preview-modal" v-if="showPreviewModal">
@@ -412,8 +614,17 @@ export default {
       isWaitingForResponse: false,
       // 新增方法选择相关数据
       currentMethod: 'basic_info',
-      currentCategory: 'statistics',
+      expandedCategories: ['statistics', 'ml', 'visualization', 'nlp', 'data_processing'], // 默认全部展开
       methodCategories: [
+        {
+          id: 'data_processing',
+          name: '数据处理',
+          methods: [
+            { id: 'data_cleaning', name: '数据清洗' },
+            { id: 'data_transformation', name: '数据转换' },
+            { id: 'add_header', name: '添加/修改标题行' }
+          ]
+        },
         {
           id: 'statistics',
           name: '统计方法',
@@ -449,15 +660,6 @@ export default {
             { id: 'sentiment_analysis', name: '情感分析' }
           ]
         },
-        {
-          id: 'data_processing',
-          name: '数据处理',
-          methods: [
-            { id: 'data_cleaning', name: '数据清洗' },
-            { id: 'data_transformation', name: '数据转换' },
-            { id: 'add_header', name: '添加/修改标题行' }  // 修改方法名称
-          ]
-        }
       ],
       // 数据预览弹窗相关数据
       showPreviewModal: false,
@@ -475,7 +677,14 @@ export default {
       // 添加标题行相关数据
       showAddHeaderModal: false,
       newColumnNames: [],
-      headerEditMode: true  // 修改：默认为修改模式
+      headerEditMode: true,  // 修改：默认为修改模式
+      // 分析历史相关数据
+      analysisHistory: [],
+      // 控制中间区域显示内容的状态
+      middleSectionView: 'config', // 'config' 表示参数配置区，'result' 表示结果渲染区
+      // 数据集详情
+      datasetDetails: null,
+      loadingDetails: false
     }
   },
   async mounted() {
@@ -492,8 +701,106 @@ export default {
         this.newColumnNames = [...this.selectedFileColumns];
       }
     }
+
+    // 恢复分析历史
+    this.restoreAnalysisHistory();
   },
   methods: {
+    // 清除localStorage中的数据
+    clearLocalStorage() {
+      // 清除与文件相关的localStorage项
+      localStorage.removeItem('currentDataId');
+      localStorage.removeItem('dashboardChatMessages');
+      localStorage.removeItem('analysisHistory');
+      localStorage.removeItem('selectedMethod');
+      localStorage.removeItem('selectedFile');
+      localStorage.removeItem('isFileSectionCollapsed');
+      localStorage.removeItem('session_id');
+    },
+
+    // 添加获取方法名称的方法
+    getMethodName(methodId) {
+      const methods = {
+        'basic_info': '基本信息',
+        'statistical_summary': '统计摘要',
+        'correlation_analysis': '相关性分析',
+        'distribution_analysis': '分布分析',
+        'visualization': '数据可视化',
+        'ml_analysis': '机器学习分析',
+        'clustering': '聚类分析',
+        'classification': '分类分析',
+        'regression': '回归分析',
+        'text_analysis': '文本分析',
+        'sentiment_analysis': '情感分析',
+        'data_cleaning': '数据清洗',
+        'data_transformation': '数据转换',
+        'add_header': '添加/修改标题行'
+      };
+      return methods[methodId] || '未知分析';
+    },
+
+
+    removeFromHistory(index) {
+      // 从历史记录中移除
+      this.analysisHistory.splice(index, 1);
+
+      // 更新localStorage
+      localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
+    },
+
+    restoreAnalysisHistory() {
+      // 从localStorage恢复分析历史
+      const savedHistory = localStorage.getItem('analysisHistory');
+      if (savedHistory) {
+        try {
+          this.analysisHistory = JSON.parse(savedHistory);
+        } catch (e) {
+          console.error("解析分析历史失败:", e);
+          this.analysisHistory = [];
+        }
+      }
+    },
+
+    // goToAnalysis(dataId, method) {
+    //   // 跳转到分析页面
+    //   // Analysis.vue已弃用
+    //   this.$router.push({
+    //     name: 'Analysis',
+    //     query: {
+    //       data_id: dataId,
+    //       method: method
+    //     }
+    //   });
+    // },
+
+    // 从历史记录加载分析结果
+    async loadAnalysisFromHistory(historyItem) {
+      // 设置当前选中的文件和方法
+      this.selectedFile = historyItem.dataId;
+      this.currentMethod = historyItem.method;
+      
+      // 保存选中的文件和方法到localStorage
+      localStorage.setItem('selectedFile', this.selectedFile);
+      localStorage.setItem('selectedMethod', this.currentMethod);
+      
+      // 获取文件的列名信息
+      await this.selectFile(this.selectedFile);
+      
+      // 如果历史记录中有结果数据，则直接显示
+      if (historyItem.result) {
+        this.datasetDetails = historyItem.result;
+        this.switchToResultView();
+      } else {
+        // 否则执行方法获取结果
+        await this.executeMethod();
+      }
+    },
+
+    // 添加检查历史记录项是否为当前选中项的方法
+    isHistoryItemActive(historyItem) {
+      return this.selectedFile === historyItem.dataId && this.currentMethod === historyItem.method;
+    },
+    
     // 添加Markdown渲染方法
     renderMarkdown(content) {
       if (!content) return '';
@@ -540,6 +847,13 @@ export default {
           const result = await response.json();
           if (result.success) {
             this.files = result.data;
+            this.session_id = result.session_id;
+            const storedSessionId = localStorage.getItem('session_id');
+            if (storedSessionId && this.session_id !== storedSessionId) {
+              // 如果session_id变化，清除localStorage中的数据
+              this.clearLocalStorage();
+              localStorage.setItem('session_id', this.session_id);
+            }
           } else {
             console.error("获取文件列表失败:", result.error);
           }
@@ -628,10 +942,10 @@ export default {
       const category = this.methodCategories.find(cat => 
         cat.methods.some(method => method.id === methodId)
       );
-      if (category) {
-        this.currentCategory = category.id;
-        // 保存当前展开的大类
-        localStorage.setItem('selectedCategory', category.id);
+      if (category && !this.expandedCategories.includes(category.id)) {
+        this.expandedCategories.push(category.id);
+        // 保存展开状态到localStorage
+        localStorage.setItem('expandedCategories', JSON.stringify(this.expandedCategories));
       }
       
       // 如果选择的是添加标题行方法，设置编辑模式
@@ -643,14 +957,7 @@ export default {
         }
       }
     },
-    
-    selectCategory(categoryId) {
-      this.currentCategory = this.currentCategory === categoryId ? null : categoryId;
-      // 保存当前展开的大类
-      localStorage.setItem('selectedCategory', this.currentCategory || '');
-    },
-    
-    executeMethod() {
+    async executeMethod() {
       if (!this.selectedFile || !this.currentMethod) {
         return;
       }
@@ -667,31 +974,87 @@ export default {
       // 保存文件选择区域的展开/收起状态
       localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
       
-      // 保存当前选中的方法和大类
+      // 保存当前选中的方法
       localStorage.setItem('selectedMethod', this.currentMethod);
-      localStorage.setItem('selectedCategory', this.currentCategory);
       
-      // 根据选择的方法跳转到相应的分析页面
-      this.$router.push({
-        name: 'Analysis',
-        query: {
-          data_id: this.selectedFile,
-          method: this.currentMethod
-        }
-      });
+      // 直接调用API获取分析结果
+      this.loadingDetails = true;
+      const result = await this.fetchAnalysisResult(this.selectedFile, this.currentMethod);
+      this.loadingDetails = false;
+      
+      if (result) {
+        // 将结果保存到历史记录中
+        this.addToHistory(this.selectedFile, this.currentMethod, result);
+        
+        // 设置分析结果数据
+        this.datasetDetails = result;
+        
+        // 切换到结果视图
+        this.switchToResultView();
+      }
     },
     
+    switchToResultView() {
+      this.middleSectionView = 'result';
+    },
+    
+    switchToConfigView() {
+      this.middleSectionView = 'config';
+    },
+    
+    // 调用API获取分析结果
+    async fetchAnalysisResult(dataId, method) {
+      try {
+        if (method === 'basic_info') {
+          const response = await fetch(`/data/${dataId}/details`, {
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+              return result.data;
+            } else {
+              console.error("获取分析结果失败:", result.error);
+              return null;
+            }
+          } else {
+            console.error("获取分析结果失败，状态码:", response.status);
+            return null;
+          }
+        }
+        // 其他分析方法可以在这里添加
+        return null;
+      } catch (error) {
+        console.error("加载分析结果失败:", error);
+        return null;
+      }
+    },
+    
+    // 修改添加到历史记录的方法，增加result参数
+    addToHistory(dataId, method, result) {
+      // 添加到历史记录
+      this.analysisHistory.push({
+        dataId,
+        method,
+        result // 保存结果
+      });
+
+      // 保存到localStorage
+      localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
+    },
+
     // 应用自定义标题行
     async applyHeaderNames() {
       if (!this.selectedFile) return;
-      
+
       // 检查是否所有列都已命名
       const emptyNames = this.newColumnNames.filter(name => !name.trim()).length;
       if (emptyNames > 0) {
         alert(`还有 ${emptyNames} 个列未命名，请为所有列提供名称。`);
         return;
       }
-      
+
       try {
         this.showAddHeaderModal = true;
         
@@ -758,36 +1121,9 @@ export default {
       }
       
       // 恢复展开的大类
-      const savedSelectedCategory = localStorage.getItem('selectedCategory');
-      if (savedSelectedCategory) {
-        this.currentCategory = savedSelectedCategory;
-      } else if (savedSelectedMethod) {
-        // 如果没有保存的大类状态但有选中的方法，则自动确定大类
-        const category = this.methodCategories.find(cat => 
-          cat.methods.some(method => method.id === savedSelectedMethod)
-        );
-        if (category) {
-          this.currentCategory = category.id;
-        }
-      }
-      
-      // 恢复聊天记录
-      const savedChatMessages = localStorage.getItem('dashboardChatMessages');
-      if (savedChatMessages) {
-        try {
-          this.chatMessages = JSON.parse(savedChatMessages);
-        } catch (e) {
-          console.error("解析保存的聊天记录失败:", e);
-        }
-      }
-      
-      // 恢复文件选择区域的展开/收起状态
-      const savedFileSectionState = localStorage.getItem('isFileSectionCollapsed');
-      if (savedFileSectionState !== null) {
-        this.isFileSectionCollapsed = savedFileSectionState === 'true';
-      } else {
-        // 默认收起文件选择区域
-        this.isFileSectionCollapsed = true;
+      const savedExpandedCategories = localStorage.getItem('expandedCategories');
+      if (savedExpandedCategories) {
+        this.expandedCategories = JSON.parse(savedExpandedCategories);
       }
       
       // 初始化添加/修改标题行模式
@@ -799,7 +1135,7 @@ export default {
       }
     },
     
-    // 新增方法：检查并选中刚上传的文件
+    // 检查并选中刚上传的文件
     checkAndSelectUploadedFile() {
       // 从localStorage获取刚上传的文件ID
       const currentDataId = localStorage.getItem('currentDataId');
@@ -808,6 +1144,20 @@ export default {
         this.selectFile(currentDataId);
       }
     },
+    
+    toggleCategory(categoryId) {
+      const index = this.expandedCategories.indexOf(categoryId);
+      if (index > -1) {
+        // 如果已经展开，则收起
+        this.expandedCategories.splice(index, 1);
+      } else {
+        // 如果收起，则展开
+        this.expandedCategories.push(categoryId);
+      }
+      // 保存展开状态到localStorage
+      localStorage.setItem('expandedCategories', JSON.stringify(this.expandedCategories));
+    },
+
     
     // 页面激活时恢复状态（从其他页面返回时调用）
     activated() {
@@ -863,15 +1213,12 @@ export default {
           credentials: 'include'
         });
         
-        console.log("收到响应:", response);
-        
         if (response.ok && response.body) {
           const reader = response.body.getReader();
           const decoder = new TextDecoder('utf-8');
           let done = false;
           let accumulatedContent = "";
-          
-          console.log("开始读取流式响应");
+          let toolCalls = [];
           
           // 逐步接收流式响应
           while (!done) {
@@ -880,27 +1227,21 @@ export default {
             
             if (value) {
               const chunk = decoder.decode(value, { stream: true });
-              console.log("收到原始数据块:", JSON.stringify(chunk));
               const lines = chunk.split('\n');
               
               for (const line of lines) {
-                console.log("处理行:", JSON.stringify(line));
                 if (line.startsWith('data: ')) {
                   const data = line.slice(6);
-                  console.log("解析数据:", JSON.stringify(data));
                   
                   if (data === '[DONE]') {
-                    console.log("接收完成");
                     done = true;
                     break;
                   }
                   
                   try {
                     const parsed = JSON.parse(data);
-                    console.log("解析后的数据:", parsed);
                     if (parsed.content !== undefined) {
                       accumulatedContent += parsed.content;
-                      console.log("更新内容:", accumulatedContent);
                       // 更新AI回复内容
                       this.chatMessages[aiMessageIndex].content = accumulatedContent;
                       // 滚动到底部并触发更新
@@ -915,48 +1256,65 @@ export default {
                       if (accumulatedContent.length % 5 === 0) {
                         await this.$nextTick();
                       }
+                    } else if (parsed.tool_calls !== undefined) {
+                      // 处理工具调用信息
+                      toolCalls = parsed.tool_calls;
+                      
+                      // 如果是添加标题行工具，需要刷新文件列表并选中新文件
+                      for (const toolCall of toolCalls) {
+                        if (toolCall.name === 'add_header_tool') {
+                          // 显示工具调用信息
+                          const toolInfo = `
+                            **工具调用详情:**
+                            - 工具名称: ${toolCall.name}
+                            - 参数: ${JSON.stringify(toolCall.args, null, 2)}`;
+                          this.chatMessages[aiMessageIndex].content += toolInfo;
+                          
+                          // 等待一段时间后刷新文件列表
+                          setTimeout(async () => {
+                            await this.loadUploadedFiles();
+                            // 查找新创建的文件并选中
+                            const files = this.files;
+                            // 查找最近添加的文件（根据文件名判断）
+                            const newFile = files.find(file => 
+                              file.filename.includes('_add_header_') || 
+                              file.filename.includes('_modify_header_')
+                            );
+                            
+                            if (newFile) {
+                              await this.selectFile(newFile.data_id);
+                              // 显示通知
+                              this.showCopyNotification(`工具执行成功，已自动选中新文件: ${newFile.filename}`, false);
+                            }
+                          }, 1000);
+                        } else {
+                          // 显示其他工具调用信息
+                          const toolInfo = `
+                            **工具调用详情:**
+                            - 工具名称: ${toolCall.name}
+                            - 参数: ${JSON.stringify(toolCall.args, null, 2)}`;
+                          this.chatMessages[aiMessageIndex].content += toolInfo;
+                        }
+                      }
                     } else if (parsed.error) {
-                      console.error("流式响应错误:", parsed.error);
                       this.chatMessages[aiMessageIndex].content = `错误: ${parsed.error}`;
                       done = true;
                     }
                   } catch (e) {
-                    console.error("解析流数据错误:", e, "原始数据:", data);
                     // 即使解析失败，也尝试显示原始内容
                     this.chatMessages[aiMessageIndex].content = `解析错误: ${data}`;
                     
                     // 强制更新DOM
                     await this.$nextTick();
                   }
-                } else {
-                  // 处理不以 'data: ' 开头的行，可能是错误信息
-                  if (line.trim() !== '') {
-                    console.log("处理非data行:", line);
-                    try {
-                      const parsed = JSON.parse(line);
-                      if (parsed.error) {
-                        console.error("直接错误响应:", parsed.error);
-                        this.chatMessages[aiMessageIndex].content = `错误: ${parsed.error}`;
-                        done = true;
-                      }
-                    } catch (e) {
-                      console.log("非JSON格式行，跳过");
-                    }
-                  }
-                  console.log("跳过非data行:", line);
                 }
               }
-            } else {
-              console.log("收到空值");
             }
           }
-          console.log("流处理完成，最终内容:", accumulatedContent);
         } else {
-          console.error("响应失败，状态码:", response.status);
           this.chatMessages[aiMessageIndex].content = `抱歉，无法连接到AI助手。状态码: ${response.status}`;
         }
       } catch (error) {
-        console.error("发送消息时发生错误:", error);
         this.chatMessages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;
       } finally {
         this.isWaitingForResponse = false;
@@ -979,7 +1337,7 @@ export default {
       }
     },
     
-    // 添加复制消息文本的方法
+    // 复制消息文本
     copyMessageText(text) {
       navigator.clipboard.writeText(text).then(() => {
         // 添加视觉反馈
@@ -1023,7 +1381,7 @@ export default {
     
     getSelectedFileName() {
       const file = this.files.find(f => f.data_id === this.selectedFile);
-      return file ? file.filename : "";
+      return file ? file.filename : "无";
     },
     
     // 显示数据预览弹窗
@@ -1162,12 +1520,85 @@ export default {
   position: relative;
 }
 
+/* 分析历史区域样式 */
+.analysis-history {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.history-title {
+  font-weight: bold;
+  margin-right: 15px;
+  color: #303133;
+}
+
+.history-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.history-item {
+  display: flex;
+  align-items: center;
+}
+
+.history-item:not(.active) .history-button {
+  background-color: #909399; /* 灰色 */
+  color: #ffffff;
+}
+
+.history-item:not(.active) .history-button:hover {
+  background-color: #a0a3a9;
+}
+
+.history-button {
+  padding: 5px 10px;
+  background-color: #409eff; /* 蓝色 */
+  color: white;
+  border: none;
+  border-radius: 4px 0 0 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.history-button:hover {
+  background-color: #66b1ff;
+}
+
+.delete-history-button {
+  padding: 5px;
+  background-color: #f56c6c;
+  color: white;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.delete-history-button:hover {
+  background-color: #ff4d4f;
+}
+
 .header-content {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 350px;
+  gap: 30px;
   position: relative;
+}
+
+.selected-file-info {
+  display: flex;
+  color: #909399;
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 .file-selector-trigger {
@@ -1336,6 +1767,13 @@ export default {
   max-height: 100%;
 }
 
+.config-section,
+.result-section {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .section-header h3 {
   margin: 0;
   color: #303133;
@@ -1469,10 +1907,6 @@ export default {
   margin-bottom: 10px;
 }
 
-.method-category.active {
-  border-color: #409eff;
-}
-
 .category-header {
   display: flex;
   justify-content: space-between;
@@ -1595,6 +2029,187 @@ export default {
   display: flex;
   gap: 0;
   flex: 1;
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+  gap: 20px;
+}
+
+.result-header h2 {
+  margin: 0;
+  color: #303133;
+}
+
+.back-button {
+  padding: 8px 16px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.back-button:hover {
+  background-color: #66b1ff;
+}
+
+.result-content {
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.analysis-section {
+  min-height: 500px;
+}
+
+.loading-spinner {
+  text-align: center;
+  padding: 50px;
+  color: #409eff;
+  font-size: 16px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  overflow-wrap: break-word;
+  padding: 10px;
+  background-color: #f5f7fa;
+  border-radius: 8px;
+}
+
+.info-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.info-value {
+  font-size: 18px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.column-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.column-item {
+  display: flex;
+  padding: 8px 12px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.column-name {
+  font-weight: bold;
+  margin-right: 8px;
+  color: #303133;
+}
+
+.column-type {
+  color: #606266;
+}
+
+.data-preview {
+  overflow-x: auto;
+}
+
+.data-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.data-preview th,
+.data-preview td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-preview th {
+  background-color: #f5f7fa;
+  font-weight: bold;
+}
+
+.stats-table-container {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.stats-table th,
+.stats-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.stats-table th {
+  background-color: #f5f7fa;
+  font-weight: bold;
+}
+
+.no-data {
+  text-align: center;
+  color: #909399;
+  font-style: italic;
+}
+
+.top-value-item {
+  margin-bottom: 3px;
+}
+
+.column-table-container {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.column-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.column-table th,
+.column-table td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.column-table th {
+  background-color: #f5f7fa;
+  font-weight: bold;
+}
+
+.highlight-param {
+  font-family: 'Courier New', monospace;
 }
 
 /* 添加标题行区域样式 */

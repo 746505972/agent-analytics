@@ -2,6 +2,10 @@ import os
 import shutil
 import uuid
 import pandas as pd
+import numpy as np
+
+# 全局操作计数器
+_operation_counter = 0
 
 DATA_DIR = "data"
 
@@ -17,6 +21,14 @@ def ensure_session_dir(session_id: str):
     os.makedirs(session_dir, exist_ok=True)
     return session_dir
 
+
+def _get_next_operation_number() -> int:
+    """
+    获取下一个操作编号，确保在同一次会话中操作编号是连续且唯一的
+    """
+    global _operation_counter
+    _operation_counter += 1
+    return _operation_counter
 
 def read_any_file(file_path: str) -> pd.DataFrame:
     """
@@ -106,7 +118,6 @@ def upload_file(file_path: str, original_filename: str = None, session_id: str =
 
     # 如果文件已存在，添加序号
     counter = 1
-    original_target_path = target_path
     while os.path.exists(target_path):
         name_part = data_id
         if counter > 1:
@@ -183,16 +194,12 @@ def add_header_to_file(file_path: str, column_names: list, session_id: str = Non
     original_filename = os.path.splitext(os.path.basename(file_path))[0]
     
     # 生成新文件名，格式为"原文件名_add_header_N" 或 "原文件名_modify_header_N"
-    counter = 1
-    while True:
-        if mode == "add":
-            new_filename = f"{original_filename}_add_header_{counter}"
-        else:
-            new_filename = f"{original_filename}_modify_header_{counter}"
-        new_file_path = get_file_path(new_filename, session_id)
-        if not os.path.exists(new_file_path):
-            break
-        counter += 1
+    counter = _get_next_operation_number()
+    if mode == "add":
+        new_filename = f"{original_filename}_add_header_{counter}"
+    else:
+        new_filename = f"{original_filename}_modify_header_{counter}"
+    new_file_path = get_file_path(new_filename, session_id)
     
     # 保存新文件
     df.to_csv(new_file_path, index=False, encoding="utf-8-sig")
@@ -203,4 +210,97 @@ def add_header_to_file(file_path: str, column_names: list, session_id: str = Non
         "cols": df.shape[1],
         "columns": list(df.columns),
         "saved_path": new_file_path
+    }
+
+
+def clean_data_file(file_path: str, session_id: str = None, remove_duplicates: bool = False,
+                   row_missing_threshold: float = 1, col_missing_threshold: float = 1,
+                   row_handling: str = "delete", col_handling: str = "delete") -> dict:
+    """
+    清洗数据文件
+    
+    Args:
+        file_path (str): 文件路径
+        session_id (str): session_id
+        remove_duplicates (bool): 是否去除重复行
+        row_missing_threshold (float): 行缺失值阈值
+        col_missing_threshold (float): 列缺失值阈值
+        row_handling (str): 行处理方式 ("delete" or "interpolate")
+        col_handling (str): 列处理方式 ("delete" or "interpolate")
+    """
+    # 确保数据目录存在
+    ensure_data_dir()
+    
+    if session_id:
+        ensure_session_dir(session_id)
+
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+
+    # 读取文件
+    df = pd.read_csv(file_path, encoding="utf-8-sig")
+    
+    # 记录清洗前的信息
+    original_shape = df.shape
+    original_rows = original_shape[0]
+    original_cols = original_shape[1]
+    
+    # 1. 去除重复行（如果启用）
+    if remove_duplicates:
+        df = df.drop_duplicates()
+    
+    # 2. 处理缺失值 - 行处理
+    if row_handling == "delete":
+        # 删除缺失值比例超过阈值的行
+        row_missing_ratio = df.isnull().sum(axis=1) / df.shape[1]
+        df = df[row_missing_ratio <= row_missing_threshold]
+    elif row_handling == "interpolate":
+        # 对数值列进行插值处理
+        numeric_columns = df.select_dtypes(include=[np.number]).columns
+        df[numeric_columns] = df[numeric_columns].interpolate()
+    
+    # 3. 处理缺失值 - 列处理
+    if col_handling == "delete":
+        # 删除缺失值比例超过阈值的列
+        col_missing_ratio = df.isnull().sum() / df.shape[0]
+        df = df.loc[:, col_missing_ratio <= col_missing_threshold]
+    elif col_handling == "interpolate":
+        # 对数值列进行插值处理
+        numeric_columns = df.select_dtypes(include=[np.number]).columns
+        df[numeric_columns] = df[numeric_columns].interpolate()
+    
+    # 生成新的文件名
+    base_name = os.path.splitext(os.path.basename(file_path))[0]
+    counter = _get_next_operation_number()
+    new_filename = f"{base_name}_clean_{counter}"
+    new_file_path = get_file_path(new_filename, session_id)
+    
+    # 保存清洗后的数据
+    df.to_csv(new_file_path, index=False, encoding="utf-8-sig")
+    
+    # 处理NaN值，将其替换为None以便JSON序列化
+    df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+    
+    # 再次确保所有值都可以被JSON序列化
+    for col in df.columns:
+        def convert_value(x):
+            if pd.isna(x) or x is None:
+                return None
+            if hasattr(x, 'item'):
+                try:
+                    return x.item()
+                except (ValueError, OverflowError):
+                    return str(x)
+            return x
+        df[col] = df[col].apply(convert_value)
+    
+    return {
+        "original_rows": original_rows,
+        "original_cols": original_cols,
+        "cleaned_rows": df.shape[0],
+        "cleaned_cols": df.shape[1],
+        "removed_rows": original_rows - df.shape[0],
+        "removed_cols": original_cols - df.shape[1],
+        "data_id": new_filename,
+        "saved_path": new_file_path,
     }

@@ -1,5 +1,17 @@
 # Agent-Analytics: 基于LLM-Agent的自适应数据分析与报告生成系统
 
+
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
+![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
+![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
+![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
+![ngrok](https://img.shields.io/badge/ngrok-1F1E37?style=for-the-badge&logo=ngrok&logoColor=white)
+
 ## 项目简介
 
 Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据分析与报告生成系统，旨在通过智能代理技术实现自动化数据处理、分析与可视化报告输出。
@@ -46,7 +58,7 @@ Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据�
 * 功能：
 
   * 将分析结果（如表格、指标、图表）输入LLM进行解读
-  * 输出自然语言报告
+  * 输出自然语言报告、PDF报告
 
 ## 实际系统目录结构
 
@@ -135,11 +147,10 @@ npm run dev
 ## 开发路线图
 
 - [x] 基础文件上传功能
-- [x] 重构项目结构
-- [x] 实现基础数据分析 API
-- [x] 添加数据可视化功能
+- [ ] 实现基础数据分析 API
+- [ ] 添加数据可视化功能
 - [x] 实现自然语言交互
-- [x] 自动生成分析报告
+- [ ] 自动生成分析报告
 - [ ] 集成更多机器学习算法
 - [ ] 支持更多文件格式
 - [ ] 增强报告模板功能

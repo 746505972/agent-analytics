@@ -12,6 +12,26 @@
       </div>
     </div>
     
+    <!-- 分析历史区域 -->
+    <div class="analysis-history" v-if="analysisHistory.length > 0">
+      <div class="history-title">分析历史:</div>
+      <div class="history-buttons">
+        <div
+          v-for="(historyItem, index) in analysisHistory"
+          :key="index"
+          class="history-item"
+        >
+          <button
+            @click="goToAnalysis(historyItem.dataId, historyItem.method)"
+            class="history-button"
+            :class="{ active: historyItem.dataId === dataId && historyItem.method === analysisMethod }"
+          >
+            {{ getMethodName(historyItem.method) }}{{ index + 1 }}
+          </button>
+        </div>
+      </div>
+    </div>
+    
     <div class="analysis-content">
       <!-- 基本信息分析结果 -->
       <div v-if="analysisMethod === 'basic_info' && datasetDetails" class="analysis-section">
@@ -166,13 +186,19 @@ export default {
           content: "您好！我是您的数据分析助手，我可以帮您解读分析结果或进行进一步分析。"
         }
       ],
-      isWaitingForResponse: false
+      isWaitingForResponse: false,
+      
+      // 分析历史相关数据
+      analysisHistory: []
     }
   },
   async mounted() {
     // 从路由参数获取dataId和分析方法
     this.dataId = this.$route.query.data_id || ''
     this.analysisMethod = this.$route.query.method || ''
+    
+    // 恢复分析历史
+    this.restoreAnalysisHistory();
     
     if (this.dataId && this.analysisMethod) {
       // 根据分析方法加载相应的结果
@@ -209,7 +235,18 @@ export default {
       
       this.loadingDetails = true;
       try {
-        if (this.analysisMethod === 'basic_info') {
+        // 从localStorage中获取分析历史记录
+        const analysisHistory = JSON.parse(localStorage.getItem('analysisHistory') || '[]');
+        const historyItem = analysisHistory.find(item => 
+          item.dataId === this.dataId && item.method === this.analysisMethod
+        );
+        
+        if (historyItem && historyItem.result) {
+          // 从历史记录中获取结果
+          this.datasetDetails = historyItem.result;
+          this.documentName = historyItem.result.filename || this.dataId;
+        } else if (this.analysisMethod === 'basic_info') {
+          // 如果历史记录中没有结果，则直接调用API获取
           const response = await fetch(`/data/${this.dataId}/details`, {
             credentials: 'include'
           });
@@ -239,9 +276,44 @@ export default {
         'basic_info': '基本信息',
         'statistical_summary': '统计摘要',
         'visualization': '数据可视化',
-        'ml_analysis': '机器学习分析'
+        'ml_analysis': '机器学习分析',
+        'correlation_analysis': '相关性分析',
+        'distribution_analysis': '分布分析',
+        'clustering': '聚类分析',
+        'classification': '分类分析',
+        'regression': '回归分析',
+        'text_analysis': '文本分析',
+        'sentiment_analysis': '情感分析',
+        'data_cleaning': '数据清洗',
+        'data_transformation': '数据转换',
+        'add_header': '添加/修改标题行'
       };
       return methods[methodId] || '未知分析';
+    },
+    
+    // 添加分析历史相关方法
+    restoreAnalysisHistory() {
+      // 从localStorage恢复分析历史
+      const savedHistory = localStorage.getItem('analysisHistory');
+      if (savedHistory) {
+        try {
+          this.analysisHistory = JSON.parse(savedHistory);
+        } catch (e) {
+          console.error("解析分析历史失败:", e);
+          this.analysisHistory = [];
+        }
+      }
+    },
+    
+    goToAnalysis(dataId, method) {
+      // 跳转到分析页面
+      this.$router.push({
+        name: 'Analysis',
+        query: {
+          data_id: dataId,
+          method: method
+        }
+      });
     },
     
     // 新增方法：恢复聊天记录
@@ -349,8 +421,6 @@ export default {
           history: this.chatMessages.slice(0, -1) // 不包括刚添加的AI回复占位符
         };
         
-// 移除了聊天请求数据的日志打印，以保护用户隐私
-        
         // 发起流式请求
         const response = await fetch('/chat/stream', {
           method: 'POST',
@@ -361,13 +431,12 @@ export default {
           credentials: 'include'
         });
         
-// 移除了聊天响应的日志打印，以保护用户隐私
-        
         if (response.ok && response.body) {
           const reader = response.body.getReader();
           const decoder = new TextDecoder('utf-8');
           let done = false;
           let accumulatedContent = "";
+          let toolCalls = [];
           
           // 逐步接收流式响应
           while (!done) {
@@ -400,13 +469,34 @@ export default {
                           messagesContainer.scrollTop = messagesContainer.scrollHeight;
                         }
                       });
+                    } else if (parsed.tool_calls !== undefined) {
+                      // 处理工具调用信息
+                      toolCalls = parsed.tool_calls;
+                      
+                      // 显示工具调用信息
+                      for (const toolCall of toolCalls) {
+                        const toolInfo = `
+
+**工具调用详情:**
+- 工具名称: ${toolCall.name}
+- 参数: ${JSON.stringify(toolCall.args, null, 2)}`;
+                        this.chatMessages[aiMessageIndex].content += toolInfo;
+                      }
+                      
+                      // 如果是添加标题行工具，需要刷新文件列表并选中新文件
+                      const addHeaderToolCall = toolCalls.find(toolCall => toolCall.name === 'add_header_tool');
+                      if (addHeaderToolCall) {
+                        // 等待一段时间后刷新文件列表
+                        setTimeout(async () => {
+                          // 发送事件到父组件，通知需要刷新文件列表
+                          window.postMessage({ type: 'REFRESH_FILE_LIST' }, '*');
+                        }, 1000);
+                      }
                     } else if (parsed.error) {
-                      console.error("流式响应错误:", parsed.error);
                       this.chatMessages[aiMessageIndex].content = `错误: ${parsed.error}`;
                       done = true;
                     }
                   } catch (e) {
-                    console.error("解析流数据错误:", e, "原始数据:", data);
                     // 即使解析失败，也尝试显示原始内容
                     this.chatMessages[aiMessageIndex].content = `解析错误: ${data}`;
                   }
@@ -420,11 +510,9 @@ export default {
             }
           }
         } else {
-          console.error("响应失败，状态码:", response.status);
           this.chatMessages[aiMessageIndex].content = `抱歉，无法连接到AI助手。状态码: ${response.status}`;
         }
       } catch (error) {
-        console.error("发送消息时发生错误:", error);
         this.chatMessages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;
       } finally {
         this.isWaitingForResponse = false;
@@ -463,6 +551,51 @@ export default {
   z-index: 100;
 }
 
+/* 分析历史区域样式 */
+.analysis-history {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #ebeef5;
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  z-index: 99;
+}
+
+.history-title {
+  font-weight: bold;
+  margin-right: 15px;
+  color: #303133;
+}
+
+.history-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.history-button {
+  padding: 5px 10px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
+}
+
+.history-button:hover {
+  background-color: #66b1ff;
+}
+
+.history-button.active {
+  background-color: #67c23a;
+}
+
 .header-left {
   flex: 1;
 }
@@ -494,7 +627,7 @@ export default {
 
 .analysis-content {
   flex: 3;
-  margin-top: 80px;
+  margin-top: 120px;
   margin-right: 20px;
   overflow-y: auto;
   padding: 20px;
@@ -591,7 +724,7 @@ export default {
 
 .chat-section {
   flex: 2;
-  margin-top: 80px;
+  margin-top: 120px;
   background: white;
   border-radius: 8px;
   padding: 20px;

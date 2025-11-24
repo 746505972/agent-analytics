@@ -1,8 +1,4 @@
-"""
-LLM-Agent 核心模块
-使用 LangChain 为核心，负责协调各分析模块，处理自然语言指令，生成分析报告
-"""
-
+import json
 from langgraph.prebuilt import create_react_agent
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -59,32 +55,26 @@ class DataAnalysisAgent:
         
         # 注册文件读取工具
         @tool
-        def read_file(file_path: str) -> dict:
-            """读取CSV/Excel文件的前10行数据，参数为文件路径"""
-            return read_any_file(file_path).head(10).to_dict()
+        def read_file(file_path: str,n : int = 10) -> dict:
+            """
+            读取文件的前n行数据
+            Args:
+            file_path (str): 文件路径
+            n (int): 行数，默认为10
+            """
+            return read_any_file(file_path).head(n).to_dict()
         
         self.tools.append(read_file)
-        
-        # 注册获取文件路径工具
-        @tool
-        def get_file_path_tool(data_id: str, session_id: str = None) -> str:
-            """根据data_id获取文件完整路径，参数为data_id和可选的session_id"""
-            return get_file_path(data_id, session_id)
-        
-        self.tools.append(get_file_path_tool)
-        
-        # 注册文件上传工具
-        @tool
-        def upload_file_tool(file_path: str, original_filename: str = None, session_id: str = None) -> dict:
-            """上传文件，参数为文件路径、原始文件名和可选的session_id"""
-            return upload_file(file_path, original_filename, session_id)
-        
-        self.tools.append(upload_file_tool)
         
         # 注册文件删除工具
         @tool
         def delete_file_tool(data_id: str, session_id: str = None) -> None:
-            """删除指定的数据文件，参数为data_id和可选的session_id"""
+            """
+            删除指定的数据文件
+            Args:
+            data_id (str): 文件ID
+            session_id (str): session_id
+            """
             return delete_file(data_id, session_id)
         
         self.tools.append(delete_file_tool)
@@ -92,7 +82,11 @@ class DataAnalysisAgent:
         # 注册获取用户文件列表工具
         @tool
         def list_user_files(session_id: str = None) -> list:
-            """获取用户上传的文件列表，参数为可选的session_id"""
+            """
+            获取用户上传的文件列表
+            Args:
+            session_id (str): session_id
+            """
             # 如果没有提供session_id，返回空列表
             if not session_id:
                 return []
@@ -110,23 +104,21 @@ class DataAnalysisAgent:
         # 注册添加标题行工具
         @tool
         def add_header_tool(file_path: str, column_names: list, session_id: str = None, mode: str = "add") -> dict:
-            """为CSV文件添加标题行并创建新文件，参数为文件路径、列名列表、可选的session_id和模式("add"或"modify")"""
+            """
+            为文件添加/修改标题行并创建新文件
+            Args:
+            file_path (str): 文件路径
+            column_names (list): 列名列表
+            session_id: session_id
+            mode (str): 操作模式，"add"表示添加标题行(产生新行)，"modify"表示修改现有标题行(不产生新行)
+            """
             from utils.file_manager import add_header_to_file, get_file_path
-            import os
+
+            # 检查文件是否存在
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"文件不存在: {file_path}")
             
-            # 如果提供了session_id参数，优先使用它
-            effective_session_id = session_id
-            
-            # 如果file_path是相对路径或文件名，则构建完整路径
-            if not os.path.isabs(file_path):
-                # 如果file_path包含.csv扩展名，先去除它，因为get_file_path会自动添加.csv扩展名
-                if file_path.endswith('.csv'):
-                    file_path_without_ext = os.path.splitext(file_path)[0]
-                    file_path = get_file_path(file_path_without_ext, effective_session_id)
-                else:
-                    file_path = get_file_path(file_path, effective_session_id)
-            
-            return add_header_to_file(file_path, column_names, effective_session_id, mode)
+            return add_header_to_file(file_path, column_names, session_id, mode)
         
         self.tools.append(add_header_tool)
     
@@ -185,8 +177,9 @@ class DataAnalysisAgent:
                 # 构造更清晰的提示信息
                 context_info = f"""
 <数据上下文信息>
-文件ID: {data_context.get('data_id', '未知')}
-文件名: {data_context.get('filename', '未知')}
+文件ID(data_id): {data_context.get('data_id', '未知')}
+session_id: {session_id}
+文件路径:{data_context.get('file_path', '未知')}
 数据形状: {data_context.get('shape', '未知')} (行数, 列数)
 列名: {', '.join(data_context.get('columns', []))}
 数据类型: {data_context.get('dtypes', '未知')}
@@ -200,14 +193,39 @@ class DataAnalysisAgent:
             messages.append(HumanMessage(content=f"<用户问题>{query}</用户问题>"))
             
             # 执行agent，传递session_id给工具
-            result = self.agent.invoke({"messages": messages, "session_id": session_id})
+            config = {"recursion_limit": 50}
+            if session_id:
+                config["session_id"] = session_id
+                
+            # 使用stream模式获取工具调用的详细信息
+            tool_calls_info = []
+            final_response = ""
             
-            # 获取最后一条消息作为输出
-            output = result['messages'][-1].content
+            for chunk in self.agent.stream(
+                {"messages": messages}, 
+                config=config, 
+                stream_mode="updates"
+            ):
+                # 检查是否有工具调用信息
+                if "agent" in chunk and "messages" in chunk["agent"]:
+                    message = chunk["agent"]["messages"][0]
+                    if hasattr(message, 'tool_calls') and message.tool_calls:
+                        for tool_call in message.tool_calls:
+                            tool_calls_info.append({
+                                "name": tool_call["name"],
+                                "args": tool_call["args"]
+                            })
+                
+                # 收集最终响应
+                if "agent" in chunk and "messages" in chunk["agent"]:
+                    message = chunk["agent"]["messages"][0]
+                    if hasattr(message, 'content') and message.content:
+                        final_response += message.content
             
             return {
                 'query': query,
-                'result': output,
+                'result': final_response,
+                'tool_calls': tool_calls_info,
                 'status': 'success'
             }
         except Exception as e:
@@ -216,6 +234,7 @@ class DataAnalysisAgent:
             return {
                 'query': query,
                 'result': f"处理查询时发生错误: {str(e)}",
+                'tool_calls': [],
                 'status': 'error'
             }
     
@@ -240,18 +259,3 @@ class DataAnalysisAgent:
         
         response = self.llm.invoke(prompt)
         return response.content
-    
-    def register_tool(self, tool_func, tool_name, tool_description):
-        """
-        注册分析工具
-        
-        Args:
-            tool_func: 工具函数
-            tool_name (str): 工具名称
-            tool_description (str): 工具描述
-        """
-        # 使用装饰器创建工具
-        decorated_tool = tool(tool_func)
-        decorated_tool.name = tool_name
-        decorated_tool.description = tool_description
-        self.tools.append(decorated_tool)

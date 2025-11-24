@@ -2,35 +2,50 @@
 Pandas API 模块
 提供统计建模方法，包括数据清洗、聚类、假设检验、回归分析等功能
 """
+import os
+import sys
 
 import pandas as pd
+import numpy as np
 from langchain_core.tools import tool
+# 添加项目根目录到sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
+
+
 
 # 数据清洗工具
 @tool
-def clean_data(df: dict) -> dict:
+def clean_data(
+    file_path: str,
+    session_id: str = None,
+    remove_duplicates: bool = True,
+    row_missing_threshold: float = 0.5,
+    col_missing_threshold: float = 0.5,
+    row_handling: str = "delete",
+    col_handling: str = "delete"
+) -> dict:
     """
-    基础数据清洗功能
+    数据清洗功能
     
     Args:
-        df (dict): 输入数据（字典格式）
-        
-    Returns:
-        dict: 清洗后的数据
+        file_path (str): 文件路径
+        session_id (str): session_id
+        remove_duplicates (bool): 是否去除重复行，默认False
+        row_missing_threshold (float): 行缺失值阈值(0-1)，默认1(不删除)
+        col_missing_threshold (float): 列缺失值阈值(0-1)，默认1(不删除)
+        row_handling (str): 行处理方式("delete" 或 "interpolate")，默认"delete"
+        col_handling (str): 列处理方式("delete" 或 "interpolate")，默认"delete"
     """
-    # 转换为DataFrame
-    df = pd.DataFrame(df)
-    
-    # 删除完全重复的行
-    df = df.drop_duplicates()
-    
-    # 删除完全为空的列
-    df = df.dropna(axis=1, how='all')
-    
-    # 删除完全为空的行
-    df = df.dropna(axis=0, how='all')
-    
-    return df.to_dict()
+    try:
+        from utils.file_manager import clean_data_file
+    except ImportError:
+        # 最后尝试直接添加到路径并导入
+        sys.path.insert(0, os.path.join(parent_dir, "utils"))
+        from utils.file_manager import clean_data_file
+    return clean_data_file(file_path, session_id,remove_duplicates, row_missing_threshold, col_missing_threshold, row_handling, col_handling)
+
 
 # 聚类分析工具
 @tool
