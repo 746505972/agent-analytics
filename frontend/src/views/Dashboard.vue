@@ -470,8 +470,11 @@
       </div>
 
       <!-- 右侧：聊天分析区域 -->
-      <div class="right-section">
-        <div class="chat-section">
+      <div :class="['right-section', { collapsed: isRightSectionCollapsed }]">
+        <div class="collapse-toggle" @click="toggleRightSection">
+          {{ isRightSectionCollapsed ? '<' : '>' }}
+        </div>
+        <div v-show="!isRightSectionCollapsed" class="chat-section">
           <div class="chat-header">
             <h2>数据分析助手</h2>
             <button @click="clearChatHistory" class="clear-chat-btn">清除历史记录</button>
@@ -660,6 +663,8 @@ export default {
       ],
       isFileSectionCollapsed: true, // 默认收起文件选择区域
       isWaitingForResponse: false,
+      // 添加折叠右侧区域的状态
+      isRightSectionCollapsed: false,
       // 新增方法选择相关数据
       currentMethod: 'basic_info',
       expandedCategories: ['statistics', 'ml', 'visualization', 'nlp', 'data_processing'], // 默认全部展开
@@ -851,6 +856,11 @@ export default {
     // 添加检查历史记录项是否为当前选中项的方法
     isHistoryItemActive(historyItem) {
       return this.selectedFile === historyItem.dataId && this.currentMethod === historyItem.method;
+    },
+    
+    // 添加切换右侧区域显示/隐藏的方法
+    toggleRightSection() {
+      this.isRightSectionCollapsed = !this.isRightSectionCollapsed;
     },
     
     // 添加Markdown渲染方法
@@ -1817,6 +1827,38 @@ export default {
   padding-right: 10px;
   overflow-y: auto;
   max-height: 100%;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.right-section.collapsed {
+  flex: 0 0 30px;
+  padding: 0;
+}
+
+.collapse-toggle {
+  position: absolute;
+  top: 25px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 40px;
+  background-color: #419fff;
+  color: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  font-weight: bold;
+}
+
+.chat-section {
+  background: white;
+  border-radius: 8px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .config-section,
