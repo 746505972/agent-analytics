@@ -149,9 +149,9 @@ def add_header_to_file(file_path: str, column_names: list, session_id: str = Non
     
     Args:
         file_path (str): 原始文件路径
-        column_names (list): 列名列表
+        column_names (list): 列名列表(当mode="remove"时可以为空)
         session_id (str, optional): 用户会话ID
-        mode (str): 操作模式，"add"表示添加标题行，"modify"表示修改现有标题行
+        mode (str): 操作模式，"add"表示添加标题行，"modify"表示修改现有标题行，"remove"表示删除第一行
         
     Returns:
         dict: 包含新文件信息的字典
@@ -169,16 +169,23 @@ def add_header_to_file(file_path: str, column_names: list, session_id: str = Non
     if mode == "add":
         # 添加模式：读取没有标题行的文件
         df = pd.read_csv(file_path, header=None, encoding="utf-8-sig")
+    elif mode == "remove":
+        # 删除模式：读取文件并删除第一行
+        df = pd.read_csv(file_path, encoding="utf-8-sig")
     else:
         # 修改模式：读取已有标题行的文件
         df = pd.read_csv(file_path, encoding="utf-8-sig")
     
-    # 检查列数是否匹配
-    if len(column_names) != len(df.columns):
+    # 检查列数是否匹配（仅适用于add和modify模式）
+    if mode != "remove" and len(column_names) != len(df.columns):
         raise ValueError(f"提供的列名数量({len(column_names)})与文件列数({len(df.columns)})不匹配")
     
-    # 设置列名
-    df.columns = column_names
+    # 设置列名（仅适用于add和modify模式）
+    if mode != "remove":
+        df.columns = column_names
+    else:
+        df.columns = df.iloc[0]
+        df = df[1:]
     
     # 获取原始文件名（不含扩展名）
     original_filename = os.path.splitext(os.path.basename(file_path))[0]
@@ -198,9 +205,6 @@ def add_header_to_file(file_path: str, column_names: list, session_id: str = Non
     
     return {
         "data_id": new_filename,
-        "rows": df.shape[0],
-        "cols": df.shape[1],
-        "columns": list(df.columns),
         "saved_path": new_file_path
     }
 

@@ -363,6 +363,14 @@
                         @change="handleHeaderModeChange"
                       > 修改标题行
                     </label>
+                    <label>
+                      <input 
+                        type="radio" 
+                        v-model="headerEditMode" 
+                        value="remove" 
+                        @change="handleHeaderModeChange"
+                      > 删除首行
+                    </label>
                   </div>
                 </div>
               </div>
@@ -405,7 +413,7 @@
             </div>
             
             <!-- 添加标题行操作区域 -->
-            <div v-if="currentMethod === 'add_header'" class="add-header-section">
+            <div v-if="currentMethod === 'add_header' && headerEditMode !== 'remove'" class="add-header-section">
               <h3>设置列名</h3>
               <div class="add-header-content">
                 <div class="column-inputs">
@@ -871,9 +879,12 @@ export default {
     
     // 处理标题行模式切换
     handleHeaderModeChange() {
-      if (this.headerEditMode && this.selectedFileColumns.length > 0) {
+      if (this.headerEditMode === true && this.selectedFileColumns.length > 0) {
         // 修改模式：填入当前列名
         this.newColumnNames = [...this.selectedFileColumns];
+      } else if (this.headerEditMode === 'remove') {
+        // 删除模式：不需要处理列名
+
       } else {
         // 添加模式：清空列名
         this.newColumnNames = new Array(this.selectedFileColumns.length).fill('');
@@ -1110,15 +1121,25 @@ export default {
     async applyHeaderNames() {
       if (!this.selectedFile) return;
 
-      // 检查是否所有列都已命名
-      const emptyNames = this.newColumnNames.filter(name => !name.trim()).length;
-      if (emptyNames > 0) {
-        alert(`还有 ${emptyNames} 个列未命名，请为所有列提供名称。`);
-        return;
+      // 检查是否所有列都已命名（仅在非删除模式下）
+      if (this.headerEditMode !== 'remove') {
+        const emptyNames = this.newColumnNames.filter(name => !name.trim()).length;
+        if (emptyNames > 0) {
+          alert(`还有 ${emptyNames} 个列未命名，请为所有列提供名称。`);
+          return;
+        }
       }
 
       try {
         this.showAddHeaderModal = true;
+        
+        // 确定模式参数
+        let mode = "add";
+        if (this.headerEditMode === true) {
+          mode = "modify";
+        } else if (this.headerEditMode === 'remove') {
+          mode = "remove";
+        }
         
         const response = await fetch(`/data/${this.selectedFile}/add_header`, {
           method: 'POST',
@@ -1127,7 +1148,7 @@ export default {
           },
           body: JSON.stringify({
             column_names: this.newColumnNames,
-            mode: this.headerEditMode ? "modify" : "add"  // 添加模式参数
+            mode: mode  // 添加模式参数
           }),
           credentials: 'include'
         });
@@ -1140,7 +1161,9 @@ export default {
             await this.selectFile(result.data.data_id); // 选择新文件
             
             // 显示成功消息
-            if (this.headerEditMode) {
+            if (this.headerEditMode === 'remove') {
+              alert('首行删除成功，已自动选择新文件');
+            } else if (this.headerEditMode) {
               alert('标题行修改成功，已自动选择新文件');
             } else {
               alert('标题行添加成功，已自动选择新文件');
