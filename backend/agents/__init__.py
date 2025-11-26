@@ -51,7 +51,7 @@ class DataAnalysisAgent:
         注册内置工具
         """
         # 导入文件管理工具
-        from utils.file_manager import read_any_file, get_file_path, upload_file, delete_file
+        from utils.file_manager import read_any_file, get_file_path, upload_file, delete_file, remove_invalid_samples, handle_missing_values
         
         # 注册文件读取工具
         @tool
@@ -78,6 +78,53 @@ class DataAnalysisAgent:
             return delete_file(data_id, session_id)
         
         self.tools.append(delete_file_tool)
+        
+        # 注册去除无效样本工具
+        @tool
+        def remove_invalid_samples_tool(file_path: str, session_id: str = None,
+                                       remove_duplicates: bool = False,
+                                       remove_duplicate_cols: bool = False,
+                                       remove_constant_cols: bool = False,
+                                       row_missing_threshold: float = 1,
+                                       col_missing_threshold: float = 1) -> dict:
+            """
+            去除无效样本 - 处理重复数据和超出阈值的行列
+            Args:
+                file_path (str): 文件路径
+                session_id (str): session_id
+                remove_duplicates (bool): 是否去除重复行
+                remove_duplicate_cols (bool): 是否删除重复列
+                remove_constant_cols (bool): 是否删除所有数据都相同的列
+                row_missing_threshold (float): 行缺失值阈值 (0-1之间)
+                col_missing_threshold (float): 列缺失值阈值 (0-1之间)
+            """
+            return remove_invalid_samples(file_path, session_id, remove_duplicates, 
+                                        remove_duplicate_cols, remove_constant_cols,
+                                        row_missing_threshold, col_missing_threshold)
+        
+        self.tools.append(remove_invalid_samples_tool)
+        
+        # 注册处理缺失值工具
+        @tool
+        def handle_missing_values_tool(file_path: str, session_id: str = None,
+                                      specified_columns: list = None,
+                                      interpolation_method: str = "linear",
+                                      fill_value: any = None,
+                                      knn_neighbors: int = 5) -> dict:
+            """
+            对缺失数据进行插值
+            Args:
+                file_path (str): 文件路径
+                session_id (str): session_id
+                specified_columns (List[str]): 指定要处理的列名列表，如果为None则处理所有列
+                interpolation_method (str): 插值方法 ("linear", "ffill", "bfill", "mean", "median", "mode", "knn", "constant")
+                fill_value (Any): 当使用constant方法时的填充值
+                knn_neighbors (int): KNN插值的邻居数量
+            """
+            return handle_missing_values(file_path, session_id, specified_columns, interpolation_method,
+                                       fill_value, knn_neighbors)
+        
+        self.tools.append(handle_missing_values_tool)
         
         # 注册获取用户文件列表工具
         @tool
