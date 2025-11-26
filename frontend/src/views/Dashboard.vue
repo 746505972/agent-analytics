@@ -335,9 +335,9 @@
                   <h4>情感分析</h4>
                   <p>分析文本数据中的情感倾向。</p>
                 </div>
-                <div v-else-if="currentMethod === 'data_cleaning'" class="data-cleaning-method">
-                  <h4>数据清洗</h4>
-                  <p>清理数据中的噪声和异常值。</p>
+                <div v-else-if="currentMethod === 'invalid_samples'" class="data-cleaning-method">
+                  <h4>无效样本</h4>
+                  <p>删除重复行、重复列、唯一值列、缺失过多的行列。</p>
                 </div>
                 <div v-else-if="currentMethod === 'data_transformation'" class="data-transformation-method">
                   <h4>数据转换</h4>
@@ -383,11 +383,11 @@
                   应用标题
                 </button>
                 <button
-                  v-else-if="currentMethod === 'data_cleaning'"
+                  v-else-if="currentMethod === 'invalid_samples'"
                   @click=""
                   class="execute-button"
                 >
-                  执行清洗
+                  执行操作
                 </button>
                 <button 
                   v-else
@@ -432,7 +432,7 @@
                 </div>
               </div>
             </div>
-            <div v-else-if="currentMethod === 'data_cleaning'" class="add-header-section">
+            <div v-else-if="currentMethod === 'invalid_samples'" class="add-header-section">
               <h3>设置参数</h3>
               <div class="add-header-content">
                 <div class="data-cleaning-options">
@@ -444,6 +444,24 @@
                       /> 去除重复行
                     </label>
                   </div>
+                  <div class="option-row">
+                    <label>
+                      <input
+                        type="checkbox"
+                        v-model="removeDuplicatesCols"
+                      /> 去除重复列
+                    </label>
+                  </div>
+                  <div class="option-row">
+                    <label>
+                      <input
+                        type="checkbox"
+                        v-model="removeConstantCols"
+                      /> 去除唯一值列
+                    </label>
+                  </div>
+                  <h3>设置阈值，删除缺失超出阈值的行列</h3>
+                  <p>阈值为0-1之间的小数，默认为1时不删除</p>
                   <div class="option-row">
                     <label>
                       行缺失阈值:
@@ -681,7 +699,7 @@ export default {
           id: 'data_processing',
           name: '数据处理',
           methods: [
-            { id: 'data_cleaning', name: '数据清洗' },
+            { id: 'invalid_samples', name: '无效样本' },
             { id: 'data_transformation', name: '数据转换' },
             { id: 'add_header', name: '添加/修改标题行' }
           ]
@@ -746,8 +764,10 @@ export default {
       // 数据集详情
       datasetDetails: null,
       loadingDetails: false,
-      // 数据清洗参数
+      // 无效样本参数
       removeDuplicates: false,
+      removeDuplicatesCols: false,
+      removeConstantCols: false,
       rowMissingThreshold: 1,
       columnMissingThreshold: 1
     }
@@ -797,7 +817,7 @@ export default {
         'regression': '回归分析',
         'text_analysis': '文本分析',
         'sentiment_analysis': '情感分析',
-        'data_cleaning': '数据清洗',
+        'invalid_samples': '无效样本',
         'data_transformation': '数据转换',
         'add_header': '添加/修改标题行'
       };
@@ -1032,12 +1052,6 @@ export default {
     },
     async executeMethod() {
       if (!this.selectedFile || !this.currentMethod) {
-        return;
-      }
-      
-      // 如果是添加标题行方法，不跳转到分析页面，而是在当前页面处理
-      if (this.currentMethod === 'add_header') {
-        // 显示添加标题行的UI
         return;
       }
       

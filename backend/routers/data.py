@@ -8,18 +8,14 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
 from fastapi import APIRouter, Request, Body
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse,FileResponse
 from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import logging
+from typing import Any, List
 
-try:
-    from utils.file_manager import get_file_path, delete_file, sanitize_filename
-except ImportError:
-    # 最后尝试直接添加到路径并导入
-    sys.path.insert(0, os.path.join(parent_dir, "utils"))
-    from utils.file_manager import get_file_path, delete_file, sanitize_filename
+from utils.file_manager import get_file_path, delete_file, sanitize_filename
 
 router = APIRouter(prefix="/data", tags=["data"])
 
@@ -517,61 +513,6 @@ async def download_data(request: Request, data_id: str):
         )
 
 
-class DataCleaningRequest(BaseModel):
-    """
-    数据清洗请求模型
-    """
-    remove_duplicates: bool = True
-    row_missing_threshold: float = 0.5
-    col_missing_threshold: float = 0.5
-    row_handling: str = "delete"  # "delete" or "interpolate"
-    col_handling: str = "delete"  # "delete" or "interpolate"
-
-
-@router.post("/{data_id}/clean")
-async def clean_data(request: Request, data_id: str, cleaning_params: DataCleaningRequest):
-    """
-    数据清洗接口
-    """
-    try:
-        # 获取session_id
-        session_id = request.state.session_id
-
-        # 加载CSV文件
-        success, result, status_code = load_csv_file(data_id, session_id)
-        if not success:
-            return JSONResponse(
-                status_code=status_code,
-                content={
-                    "success": False,
-                    "error": result
-                }
-            )
-
-        # 导入并调用添加标题行的函数
-        try:
-            from utils.file_manager import clean_data_file
-        except ImportError:
-            # 最后尝试直接添加到路径并导入
-            sys.path.insert(0, os.path.join(parent_dir, "utils"))
-            from utils.file_manager import clean_data_file
-
-        result = clean_data_file(get_file_path(data_id, session_id), session_id, cleaning_params)
-
-        return JSONResponse(content={
-            "success": True,
-            "data": result
-        })
-    except Exception as e:
-        logger.error(f"添加标题行时出错: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": str(e)
-            }
-        )
-
 
 class AddHeaderRequest(BaseModel):
     column_names: list
@@ -605,14 +546,9 @@ async def add_header(request: Request, data_id: str, body: AddHeaderRequest):
                     "error": result
                 }
             )
-        
+
         # 导入并调用添加标题行的函数
-        try:
-            from utils.file_manager import add_header_to_file
-        except ImportError:
-            # 最后尝试直接添加到路径并导入
-            sys.path.insert(0, os.path.join(parent_dir, "utils"))
-            from utils.file_manager import add_header_to_file
+        from utils.file_manager import add_header_to_file
                 
         result = add_header_to_file(get_file_path(data_id, session_id), body.column_names, session_id, mode=body.mode)
         
@@ -665,14 +601,8 @@ async def remove_invalid_samples(request: Request, data_id: str, body: RemoveInv
                     "error": result
                 }
             )
-
         # 导入并调用去除无效样本的函数
-        try:
-            from utils.file_manager import remove_invalid_samples
-        except ImportError:
-            # 最后尝试直接添加到路径并导入
-            sys.path.insert(0, os.path.join(parent_dir, "utils"))
-            from utils.file_manager import remove_invalid_samples
+        from utils.file_manager import remove_invalid_samples
 
         result = remove_invalid_samples(get_file_path(data_id, session_id), session_id,
                                         body.remove_duplicates, body.remove_duplicate_cols, body.remove_constant_cols,
@@ -693,9 +623,9 @@ async def remove_invalid_samples(request: Request, data_id: str, body: RemoveInv
         )
 
 class HandleMissingValuesRequest(BaseModel):
-    specified_columns: list = None
+    specified_columns: List[str] = None
     interpolation_method: str = "linear"
-    fill_value: any = None
+    fill_value: Any = None
     knn_neighbors: int = 5
 
 
@@ -726,14 +656,8 @@ async def handle_missing_values_endpoint(request: Request, data_id: str, body: H
                     "error": result
                 }
             )
-
         # 导入并调用处理缺失值的函数
-        try:
-            from utils.file_manager import handle_missing_values
-        except ImportError:
-            # 最后尝试直接添加到路径并导入
-            sys.path.insert(0, os.path.join(parent_dir, "utils"))
-            from utils.file_manager import handle_missing_values
+        from utils.file_manager import handle_missing_values
 
         result = handle_missing_values(get_file_path(data_id, session_id), session_id, body.specified_columns,
                                        body.interpolation_method, body.fill_value,

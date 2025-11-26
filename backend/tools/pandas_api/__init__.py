@@ -4,6 +4,7 @@ Pandas API 模块
 """
 import os
 import sys
+from typing import Any, List
 
 import pandas as pd
 import numpy as np
@@ -13,38 +14,52 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-
-
-# 数据清洗工具
+from utils.file_manager import remove_invalid_samples, handle_missing_values
+# 注册去除无效样本工具
 @tool
-def clean_data(
-    file_path: str,
-    session_id: str = None,
-    remove_duplicates: bool = True,
-    row_missing_threshold: float = 0.5,
-    col_missing_threshold: float = 0.5,
-    row_handling: str = "delete",
-    col_handling: str = "delete"
-) -> dict:
+def remove_invalid_samples_tool(file_path: str, session_id: str = None,
+                                remove_duplicates: bool = False,
+                                remove_duplicate_cols: bool = False,
+                                remove_constant_cols: bool = False,
+                                row_missing_threshold: float = 1,
+                                col_missing_threshold: float = 1) -> dict:
     """
-    数据清洗功能
-    
+    去除无效样本 - 处理重复数据和超出阈值的行列
     Args:
         file_path (str): 文件路径
         session_id (str): session_id
-        remove_duplicates (bool): 是否去除重复行，默认False
-        row_missing_threshold (float): 行缺失值阈值(0-1)，默认1(不删除)
-        col_missing_threshold (float): 列缺失值阈值(0-1)，默认1(不删除)
-        row_handling (str): 行处理方式("delete" 或 "interpolate")，默认"delete"
-        col_handling (str): 列处理方式("delete" 或 "interpolate")，默认"delete"
+        remove_duplicates (bool): 是否去除重复行
+        remove_duplicate_cols (bool): 是否删除重复列
+        remove_constant_cols (bool): 是否删除所有数据都相同的列
+        row_missing_threshold (float): 行缺失值阈值 (0-1之间)
+        col_missing_threshold (float): 列缺失值阈值 (0-1之间)
     """
-    try:
-        from utils.file_manager import clean_data_file
-    except ImportError:
-        # 最后尝试直接添加到路径并导入
-        sys.path.insert(0, os.path.join(parent_dir, "utils"))
-        from utils.file_manager import clean_data_file
-    return clean_data_file(file_path, session_id,remove_duplicates, row_missing_threshold, col_missing_threshold, row_handling, col_handling)
+    return remove_invalid_samples(file_path, session_id, remove_duplicates,
+                                  remove_duplicate_cols, remove_constant_cols,
+                                  row_missing_threshold, col_missing_threshold)
+
+
+
+# 注册处理缺失值工具
+@tool
+def handle_missing_values_tool(file_path: str, session_id: str = None,
+                               specified_columns: List[str] = None,
+                               interpolation_method: str = "linear",
+                               fill_value: Any = None,
+                               knn_neighbors: int = 5) -> dict:
+    """
+    对缺失数据进行插值
+    Args:
+        file_path (str): 文件路径
+        session_id (str): session_id
+        specified_columns (List[str]): 指定要处理的列名列表，如果为None则处理所有列
+        interpolation_method (str): 插值方法 ("linear", "ffill", "bfill", "mean", "median", "mode", "knn", "constant")
+        fill_value (Any): 当使用constant方法时的填充值
+        knn_neighbors (int): KNN插值的邻居数量
+    """
+    return handle_missing_values(file_path, session_id, specified_columns, interpolation_method,
+                                 fill_value, knn_neighbors)
+
 
 
 # 聚类分析工具
@@ -121,7 +136,8 @@ def register_pandas_tools(agent):
         agent: DataAnalysisAgent实例
     """
     # 已经使用装饰器注册为工具，这里只需要将它们添加到agent中
-    agent.tools.append(clean_data)
+    agent.tools.append(remove_invalid_samples_tool)
+    agent.tools.append(handle_missing_values_tool)
     agent.tools.append(cluster_analysis)
     agent.tools.append(regression_analysis)
     agent.tools.append(hypothesis_test)
