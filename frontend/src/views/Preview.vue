@@ -323,7 +323,6 @@ export default {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #f5f5f5;
 }
 
 .indexheader {
@@ -357,10 +356,28 @@ export default {
   display: flex;
   align-items: center;
   margin-bottom: 15px;
-  background: white;
-  padding: 15px;
-  border-radius: 6px;
-  box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.1);
+}
+
+.header-left .back-link {
+  text-decoration: none;
+  color: #333;
+  font-size: 16px;
+}
+
+.header-right .hollow-button {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid #409eff;
+  color: #409eff;
+  border-radius: 4px;
+  text-decoration: none;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.header-right .hollow-button:hover {
+  background-color: #409eff;
+  color: white;
 }
 
 .step-item {

@@ -105,12 +105,12 @@ class DataAnalysisAgent:
         @tool
         def add_header_tool(file_path: str, column_names: list, session_id: str = None, mode: str = "add") -> dict:
             """
-            为文件添加/修改标题行并创建新文件
+            为文件添加/修改标题行或单纯删除首行并创建新文件
             Args:
             file_path (str): 文件路径
-            column_names (list): 列名列表
+            column_names (list): 列名列表(当mode="remove"时可以为空)
             session_id: session_id
-            mode (str): 操作模式，"add"表示添加标题行(产生新行)，"modify"表示修改现有标题行(不产生新行)
+            mode (str): 操作模式，"add"表示添加标题行(产生新行)，"modify"表示修改现有标题行(不产生新行)，"remove"表示单纯删除第一行
             """
             from utils.file_manager import add_header_to_file, get_file_path
 

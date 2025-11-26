@@ -363,23 +363,38 @@
                         @change="handleHeaderModeChange"
                       > 修改标题行
                     </label>
+                    <label>
+                      <input 
+                        type="radio" 
+                        v-model="headerEditMode" 
+                        value="remove" 
+                        @change="handleHeaderModeChange"
+                      > 删除首行
+                    </label>
                   </div>
                 </div>
               </div>
               <div class="method-actions">
                 <button 
-                  v-if="currentMethod !== 'add_header'" 
-                  @click="executeMethod"
-                  class="execute-button"
-                >
-                  执行分析
-                </button>
-                <button 
-                  v-else
+                  v-if="currentMethod === 'add_header'"
                   @click="applyHeaderNames"
                   class="execute-button"
                 >
                   应用标题
+                </button>
+                <button
+                  v-else-if="currentMethod === 'data_cleaning'"
+                  @click=""
+                  class="execute-button"
+                >
+                  执行清洗
+                </button>
+                <button 
+                  v-else
+                  @click="executeMethod"
+                  class="execute-button"
+                >
+                  执行分析
                 </button>
               </div>
             </div>
@@ -398,7 +413,7 @@
             </div>
             
             <!-- 添加标题行操作区域 -->
-            <div v-if="currentMethod === 'add_header'" class="add-header-section">
+            <div v-if="currentMethod === 'add_header' && headerEditMode !== 'remove'" class="add-header-section">
               <h3>设置列名</h3>
               <div class="add-header-content">
                 <div class="column-inputs">
@@ -417,13 +432,57 @@
                 </div>
               </div>
             </div>
+            <div v-else-if="currentMethod === 'data_cleaning'" class="add-header-section">
+              <h3>设置参数</h3>
+              <div class="add-header-content">
+                <div class="data-cleaning-options">
+                  <div class="option-row">
+                    <label>
+                      <input 
+                        type="checkbox" 
+                        v-model="removeDuplicates"
+                      /> 去除重复行
+                    </label>
+                  </div>
+                  <div class="option-row">
+                    <label>
+                      行缺失阈值:
+                      <input 
+                        type="number" 
+                        v-model="rowMissingThreshold" 
+                        min="0" 
+                        max="1" 
+                        step="0.01"
+                        class="threshold-input"
+                      />
+                    </label>
+                  </div>
+                  <div class="option-row">
+                    <label>
+                      列缺失阈值:
+                      <input 
+                        type="number" 
+                        v-model="columnMissingThreshold" 
+                        min="0" 
+                        max="1" 
+                        step="0.01"
+                        class="threshold-input"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- 右侧：聊天分析区域 -->
-      <div class="right-section">
-        <div class="chat-section">
+      <div :class="['right-section', { collapsed: isRightSectionCollapsed }]">
+        <div class="collapse-toggle" @click="toggleRightSection">
+          {{ isRightSectionCollapsed ? '<' : '>' }}
+        </div>
+        <div v-show="!isRightSectionCollapsed" class="chat-section">
           <div class="chat-header">
             <h2>数据分析助手</h2>
             <button @click="clearChatHistory" class="clear-chat-btn">清除历史记录</button>
@@ -612,6 +671,8 @@ export default {
       ],
       isFileSectionCollapsed: true, // 默认收起文件选择区域
       isWaitingForResponse: false,
+      // 添加折叠右侧区域的状态
+      isRightSectionCollapsed: false,
       // 新增方法选择相关数据
       currentMethod: 'basic_info',
       expandedCategories: ['statistics', 'ml', 'visualization', 'nlp', 'data_processing'], // 默认全部展开
@@ -684,7 +745,11 @@ export default {
       middleSectionView: 'config', // 'config' 表示参数配置区，'result' 表示结果渲染区
       // 数据集详情
       datasetDetails: null,
-      loadingDetails: false
+      loadingDetails: false,
+      // 数据清洗参数
+      removeDuplicates: false,
+      rowMissingThreshold: 1,
+      columnMissingThreshold: 1
     }
   },
   async mounted() {
@@ -801,6 +866,11 @@ export default {
       return this.selectedFile === historyItem.dataId && this.currentMethod === historyItem.method;
     },
     
+    // 添加切换右侧区域显示/隐藏的方法
+    toggleRightSection() {
+      this.isRightSectionCollapsed = !this.isRightSectionCollapsed;
+    },
+    
     // 添加Markdown渲染方法
     renderMarkdown(content) {
       if (!content) return '';
@@ -809,9 +879,12 @@ export default {
     
     // 处理标题行模式切换
     handleHeaderModeChange() {
-      if (this.headerEditMode && this.selectedFileColumns.length > 0) {
+      if (this.headerEditMode === true && this.selectedFileColumns.length > 0) {
         // 修改模式：填入当前列名
         this.newColumnNames = [...this.selectedFileColumns];
+      } else if (this.headerEditMode === 'remove') {
+        // 删除模式：不需要处理列名
+
       } else {
         // 添加模式：清空列名
         this.newColumnNames = new Array(this.selectedFileColumns.length).fill('');
@@ -1048,15 +1121,25 @@ export default {
     async applyHeaderNames() {
       if (!this.selectedFile) return;
 
-      // 检查是否所有列都已命名
-      const emptyNames = this.newColumnNames.filter(name => !name.trim()).length;
-      if (emptyNames > 0) {
-        alert(`还有 ${emptyNames} 个列未命名，请为所有列提供名称。`);
-        return;
+      // 检查是否所有列都已命名（仅在非删除模式下）
+      if (this.headerEditMode !== 'remove') {
+        const emptyNames = this.newColumnNames.filter(name => !name.trim()).length;
+        if (emptyNames > 0) {
+          alert(`还有 ${emptyNames} 个列未命名，请为所有列提供名称。`);
+          return;
+        }
       }
 
       try {
         this.showAddHeaderModal = true;
+        
+        // 确定模式参数
+        let mode = "add";
+        if (this.headerEditMode === true) {
+          mode = "modify";
+        } else if (this.headerEditMode === 'remove') {
+          mode = "remove";
+        }
         
         const response = await fetch(`/data/${this.selectedFile}/add_header`, {
           method: 'POST',
@@ -1065,7 +1148,7 @@ export default {
           },
           body: JSON.stringify({
             column_names: this.newColumnNames,
-            mode: this.headerEditMode ? "modify" : "add"  // 添加模式参数
+            mode: mode  // 添加模式参数
           }),
           credentials: 'include'
         });
@@ -1078,7 +1161,9 @@ export default {
             await this.selectFile(result.data.data_id); // 选择新文件
             
             // 显示成功消息
-            if (this.headerEditMode) {
+            if (this.headerEditMode === 'remove') {
+              alert('首行删除成功，已自动选择新文件');
+            } else if (this.headerEditMode) {
               alert('标题行修改成功，已自动选择新文件');
             } else {
               alert('标题行添加成功，已自动选择新文件');
@@ -1765,6 +1850,38 @@ export default {
   padding-right: 10px;
   overflow-y: auto;
   max-height: 100%;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.right-section.collapsed {
+  flex: 0 0 30px;
+  padding: 0;
+}
+
+.collapse-toggle {
+  position: absolute;
+  top: 25px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 40px;
+  background-color: #419fff;
+  color: white;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  font-weight: bold;
+}
+
+.chat-section {
+  background: white;
+  border-radius: 8px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .config-section,
@@ -2371,8 +2488,8 @@ export default {
 }
 
 .chat-section h2 {
-  margin-top: 0;
-  margin-bottom: 20px;
+  margin-top: 10px;
+  margin-bottom: 10px;
   color: #303133;
 }
 
@@ -2581,6 +2698,33 @@ export default {
   flex: 1;
   padding: 20px;
   overflow: auto;
+}
+
+/* 数据清洗选项样式 */
+.data-cleaning-options {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+}
+
+.option-row label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: normal;
+  margin: 0;
+}
+
+.threshold-input {
+  width: 80px;
+  padding: 5px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
 }
 
 /* 预览部分样式（复用Preview.vue的样式） */

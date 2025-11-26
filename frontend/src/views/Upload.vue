@@ -3,9 +3,19 @@
     <div class="indexheader">
       <div class="inner">
         <div class="header-left">
-          <router-link to="/dashboard" class="back-link">
-            <span>返回</span>
-          </router-link>
+          <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="20" alt="GitHub">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" width="20" alt="NodeJS">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/npm/npm-original.svg" width="20" alt="npm">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/numpy/numpy-original.svg" width="20" alt="numpy">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/ngrok/ngrok-original.svg" width="20" alt="ngrok">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nginx/nginx-original.svg" width="20" alt="nginx">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pandas/pandas-original.svg" width="20" alt="pandas">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20" alt="python">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pytorch/pytorch-original.svg" width="20" alt="pytorch">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vuejs/vuejs-original.svg" width="20" alt="vuejs">
+            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/fastapi/fastapi-original.svg" width="20" alt="fastapi">
+          </a>
         </div>
         <div class="header-right">
           <router-link class="hollow-button" to="/dashboard">
@@ -56,7 +66,7 @@
             <h3>导入说明：</h3>
           </li>
           <li>不含合并单元格</li>
-          <li>不能缺失标题行</li>
+          <li>不要以 _edit 结尾</li>
           <li>日期字段需包含年月日（如2021/1/1），或年月日时分秒（如2021/1/1 00:00:00）</li>
         </ul>
       </div>
@@ -234,7 +244,6 @@ export default {
 <style scoped>
 .upload-container {
   min-height: 100vh;
-  background-color: #f5f5f5;
 }
 
 .indexheader {
@@ -284,10 +293,6 @@ export default {
   display: flex;
   align-items: center;
   margin-bottom: 30px;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
 .step-item {
@@ -398,9 +403,6 @@ export default {
 
 .upload-instructions {
   flex: 1;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   padding: 20px;
   list-style: none;
 }
