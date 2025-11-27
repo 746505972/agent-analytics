@@ -505,6 +505,48 @@ def _convert_to_serializable(x):
     return x
 
 
+def delete_columns(file_path: str, columns_to_delete: List[str], session_id: str = None) -> dict:
+    """
+    删除指定的列
+    
+    Args:
+        file_path (str): 文件路径
+        columns_to_delete (List[str]): 要删除的列名列表
+        session_id (str): session_id
+
+    Returns:
+        dict: 只包含data_id和保存路径的字典
+    """
+    # 确保数据目录存在
+    ensure_data_dir()
+
+    if session_id:
+        ensure_session_dir(session_id)
+
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+
+    # 读取文件
+    df = read_any_file(file_path)
+    
+    # 检查要删除的列是否存在
+    existing_columns = [col for col in columns_to_delete if col in df.columns]
+    missing_columns = set(columns_to_delete) - set(existing_columns)
+    if missing_columns:
+        print(f"警告: 以下列不存在于数据集中: {missing_columns}")
+    
+    # 删除指定的列
+    df = df.drop(columns=existing_columns, errors='ignore')
+    
+    # 保存处理后的数据
+    new_filename, new_file_path = generate_new_file_path(file_path, session_id)
+    df.to_csv(new_file_path, index=False, encoding="utf-8-sig")
+    
+    return {
+        "data_id": new_filename,
+        "saved_path": new_file_path
+    }
+
 
 def edit_file_data(file_path: str, edit_func, session_id: str = None, *args, **kwargs) -> dict:
     """

@@ -676,3 +676,54 @@ async def handle_missing_values_endpoint(request: Request, data_id: str, body: H
                 "error": str(e)
             }
         )
+
+
+class DeleteColumnsRequest(BaseModel):
+    columns_to_delete: List[str]
+
+
+@router.post("/{data_id}/delete_columns")
+async def delete_columns_endpoint(request: Request, data_id: str, body: DeleteColumnsRequest):
+    """
+    删除指定列接口
+
+    Args:
+        request (Request): FastAPI请求对象
+        data_id (str): 数据文件ID
+        body (DeleteColumnsRequest): 请求体，包含要删除的列名列表
+
+    Returns:
+        JSONResponse: 处理结果，只包含data_id和保存路径
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+        # 导入并调用删除列的函数
+        from utils.file_manager import delete_columns
+
+        result = delete_columns(get_file_path(data_id, session_id), body.columns_to_delete, session_id)
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"删除列时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )

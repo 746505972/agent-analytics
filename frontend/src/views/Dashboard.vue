@@ -295,55 +295,63 @@
                   <h4>数据集基本信息</h4>
                   <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
                 </div>
-                <div v-else-if="currentMethod === 'statistical_summary'" class="statistical-summary-method">
+                <div v-else-if="currentMethod === 'statistical_summary'">
                   <h4>统计摘要</h4>
                   <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
                 </div>
-                <div v-else-if="currentMethod === 'correlation_analysis'" class="correlation-analysis-method">
+                <div v-else-if="currentMethod === 'correlation_analysis'">
                   <h4>相关性分析</h4>
                   <p>分析数据集中各变量之间的相关性。</p>
                 </div>
-                <div v-else-if="currentMethod === 'distribution_analysis'" class="distribution-analysis-method">
+                <div v-else-if="currentMethod === 'distribution_analysis'">
                   <h4>分布分析</h4>
                   <p>分析数据集中各变量的分布情况。</p>
                 </div>
-                <div v-else-if="currentMethod === 'visualization'" class="visualization-method">
+                <div v-else-if="currentMethod === 'visualization'">
                   <h4>数据可视化</h4>
                   <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
                 </div>
-                <div v-else-if="currentMethod === 'ml_analysis'" class="ml-analysis-method">
+                <div v-else-if="currentMethod === 'ml_analysis'">
                   <h4>机器学习分析</h4>
                   <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
                 </div>
-                <div v-else-if="currentMethod === 'clustering'" class="clustering-method">
+                <div v-else-if="currentMethod === 'clustering'">
                   <h4>聚类分析</h4>
                   <p>使用聚类算法对数据进行分组分析。</p>
                 </div>
-                <div v-else-if="currentMethod === 'classification'" class="classification-method">
+                <div v-else-if="currentMethod === 'classification'">
                   <h4>分类分析</h4>
                   <p>使用分类算法对数据进行分类预测。</p>
                 </div>
-                <div v-else-if="currentMethod === 'regression'" class="regression-method">
+                <div v-else-if="currentMethod === 'regression'">
                   <h4>回归分析</h4>
                   <p>使用回归算法分析变量之间的关系。</p>
                 </div>
-                <div v-else-if="currentMethod === 'text_analysis'" class="text-analysis-method">
+                <div v-else-if="currentMethod === 'text_analysis'">
                   <h4>文本分析</h4>
                   <p>对文本数据进行分析，提取关键信息和模式。</p>
                 </div>
-                <div v-else-if="currentMethod === 'sentiment_analysis'" class="sentiment-analysis-method">
+                <div v-else-if="currentMethod === 'sentiment_analysis'">
                   <h4>情感分析</h4>
                   <p>分析文本数据中的情感倾向。</p>
                 </div>
-                <div v-else-if="currentMethod === 'invalid_samples'" class="data-cleaning-method">
+                <div v-else-if="currentMethod === 'invalid_samples'">
                   <h4>无效样本</h4>
                   <p>删除重复行、重复列、唯一值列、缺失过多的行列。</p>
                 </div>
-                <div v-else-if="currentMethod === 'data_transformation'" class="data-transformation-method">
+                <div v-else-if="currentMethod === 'missing_value_interpolation'">
+                  <h4>插值法</h4>
+                  <p>对数据中的缺失值进行插值处理，支持多种插值方法。</p>
+                </div>
+                <div v-else-if="currentMethod === 'delete_columns'">
+                  <h4>删除列</h4>
+                  <p>删除指定的列。</p>
+                </div>
+                <div v-else-if="currentMethod === 'data_transformation'">
                   <h4>数据转换</h4>
                   <p>对数据进行转换操作，如标准化、归一化等。</p>
                 </div>
-                <div v-else-if="currentMethod === 'add_header'" class="add-header-method">
+                <div v-else-if="currentMethod === 'add_header'">
                   <h4>添加/修改标题行</h4>
                   <p>为没有标题行的文件添加自定义列名，或修改现有标题行。</p>
                   <div class="header-mode-toggle">
@@ -384,7 +392,21 @@
                 </button>
                 <button
                   v-else-if="currentMethod === 'invalid_samples'"
-                  @click=""
+                  @click="executeInvalidSamples"
+                  class="execute-button"
+                >
+                  执行操作
+                </button>
+                <button
+                  v-else-if="currentMethod === 'missing_value_interpolation'"
+                  @click="executeMissingValueInterpolation"
+                  class="execute-button"
+                >
+                  执行插值
+                </button>
+                <button
+                  v-else-if="currentMethod === 'delete_columns'"
+                  @click="executeDeleteColumns"
                   class="execute-button"
                 >
                   执行操作
@@ -404,16 +426,32 @@
           <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
             <!-- 列名列表区域 -->
             <div class="column-list-section">
-              <h3>列名列表</h3>
+              <div v-if="['missing_value_interpolation','delete_columns'].includes(currentMethod)">
+                <h3>选择需要处理的列</h3>
+                <p>点击选择列，支持 Ctrl/Shift 多选</p>
+                <p>不选则处理所有列</p>
+              </div>
+              <div v-else>
+                <h3>列名列表</h3>
+              </div>
+
               <ul class="column-list">
-                <li v-for="(column, index) in selectedFileColumns" :key="index" class="column-item">
+                <li v-for="(column, index) in selectedFileColumns"
+                    :key="index"
+                    class="column-item"
+                    :class="{
+                      selected: isColumnSelected(column),
+                      clickable: ['missing_value_interpolation','delete_columns'].includes(currentMethod)
+                    }"
+                    @click="toggleColumnSelection($event, column, index)"
+                >
                   {{ column }}
                 </li>
               </ul>
             </div>
             
-            <!-- 添加标题行操作区域 -->
-            <div v-if="currentMethod === 'add_header' && headerEditMode !== 'remove'" class="add-header-section">
+            <!-- 参数配置区域 -->
+            <div v-if="currentMethod === 'add_header' && headerEditMode !== 'remove'" class="param-config-section">
               <h3>设置列名</h3>
               <div class="add-header-content">
                 <div class="column-inputs">
@@ -432,7 +470,7 @@
                 </div>
               </div>
             </div>
-            <div v-else-if="currentMethod === 'invalid_samples'" class="add-header-section">
+            <div v-else-if="currentMethod === 'invalid_samples'" class="param-config-section">
               <h3>设置参数</h3>
               <div class="add-header-content">
                 <div class="data-cleaning-options">
@@ -487,6 +525,85 @@
                         class="threshold-input"
                       />
                     </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else-if="currentMethod === 'missing_value_interpolation'" class="param-config-section">
+              <h3>插值参数设置</h3>
+              <div class="add-header-content">
+                <div class="interpolation-options">
+                  <div class="option-row">
+                    <label>
+                      插值方法:
+                      <select v-model="interpolationMethod" class="interpolation-method-select">
+                        <option value="linear">线性插值</option>
+                        <option value="ffill">前向填充</option>
+                        <option value="bfill">后向填充</option>
+                        <option value="mean">均值填充</option>
+                        <option value="median">中位数填充</option>
+                        <option value="constant">常量填充</option>
+                        <option value="knn">KNN插值</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <div class="option-row" v-if="interpolationMethod === 'constant'">
+                    <label>
+                      填充值:
+                      <input
+                        type="text"
+                        v-model="fillValue"
+                        placeholder="请输入填充值"
+                        class="input-value"
+                        aria-label="填充值"
+                      />
+                    </label>
+                  </div>
+
+                  <div class="option-row" v-if="interpolationMethod === 'knn'">
+                    <label>
+                      KNN邻居数:
+                      <input
+                        type="number"
+                        v-model="knnNeighbors"
+                        min="1"
+                        max="10"
+                        class="input-value"
+                      />
+                    </label>
+                  </div>
+                  <!-- 方法介绍 -->
+                  <div class="method-description" v-if="interpolationMethod">
+                    <p v-if="interpolationMethod === 'linear'">
+                      线性插值使用线性函数来估算缺失值。它会在已知数据点之间画一条直线，并使用这条直线来估计缺失值。
+                      这种方法适用于数值型数据，假设数据在局部范围内呈线性变化。
+                    </p>
+                    <p v-else-if="interpolationMethod === 'ffill'">
+                      前向填充使用前面最近的有效值来填充缺失值。对于时间序列数据特别有用，
+                      因为它假设有连续性的数据点具有相似的值。
+                    </p>
+                    <p v-else-if="interpolationMethod === 'bfill'">
+                      后向填充使用后面最近的有效值来填充缺失值。这种方法也适用于时间序列数据，
+                      特别是在数据趋势是反向的情况下。
+                    </p>
+                    <p v-else-if="interpolationMethod === 'mean'">
+                      均值填充使用每列的平均值来填充该列的缺失值。这是一种简单而常用的方法，
+                      适用于数值型数据，但可能会降低数据的方差。
+                    </p>
+                    <p v-else-if="interpolationMethod === 'median'">
+                      中位数填充使用每列的中位数来填充该列的缺失值。相比均值填充，它对异常值更鲁棒，
+                      是处理偏态分布数据的一个更好选择。
+                    </p>
+                    <p v-else-if="interpolationMethod === 'constant'">
+                      常量填充使用指定的固定值来填充所有缺失值。这种方法非常直接，
+                      但在后续分析中可能会影响数据的真实分布。
+                    </p>
+                    <p v-else-if="interpolationMethod === 'knn'">
+                      KNN（K最近邻）插值使用机器学习方法，基于最相似的k个样本来估算缺失值。
+                      它会考虑其他列的信息来预测缺失值，因此需要所有列参与计算。
+                      这就是为什么KNN方法会对全体列进行插值的原因。
+                    </p>
                   </div>
                 </div>
               </div>
@@ -679,7 +796,8 @@ export default {
     return {
       files: [],
       selectedFile: null,
-      selectedFileColumns: [],
+      selectedFileColumns: [], // 用于显示选择的文件的列名
+      selectedColumns: [], // 用于插值法选中的列
       userInput: "",
       chatMessages: [
         {
@@ -700,8 +818,11 @@ export default {
           name: '数据处理',
           methods: [
             { id: 'invalid_samples', name: '无效样本' },
+            { id: 'delete_columns', name: '删除列' },
             { id: 'data_transformation', name: '数据转换' },
-            { id: 'add_header', name: '添加/修改标题行' }
+            { id: 'missing_value_interpolation', name: '插值法' },
+            { id: 'add_header', name: '添加/修改标题行' },
+
           ]
         },
         {
@@ -769,7 +890,12 @@ export default {
       removeDuplicatesCols: false,
       removeConstantCols: false,
       rowMissingThreshold: 1,
-      columnMissingThreshold: 1
+      columnMissingThreshold: 1,
+      // 插值法参数
+      interpolationMethod: 'linear',
+      fillValue: '',
+      knnNeighbors: 5,
+      lastSelectedColumnIndex: -1
     }
   },
   async mounted() {
@@ -819,7 +945,8 @@ export default {
         'sentiment_analysis': '情感分析',
         'invalid_samples': '无效样本',
         'data_transformation': '数据转换',
-        'add_header': '添加/修改标题行'
+        'add_header': '添加/修改标题行',
+        'delete_columns': '删除列',
       };
       return methods[methodId] || '未知分析';
     },
@@ -1081,12 +1208,242 @@ export default {
       }
     },
     
+    // 添加无效样本处理方法
+    async executeInvalidSamples() {
+      if (!this.selectedFile) {
+        alert('请先选择一个文件');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/data/${this.selectedFile}/remove_invalid_samples`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            remove_duplicates: this.removeDuplicates,
+            remove_duplicate_cols: this.removeDuplicatesCols,
+            remove_constant_cols: this.removeConstantCols,
+            row_missing_threshold: this.rowMissingThreshold,
+            col_missing_threshold: this.columnMissingThreshold
+          }),
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            // 刷新文件列表并选中处理后的新文件
+            await this.loadUploadedFiles();
+            await this.selectFile(result.data.data_id);
+            
+            // 显示处理统计信息
+            const stats = result.data.cleaning_stats;
+            let statsMessage = '无效样本处理完成：\n';
+            statsMessage += `已自动选择新文件\n\n`;
+            statsMessage += '处理统计信息：\n';
+            statsMessage += `删除重复行: ${stats.duplicates_removed}\n`;
+            statsMessage += `删除重复列: ${stats.duplicate_cols_removed}\n`;
+            statsMessage += `删除常量列: ${stats.constant_cols_removed}\n`;
+            statsMessage += `删除行数: ${stats.rows_removed}\n`;
+            statsMessage += `删除列数: ${stats.columns_removed}`;
+            
+            alert(statsMessage);
+          } else {
+            console.error("处理无效样本失败:", result.error);
+            alert("处理无效样本失败: " + result.error);
+          }
+        } else {
+          console.error("处理无效样本请求失败，状态码:", response.status);
+          alert("处理无效样本失败，状态码: " + response.status);
+        }
+      } catch (error) {
+        console.error("处理无效样本时发生错误:", error);
+        alert("处理无效样本时发生错误: " + error.message);
+      }
+    },
+
+    // 检查列是否被选中（用于插值法、删除列）
+    isColumnSelected(column) {
+      const interpolationMethods = ['missing_value_interpolation', 'delete_columns'];
+      if (!interpolationMethods.includes(this.currentMethod)) {
+        return;
+      }
+      return this.selectedColumns.includes(column);
+    },
+
+    // 切换列选中状态（用于插值法、删除列）
+    toggleColumnSelection(event, column, index) {
+      // 双重验证
+      const interpolationMethods = ['missing_value_interpolation', 'delete_columns'];
+
+      if (!interpolationMethods.includes(this.currentMethod)) {
+        return;
+      }
+      const lastIndex = this.lastSelectedColumnIndex;
+
+      if (event.ctrlKey || event.metaKey) {
+        // Ctrl+点击：切换单个列的选中状态
+        const selectedIndex = this.selectedColumns.indexOf(column);
+        if (selectedIndex === -1) {
+          this.selectedColumns.push(column);
+        } else {
+          this.selectedColumns.splice(selectedIndex, 1);
+        }
+      } else if (event.shiftKey && lastIndex !== -1) {
+        // Shift+点击：选择范围
+
+        const start = Math.min(lastIndex, index);
+        const end = Math.max(lastIndex, index);
+        this.selectedColumns = [];
+        for (let i = start; i <= end; i++) {
+          this.selectedColumns.push(this.selectedFileColumns[i]);
+        }
+      } else {
+        // 普通点击：只选中当前列
+        this.selectedColumns = [column];
+      }
+
+      this.lastSelectedColumnIndex = index;
+    },
+
+    // 执行插值法
+    async executeMissingValueInterpolation() {
+      if (!this.selectedFile) {
+        alert('请先选择一个文件');
+        return;
+      }
+
+      // 检查是否选择了列（除非使用KNN方法）
+      if (this.interpolationMethod !== 'knn' && this.selectedColumns.length === 0) {
+        alert('请选择至少一列进行插值处理');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/data/${this.selectedFile}/handle_missing_values`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            specified_columns: this.interpolationMethod !== 'knn' ? this.selectedColumns : undefined,
+            interpolation_method: this.interpolationMethod,
+            fill_value: this.fillValue || undefined,
+            knn_neighbors: this.knnNeighbors
+          }),
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            // 刷新文件列表并选中处理后的新文件
+            await this.loadUploadedFiles();
+            await this.selectFile(result.data.data_id);
+            
+            // 显示处理统计信息
+            const stats = result.data;
+            let statsMessage = '插值处理完成：\n';
+            statsMessage += `已自动选择新文件\n\n`;
+            statsMessage += '处理统计信息：\n';
+            statsMessage += `处理行数: ${stats.processed_rows}\n`;
+            statsMessage += `处理列数: ${stats.processed_cols}\n`;
+            statsMessage += `剩余缺失值: ${stats.remaining_missing_count}\n`;
+            statsMessage += `填充缺失值: ${stats.missing_filled_count}\n\n`;
+            
+            if (Object.keys(stats.cols_filled).length > 0) {
+              statsMessage += '各列填充详情:\n';
+              for (const [col, count] of Object.entries(stats.cols_filled)) {
+                statsMessage += `${col}: ${count}个缺失值\n`;
+              }
+            }
+            
+            alert(statsMessage);
+          } else {
+            console.error("插值处理失败:", result.error);
+            alert("插值处理失败: " + result.error);
+          }
+        } else {
+          console.error("插值处理请求失败，状态码:", response.status);
+          alert("插值处理失败，状态码: " + response.status);
+        }
+      } catch (error) {
+        console.error("插值处理时发生错误:", error);
+        alert("插值处理时发生错误: " + error.message);
+      }
+    },
+
+    // 执行删除列
+    async executeDeleteColumns() {
+      if (!this.selectedFile) {
+        alert('请先选择一个文件');
+        return;
+      }
+
+      if (this.selectedColumns.length === 0) {
+        alert('请至少选择一列进行删除');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/data/${this.selectedFile}/delete_columns`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            columns_to_delete: this.selectedColumns
+          }),
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            // 刷新文件列表并选中处理后的新文件
+            await this.loadUploadedFiles();
+            await this.selectFile(result.data.data_id);
+
+            // 清空已选择的列
+            this.selectedColumns = [];
+
+            alert('列删除成功');
+          } else {
+            console.error("删除列失败:", result.error);
+            alert("删除列失败: " + result.error);
+          }
+        } else {
+          console.error("删除列请求失败，状态码:", response.status);
+          alert("删除列失败，状态码: " + response.status);
+        }
+      } catch (error) {
+        console.error("删除列时发生错误:", error);
+        alert("删除列时发生错误: " + error.message);
+      }
+    },
+
     switchToResultView() {
       this.middleSectionView = 'result';
     },
-    
+    // TODO:在这里添加清除参数
     switchToConfigView() {
       this.middleSectionView = 'config';
+      this.selectedColumns=[]; // 用于插值法选中的列
+      this.removeDuplicates= false;
+      this.removeDuplicatesCols= false;
+      this.removeConstantCols= false;
+      this.rowMissingThreshold= 1;
+      this.columnMissingThreshold= 1;
+      // 插值法参数
+      this.interpolationMethod= 'linear';
+      this.fillValue= '';
+      this.knnNeighbors= 5;
+      this.lastSelectedColumnIndex= -1;
+      this.showAddHeaderModal= false;
+      this.newColumnNames= [];
+      this.headerEditMode= true;  // 修改：默认为修改模式
     },
     
     // 调用API获取分析结果
@@ -2137,6 +2494,10 @@ export default {
   color: #303133;
 }
 
+.column-list-section p {
+  margin-bottom: 5px;
+}
+
 .column-list {
   list-style: none;
   padding: 0;
@@ -2344,7 +2705,7 @@ export default {
 }
 
 /* 添加标题行区域样式 */
-.add-header-section {
+.param-config-section {
   background: white;
   padding: 20px;
   /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); */
@@ -2355,7 +2716,7 @@ export default {
   border-top: 1px solid #ededed;
 }
 
-.add-header-section h3 {
+.param-config-section h3 {
   margin-top: 0;
   margin-bottom: 15px;
   color: #303133;
@@ -2366,6 +2727,39 @@ export default {
   display: flex;
   flex-direction: column;
 }
+
+.interpolation-method-select{
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right center;
+  background-size: 16px;
+
+}
+
+.interpolation-method-select:hover {
+  border-color: #999;
+}
+
+.interpolation-method-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.interpolation-method-select:disabled {
+  background-color: #f8f9fa;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 
 .header-mode-toggle {
   margin-bottom: 15px;
@@ -2571,6 +2965,59 @@ export default {
   background-color: #67c23a;
   color: white;
   opacity: 1;
+}
+
+.column-item {
+  padding: 8px 12px;
+  cursor: default;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  transition: all 0.3s;
+}
+
+.column-item.clickable {
+  cursor: pointer;
+}
+
+.column-item.clickable:hover {
+  background-color: #f0f0f0;
+}
+
+.column-item.selected {
+  background-color: #409eff;
+  color: white;
+}
+.method-description {
+  background-color: #f8f9fa;
+  border-left: 4px solid #409eff;
+  padding: 12px 16px;
+  margin: 15px 0;
+  border-radius: 0 4px 4px 0;
+}
+
+.method-description h4 {
+  margin-top: 0;
+  color: #303133;
+}
+
+.method-description p {
+  margin: 8px 0;
+  line-height: 1.6;
+  color: #606266;
+  font-size: 14px;
+}
+
+.input-value {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.input-value:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
 }
 
 .typing-indicator {

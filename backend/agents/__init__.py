@@ -121,6 +121,26 @@ class DataAnalysisAgent:
             return add_header_to_file(file_path, column_names, session_id, mode)
         
         self.tools.append(add_header_tool)
+        
+        # 注册删除列工具
+        @tool
+        def delete_columns_tool(file_path: str, columns_to_delete: list, session_id: str = None) -> dict:
+            """
+            删除文件中的指定列并创建新文件
+            Args:
+            file_path (str): 文件路径
+            columns_to_delete (list): 要删除的列名列表
+            session_id (str): session_id
+            """
+            from utils.file_manager import delete_columns, get_file_path
+
+            # 检查文件是否存在
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"文件不存在: {file_path}")
+            
+            return delete_columns(file_path, columns_to_delete, session_id)
+        
+        self.tools.append(delete_columns_tool)
     
     def register_module_tools(self):
         """
