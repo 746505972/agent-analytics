@@ -81,7 +81,6 @@ project/
 ├── frontend/
 │   └── src/
 │       ├── views/
-│       │   ├── Analysis.vue # 分析界面
 │       │   ├── Dashboard.vue# 主界面
 │       │   ├── Preview.vue  # 预览界面
 │       │   └── Upload.vue   # 上传界面

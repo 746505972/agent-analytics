@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Upload from '@/views/Upload.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import Preview from '@/views/Preview.vue'
-import Analysis from '@/views/Analysis.vue'
 
 const routes = [
   {
@@ -24,11 +23,6 @@ const routes = [
     name: 'Preview',
     component: Preview
   },
-  {
-    path: '/analysis',
-    name: 'Analysis',
-    component: Analysis
-  }
 ]
 
 const router = createRouter({
