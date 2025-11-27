@@ -27,105 +27,49 @@
           数据预览
         </div>
       </div>
-      
-      <div class="data-info">
-        <div class="data-info-content">
-          <span class="document-name">{{ documentName }}</span>
-          <p>当前样本量：<span>{{ totalRows }}</span></p>
+      <div class="preview-section">
+        <DataPreview
+          v-if="!loading"
+          :column-headers="columnHeaders"
+          :row-data="rowData"
+          :total-rows="totalRows"
+          :total-pages="totalPages"
+          :current-page="currentPage"
+          :header-width="headerWidth"
+          :document-name="documentName"
+          @prev-page="prevPage"
+          @next-page="nextPage"
+          @change-page="changePage"
+        />
+        <div class="loading-section" v-else>
+          <div class="loading-spinner">加载中...</div>
         </div>
-      </div>
-      
-      <div class="preview-section" v-if="!loading">
-        <div class="preview-top">
-          <h3>数据预览如下<p>（共<span>{{ totalRows }}</span>行）</p></h3>
-        </div>
-        
-        <div class="preview-wrap">
-          <table class="preview-table">
-            <thead>
-              <tr>
-                <th v-for="(header, index) in columnHeaders" :key="index" :style="{ minWidth: headerWidth }">
-                  {{ header }}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(row, rowIndex) in displayedRows" :key="rowIndex">
-                <td v-for="(header, cellIndex) in columnHeaders" :key="cellIndex" :title="row[header]">
-                  {{ row[header] }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        
-        <div class="pagination" v-if="totalPages > 1">
-          <button @click="prevPage" :disabled="currentPage === 1">&lt;</button>
-          <template v-if="totalPages <= 5">
-            <button 
-              v-for="page in totalPages" 
-              :key="page" 
-              :class="{ active: currentPage === page }"
-              @click="changePage(page)"
-            >
-              {{ page }}
-            </button>
-          </template>
-          <template v-else>
-            <button 
-              v-for="page in Math.min(3, totalPages)" 
-              :key="page" 
-              :class="{ active: currentPage === page }"
-              @click="changePage(page)"
-            >
-              {{ page }}
-            </button>
-            <span v-if="totalPages > 3">...</span>
-            <button 
-              v-if="totalPages > 3"
-              :class="{ active: currentPage === totalPages }"
-              @click="changePage(totalPages)"
-            >
-              {{ totalPages }}
-            </button>
-          </template>
-          <button @click="nextPage" :disabled="currentPage === totalPages">&gt;</button>
-        </div>
-        
         <div class="operation-buttons">
           <button class="hollow-button previous-page" @click="goBack">上一步</button>
           <button class="blue-button jin" @click="enterAnalysis">进入分析</button>
         </div>
       </div>
-      
-      <div class="loading-section" v-else>
-        <div class="loading-spinner">加载中...</div>
-      </div>
     </div>
-    
+
     <!-- 删除确认弹窗 -->
-    <div class="danger-window" v-if="showDeleteConfirm">
-      <div class="danger-box">
-        <div class="top-header">
-          <h2>提示</h2>
-          <button class="icon-button inputno" @click="cancelDelete"></button>
-        </div>
-        <div class="ml36">
-          <h3 class="warning">是否确定删除？</h3>
-          <p>数据删除后不能恢复，请确认！</p>
-        </div>
-        <div>
-          <button class="red-button inputyes" @click="confirmDelete">删除</button>
-          <button class="noborder-button inputno" @click="cancelDelete">取消</button>
-        </div>
-      </div>
-    </div>
+    <DeleteConfirmationModal 
+      :visible="showDeleteConfirm"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
   </div>
 </template>
 
 <script>
+import DataPreview from '@/components/DataPreview.vue';
+import DeleteConfirmationModal from '@/components/DeleteConfirmationModal.vue';
+
 export default {
   name: 'Preview',
+  components: {
+    DataPreview,
+    DeleteConfirmationModal
+  },
   data() {
     return {
       documentName: '数据分析示例文档',
@@ -149,9 +93,6 @@ export default {
     }
   },
   computed: {
-    displayedRows() {
-      return this.rowData
-    },
     headerWidth() {
       return this.columnHeaders.length > 0 ? `${100 / this.columnHeaders.length}%` : '100px'
     }
@@ -258,11 +199,7 @@ export default {
     goBack() {
       this.showDeleteConfirmation()
     },
-    
-    uploadMore() {
-      this.$router.push('/upload')
-    },
-    
+
     enterAnalysis() {
       this.isEnteringAnalysis = true
       this.$router.push('/dashboard')
@@ -426,37 +363,6 @@ export default {
   background-color: #ebeef5;
 }
 
-.data-info {
-  flex-shrink: 0;
-}
-
-.data-info h2 {
-  font-size: 18px;
-  color: #303133;
-  margin-bottom: 10px;
-}
-
-.data-info-content {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px;
-  border-radius: 6px;
-}
-
-.document-name {
-  font-size: 16px;
-  font-weight: bold;
-  color: #303133;
-  flex: 1;
-}
-
-.data-info-content p {
-  color: #606266;
-  font-size: 13px;
-  margin-left: 10px;
-}
-
 .preview-section {
   flex: 1;
   display: flex;
@@ -466,6 +372,12 @@ export default {
   box-shadow: 0 1px 6px 0 rgba(0, 0, 0, 0.1);
   padding: 15px;
   overflow: hidden;
+}
+
+.data-info-content p {
+  color: #606266;
+  font-size: 13px;
+  margin-left: 10px;
 }
 
 .loading-section {
@@ -481,101 +393,6 @@ export default {
 .loading-spinner {
   font-size: 16px;
   color: #409eff;
-}
-
-.preview-top {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.preview-top h3 {
-  font-size: 16px;
-  color: #303133;
-}
-
-.preview-top h3 p {
-  display: inline;
-  font-size: 13px;
-  color: #606266;
-  margin-left: 8px;
-}
-
-.preview-top h3 p span {
-  font-weight: bold;
-}
-
-.preview-top label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: #606266;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.preview-wrap {
-  flex: 1;
-  overflow: auto;
-  margin-bottom: 15px;
-}
-
-.preview-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.preview-table th,
-.preview-table td {
-  padding: 8px 10px;
-  text-align: left;
-  border: 1px solid #ebeef5;
-  white-space: nowrap;
-  font-size: 13px;
-}
-
-.preview-table th {
-  background-color: #f5f7fa;
-  font-weight: 600;
-  color: #606266;
-  position: sticky;
-  top: 0;
-}
-
-.preview-table tbody tr:hover {
-  background-color: #f5f7fa;
-}
-
-.pagination {
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 15px;
-}
-
-.pagination button {
-  padding: 6px 10px;
-  border: 1px solid #dcdfe6;
-  background: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 13px;
-}
-
-.pagination button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pagination button.active,
-.pagination button:hover:not(:disabled) {
-  background-color: #409eff;
-  color: white;
-  border-color: #409eff;
 }
 
 .operation-buttons {
@@ -616,93 +433,6 @@ export default {
   background-color: #66b1ff;
 }
 
-.danger-window {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.danger-box {
-  background: white;
-  border-radius: 6px;
-  width: 350px;
-  padding: 15px;
-}
-
-.top-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.top-header h2 {
-  font-size: 16px;
-  color: #303133;
-}
-
-.icon-button {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  color: #909399;
-}
-
-.ml36 {
-  margin-left: 30px;
-  margin-bottom: 15px;
-}
-
-.ml36 .warning {
-  color: #e6a23c;
-  font-size: 14px;
-  margin-bottom: 8px;
-}
-
-.ml36 p {
-  color: #606266;
-  font-size: 13px;
-}
-
-.red-button {
-  padding: 8px 16px;
-  background-color: #f56c6c;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-  margin-right: 8px;
-  font-size: 13px;
-}
-
-.red-button:hover {
-  background-color: #f78989;
-}
-
-.noborder-button {
-  padding: 8px 16px;
-  background: none;
-  color: #606266;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-  font-size: 13px;
-}
-
-.noborder-button:hover {
-  color: #409eff;
-}
-
 @media (max-width: 768px) {
   .inner {
     flex-direction: column;
@@ -717,24 +447,12 @@ export default {
   .upload-steps hr {
     width: 100%;
   }
-  
-  .data-info-content {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-  
-  .preview-top {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-  
+
   .operation-buttons {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .operation-buttons button {
     width: 100%;
   }
@@ -743,15 +461,7 @@ export default {
     margin: 10px auto;
     padding: 0 10px;
   }
-  
-  .preview-section {
-    padding: 10px;
-  }
-  
-  .data-info-content {
-    padding: 10px;
-  }
-  
+
   .upload-steps {
     padding: 10px;
   }

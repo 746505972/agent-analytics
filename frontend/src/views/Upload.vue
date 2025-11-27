@@ -3,14 +3,7 @@
     <div class="indexheader">
       <div class="inner">
         <div class="header-left">
-          <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
-            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="20" alt="GitHub">
-            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pandas/pandas-original.svg" width="20" alt="pandas">
-            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" width="20" alt="python">
-            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/pytorch/pytorch-original.svg" width="20" alt="pytorch">
-            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vuejs/vuejs-original.svg" width="20" alt="vuejs">
-            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/fastapi/fastapi-original.svg" width="20" alt="fastapi">
-          </a>
+          <Icon />
         </div>
         <div class="header-right">
           <router-link class="hollow-button" to="/dashboard">
@@ -34,28 +27,7 @@
       </div>
       
       <div class="upload-section">
-        <div class="upload-area" @dragover.prevent @drop.prevent="handleDrop" @click="triggerFileInput">
-          <div class="upload-content">
-            <form id="upload-form">
-              <img src="../assets/images/upload-icon.svg" alt="上传图标" class="upload-icon">
-              <div class="upload-text">
-                点击上传或将文件拖拽到这里上传
-              </div>
-            </form>
-            <input
-              id="file-input"
-              class="file-input"
-              type="file"
-              name="dataFile"
-              @change="handleFileSelect"
-              accept=".csv,.xls,.xlsx,.sav,.dta,.sas7bdat"
-            >
-            <div class="upload-hint">
-              <span>支持xls、xlsx、csv文件</span>
-            </div>
-          </div>
-        </div>
-
+        <FileUploader @file-selected="handleFileSelect" @file-error="handleFileError" />
         <ul class="upload-instructions">
           <li>
             <h3>导入说明：</h3>
@@ -65,80 +37,33 @@
           <li>日期字段需包含年月日（如2021/1/1），或年月日时分秒（如2021/1/1 00:00:00）</li>
         </ul>
       </div>
-
-      <div class="example-section">
-        <h2>
-          <img src="../assets/images/table-icon.svg" alt="表格图标">
-          表格示例
-        </h2>
-        <div class="example-table-container">
-          <table class="example-table">
-            <thead>
-              <tr>
-                <th>编号</th>
-                <th>性别</th>
-                <th>年龄</th>
-                <th>学历</th>
-                <th>年收入</th>
-                <th>日期</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>1</td>
-                <td>1</td>
-                <td>32</td>
-                <td>本科</td>
-                <td>2</td>
-                <td>2021/8/12</td>
-              </tr>
-              <tr>
-                <td>2</td>
-                <td>1</td>
-                <td>28</td>
-                <td>硕士</td>
-                <td>3</td>
-                <td>2021/8/13</td>
-              </tr>
-              <tr>
-                <td>3</td>
-                <td>2</td>
-                <td>35</td>
-                <td>本科</td>
-                <td>4</td>
-                <td>2021/8/14</td>
-              </tr>
-              <tr>
-                <td>4</td>
-                <td>2</td>
-                <td>40</td>
-                <td>博士</td>
-                <td>5</td>
-                <td>2021/8/15</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ChartsExample />
     </div>
 
     <div v-if="isLoading" class="loading-overlay">
       <div class="loading-spinner">文件上传中...</div>
     </div>
 
-    <div v-if="uploadError" class="error-overlay">
-      <div class="error-message">
-        <h3>上传失败</h3>
-        <p>{{ uploadError }}</p>
-        <button @click="clearError">确定</button>
-      </div>
-    </div>
+    <UploadError v-if="uploadError" @close="clearError">
+      {{ uploadError }}
+    </UploadError>
   </div>
 </template>
 
 <script>
+import FileUploader from '@/components/FileUploader.vue';
+import ChartsExample from "@/components/ChartsExample.vue";
+import Icon from "@/components/Icon.vue";
+import UploadError from "@/components/UploadError.vue";
+
 export default {
   name: 'Upload',
+  components: {
+    UploadError,
+    Icon,
+    FileUploader,
+    ChartsExample
+  },
   data() {
     return {
       isLoading: false,
@@ -147,42 +72,13 @@ export default {
     }
   },
   methods: {
-    triggerFileInput() {
-      document.getElementById('file-input').click()
+    handleFileSelect(file) {
+      this.selectedFile = file
+      this.uploadFile(file)
     },
-
-    handleFileSelect(event) {
-      const file = event.target.files[0]
-      if (file) {
-        this.selectedFile = file
-        this.uploadFile(file)
-      }
-    },
-
-    handleDrop(event) {
-      const file = event.dataTransfer.files[0]
-      if (file) {
-        // 检查文件类型
-        const allowedTypes = [
-          'text/csv',
-          'application/vnd.ms-excel',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'application/octet-stream'
-        ]
-
-        if (allowedTypes.includes(file.type) || this.isValidFileType(file.name)) {
-          this.selectedFile = file
-          this.uploadFile(file)
-        } else {
-          this.uploadError = '不支持的文件类型，请上传正确的数据文件'
-        }
-      }
-    },
-
-    isValidFileType(filename) {
-      // Todo: 添加更多文件类型检查
-      const extensions = ['.csv', '.xls', '.xlsx']
-      return extensions.some(ext => filename.toLowerCase().endsWith(ext))
+    
+    handleFileError(errorMessage) {
+      this.uploadError = errorMessage
     },
 
     async uploadFile(file) {
@@ -332,70 +228,6 @@ export default {
   margin-bottom: 30px;
 }
 
-.upload-area {
-  flex: 1;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  padding: 30px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.upload-area:hover {
-  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.15);
-  transform: translateY(-2px);
-  background: rgba(122, 204, 233, 0.09);
-}
-
-.upload-area:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.1);
-}
-
-.upload-content {
-  text-align: center;
-}
-
-.upload-icon {
-  width: 64px;
-  height: 64px;
-  margin-bottom: 20px;
-}
-
-.upload-text {
-  color: #409eff;
-  font-size: 18px;
-  margin-bottom: 20px;
-  transition: all 0.3s ease;
-}
-
-.upload-area:hover .upload-text {
-  color: #66b1ff;
-}
-
-.file-input {
-  display: none;
-}
-
-.upload-hint {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 15px;
-  color: #909399;
-  font-size: 14px;
-}
-
-.upload-hint a {
-  color: #409eff;
-  text-decoration: none;
-}
-
-.upload-hint a:hover {
-  text-decoration: underline;
-}
-
 .upload-instructions {
   flex: 1;
   padding: 20px;
@@ -412,46 +244,6 @@ export default {
   margin: 0 0 10px 0;
   color: #303133;
   font-size: 18px;
-}
-
-.example-section h2 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 20px;
-  color: #303133;
-  margin-bottom: 20px;
-}
-
-.example-table-container {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  overflow-x: auto;
-}
-
-.example-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.example-table th,
-.example-table td {
-  padding: 12px 15px;
-  text-align: left;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.example-table th {
-  background-color: #f5f7fa;
-  font-weight: 600;
-  color: #606266;
-}
-
-.example-table tbody tr:hover {
-  background-color: #f5f7fa;
 }
 
 .loading-overlay {
@@ -474,46 +266,6 @@ export default {
   font-size: 16px;
 }
 
-.error-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.error-message {
-  background: white;
-  padding: 30px;
-  border-radius: 8px;
-  text-align: center;
-  max-width: 400px;
-}
-
-.error-message h3 {
-  color: #f56c6c;
-  margin-bottom: 15px;
-}
-
-.error-message p {
-  color: #606266;
-  margin-bottom: 20px;
-}
-
-.error-message button {
-  padding: 10px 20px;
-  background-color: #409eff;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
 @media (max-width: 768px) {
   .upload-section {
     flex-direction: column;
@@ -531,15 +283,6 @@ export default {
   
   .upload-steps hr {
     width: 100%;
-  }
-  
-  .example-table {
-    font-size: 12px;
-  }
-  
-  .example-table th,
-  .example-table td {
-    padding: 8px 10px;
   }
 }
 </style>
