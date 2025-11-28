@@ -654,19 +654,6 @@
         </div>
       </div>
     </div>
-    
-    <!-- 添加标题行弹窗 -->
-    <div class="add-header-modal" v-if="showAddHeaderModal">
-      <div class="add-header-modal-content">
-        <div class="add-header-modal-header">
-          <h3>添加标题行</h3>
-          <button class="close-button" @click="closeAddHeaderModal">×</button>
-        </div>
-        <div class="add-header-modal-body">
-          <p>正在为文件添加标题行，请稍候...</p>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -789,7 +776,6 @@ export default {
         loading: true
       },
       // 添加标题行相关数据
-      showAddHeaderModal: false,
       newColumnNames: [],
       headerEditMode: true,  // 修改：默认为修改模式
       // 分析历史相关数据
@@ -1336,7 +1322,6 @@ export default {
       this.fillValue= '';
       this.knnNeighbors= 5;
       this.lastSelectedColumnIndex= -1;
-      this.showAddHeaderModal= false;
       this.newColumnNames= [];
       this.headerEditMode= true;  // 修改：默认为修改模式
     },
@@ -1397,8 +1382,6 @@ export default {
       }
 
       try {
-        this.showAddHeaderModal = true;
-        
         // 确定模式参数
         let mode = "add";
         if (this.headerEditMode === true) {
@@ -1445,15 +1428,9 @@ export default {
       } catch (error) {
         console.error("添加标题行时发生错误:", error);
         alert("添加标题行时发生错误: " + error.message);
-      } finally {
-        this.showAddHeaderModal = false;
       }
     },
-    
-    // 关闭添加标题行弹窗
-    closeAddHeaderModal() {
-      this.showAddHeaderModal = false;
-    },
+
     
     // 新增方法：恢复保存的状态
     restoreState() {
@@ -2459,40 +2436,6 @@ export default {
   box-sizing: border-box;
 }
 
-/* 添加标题行弹窗样式 */
-.add-header-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.add-header-modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 400px;
-  max-width: 90%;
-  padding: 20px;
-}
-
-.add-header-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.add-header-modal-header h3 {
-  margin: 0;
-  color: #303133;
-}
-
 .header-mode-toggle {
   margin-top: 10px;
 }
@@ -2509,11 +2452,6 @@ export default {
   font-size: 24px;
   cursor: pointer;
   color: #909399;
-}
-
-.add-header-modal-body {
-  text-align: center;
-  padding: 20px 0;
 }
 
 .column-item {
