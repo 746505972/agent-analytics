@@ -8,18 +8,14 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
 from fastapi import APIRouter, Request, Body
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse,FileResponse
 from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import logging
+from typing import Any, List
 
-try:
-    from utils.file_manager import get_file_path, delete_file, sanitize_filename
-except ImportError:
-    # 最后尝试直接添加到路径并导入
-    sys.path.insert(0, os.path.join(parent_dir, "utils"))
-    from utils.file_manager import get_file_path, delete_file, sanitize_filename
+from utils.file_manager import get_file_path, delete_file, sanitize_filename
 
 router = APIRouter(prefix="/data", tags=["data"])
 
@@ -99,63 +95,6 @@ def load_csv_file(data_id: str, session_id: str) -> tuple:
         logger.error(f"读取文件 {file_path} 失败: {str(e)}")
         return False, error_msg, 500
 
-
-class DataCleaningRequest(BaseModel):
-    """
-    数据清洗请求模型
-    """
-    remove_duplicates: bool = True
-    row_missing_threshold: float = 0.5
-    col_missing_threshold: float = 0.5
-    row_handling: str = "delete"  # "delete" or "interpolate"
-    col_handling: str = "delete"  # "delete" or "interpolate"
-
-
-@router.post("/{data_id}/clean")
-async def clean_data(request: Request, data_id: str, cleaning_params: DataCleaningRequest):
-    """
-    数据清洗接口
-    """
-    try:
-        # 获取session_id
-        session_id = request.state.session_id
-        
-        # 加载CSV文件
-        success, result, status_code = load_csv_file(data_id, session_id)
-        if not success:
-            return JSONResponse(
-                status_code=status_code,
-                content={
-                    "success": False,
-                    "error": result
-                }
-            )
-
-        # 导入并调用添加标题行的函数
-        try:
-            from utils.file_manager import clean_data_file
-        except ImportError:
-            # 最后尝试直接添加到路径并导入
-            sys.path.insert(0, os.path.join(parent_dir, "utils"))
-            from utils.file_manager import clean_data_file
-
-        result = clean_data_file(get_file_path(data_id, session_id), session_id, cleaning_params.remove_duplicates,
-                                 cleaning_params.row_missing_threshold, cleaning_params.col_missing_threshold,
-                                 cleaning_params.row_handling, cleaning_params.col_handling)
-
-        return JSONResponse(content={
-            "success": True,
-            "data": result
-        })
-    except Exception as e:
-        logger.error(f"添加标题行时出错: {str(e)}")
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": str(e)
-            }
-        )
 
 @router.get("/{data_id}")
 async def get_data_preview(request: Request, data_id: str, page: int = 1, page_size: int = 10):
@@ -573,6 +512,8 @@ async def download_data(request: Request, data_id: str):
             }
         )
 
+
+
 class AddHeaderRequest(BaseModel):
     column_names: list
     mode: str = "add"  # "add" for adding header, "modify" for modifying existing header
@@ -605,14 +546,9 @@ async def add_header(request: Request, data_id: str, body: AddHeaderRequest):
                     "error": result
                 }
             )
-        
+
         # 导入并调用添加标题行的函数
-        try:
-            from utils.file_manager import add_header_to_file
-        except ImportError:
-            # 最后尝试直接添加到路径并导入
-            sys.path.insert(0, os.path.join(parent_dir, "utils"))
-            from utils.file_manager import add_header_to_file
+        from utils.file_manager import add_header_to_file
                 
         result = add_header_to_file(get_file_path(data_id, session_id), body.column_names, session_id, mode=body.mode)
         
@@ -622,6 +558,168 @@ async def add_header(request: Request, data_id: str, body: AddHeaderRequest):
         })
     except Exception as e:
         logger.error(f"添加标题行时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+class RemoveInvalidSamplesRequest(BaseModel):
+    remove_duplicates: bool = False
+    remove_duplicate_cols: bool = False
+    remove_constant_cols: bool = False
+    row_missing_threshold: float = 1.0
+    col_missing_threshold: float = 1.0
+
+
+@router.post("/{data_id}/remove_invalid_samples")
+async def remove_invalid_samples(request: Request, data_id: str, body: RemoveInvalidSamplesRequest):
+    """
+    去除无效样本接口
+
+    Args:
+        request (Request): FastAPI请求对象
+        data_id (str): 数据文件ID
+        body (RemoveInvalidSamplesRequest): 请求体，包含处理参数
+
+    Returns:
+        JSONResponse: 处理结果
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+        # 导入并调用去除无效样本的函数
+        from utils.file_manager import remove_invalid_samples
+
+        result = remove_invalid_samples(get_file_path(data_id, session_id), session_id,
+                                        body.remove_duplicates, body.remove_duplicate_cols, body.remove_constant_cols,
+                                        body.row_missing_threshold, body.col_missing_threshold)
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"去除无效样本时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+class HandleMissingValuesRequest(BaseModel):
+    specified_columns: List[str] = None
+    interpolation_method: str = "linear"
+    fill_value: Any = None
+    knn_neighbors: int = 5
+
+
+@router.post("/{data_id}/handle_missing_values")
+async def handle_missing_values_endpoint(request: Request, data_id: str, body: HandleMissingValuesRequest):
+    """
+    处理缺失值接口
+
+    Args:
+        request (Request): FastAPI请求对象
+        data_id (str): 数据文件ID
+        body (HandleMissingValuesRequest): 请求体，包含处理参数
+
+    Returns:
+        JSONResponse: 处理结果
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+        # 导入并调用处理缺失值的函数
+        from utils.file_manager import handle_missing_values
+
+        result = handle_missing_values(get_file_path(data_id, session_id), session_id, body.specified_columns,
+                                       body.interpolation_method, body.fill_value,
+                                       body.knn_neighbors)
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"处理缺失值时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+
+class DeleteColumnsRequest(BaseModel):
+    columns_to_delete: List[str]
+
+
+@router.post("/{data_id}/delete_columns")
+async def delete_columns_endpoint(request: Request, data_id: str, body: DeleteColumnsRequest):
+    """
+    删除指定列接口
+
+    Args:
+        request (Request): FastAPI请求对象
+        data_id (str): 数据文件ID
+        body (DeleteColumnsRequest): 请求体，包含要删除的列名列表
+
+    Returns:
+        JSONResponse: 处理结果，只包含data_id和保存路径
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+        # 导入并调用删除列的函数
+        from utils.file_manager import delete_columns
+
+        result = delete_columns(get_file_path(data_id, session_id), body.columns_to_delete, session_id)
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"删除列时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={

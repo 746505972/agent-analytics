@@ -293,7 +293,19 @@ def remove_invalid_samples(file_path: str, session_id: str = None,
 
     new_filename,new_file_path = generate_new_file_path(file_path, session_id)
     df.to_csv(new_file_path, index=False, encoding="utf-8-sig")
-
+    """
+    {
+        "data_id": "x_edit",
+        "saved_path": "data\\100\\x_edit.csv",
+        "cleaning_stats": {
+            "duplicates_removed": 0,
+            "duplicate_cols_removed": 0,
+            "constant_cols_removed": 0,
+            "rows_removed": 1,
+            "columns_removed": 0
+        }
+    }
+    """
     return {
         "data_id": new_filename,
         "saved_path": new_file_path,
@@ -302,27 +314,20 @@ def remove_invalid_samples(file_path: str, session_id: str = None,
 
 
 def handle_missing_values(file_path: str, session_id: str = None,
-                          row_handling: str = "interpolate",
-                          col_handling: str = "interpolate",
+                          specified_columns: List[str] = None,
                           interpolation_method: str = "linear",
                           fill_value: Any = None,
-                          knn_neighbors: int = 5,
-                          specified_columns: List[str] = None,
-                          temporal_columns: List[str] = None) -> dict:
+                          knn_neighbors: int = 5) -> dict:
     """
-    处理缺失值 - 对行列缺失值进行插值或填充
+    对缺失数据进行插值
 
     Args:
         file_path (str): 文件路径
         session_id (str): session_id
-        # TODO: 检查"constant"和"fill"是否重复
-        row_handling (str): 行处理方式 ("interpolate", "fill")
-        col_handling (str): 列处理方式 ("interpolate", "fill")
+        specified_columns (List[str]): 指定要处理的列名列表，如果为None则处理所有列
         interpolation_method (str): 插值方法 ("linear", "ffill", "bfill", "mean", "median", "mode", "knn", "constant")
         fill_value (Any): 当使用constant方法时的填充值
         knn_neighbors (int): KNN插值的邻居数量
-        specified_columns (List[str]): 指定要处理的列名列表，如果为None则处理所有列
-        temporal_columns (List[str]): 时间序列列名列表
 
     Returns:
         dict: 处理结果和统计信息
@@ -354,53 +359,71 @@ def handle_missing_values(file_path: str, session_id: str = None,
     filling_stats = {
         'missing_filled': 0,
         'columns_processed': columns_to_process,
-        'methods_used': {}
+        'cols_filled': {}
     }
 
-    # 处理缺失值
-    if row_handling == "interpolate" or col_handling == "interpolate":
-        # 插值处理
-        df, stats = _interpolate_missing_values(df, columns_to_process, interpolation_method,
-                                                fill_value, knn_neighbors, temporal_columns)
-    else:
-        # 填充处理
-        df, stats = _fill_missing_values(df, columns_to_process, interpolation_method,
-                                         fill_value, temporal_columns)
+    # 插值处理
+    df, stats = _interpolate_missing_values(df, columns_to_process, interpolation_method,
+                                            fill_value, knn_neighbors)
 
     filling_stats['missing_filled'] = stats['missing_filled']
-    filling_stats['methods_used'] = stats['methods_used']
+    filling_stats['cols_filled'] = stats['cols_filled']
     filling_stats['total_missing_after'] = df.isnull().sum().sum()
 
     # 保存处理后的数据
     new_filename,new_file_path = generate_new_file_path(file_path, session_id)
     df.to_csv(new_file_path, index=False, encoding="utf-8-sig")
-
+    """
+    {
+        "processed_rows": 16,
+        "processed_cols": 3,
+        "remaining_missing_count": 0,
+        "missing_filled_count": 4,
+        "cols_filled": {
+            "值1": 2,
+            "值2": 3,
+            "时间": 4
+        },
+        "data_id": "x_edit",
+        "saved_path": "data\\100\\x_edit.csv"
+    }
+    """
     return {
         "processed_rows": df.shape[0],
         "processed_cols": df.shape[1],
         "remaining_missing_count": int(filling_stats['total_missing_after']),
         "missing_filled_count": int(filling_stats['missing_filled']),
+        "cols_filled": filling_stats['cols_filled'],
         "data_id": new_filename,
         "saved_path": new_file_path,
     }
 
 
+
 def _interpolate_missing_values(df: pd.DataFrame, columns: List[str], method: str,
-                                fill_value: Any, knn_neighbors: int, temporal_columns: List[str]) -> tuple:
+                                fill_value: Any, knn_neighbors: int) -> tuple:
     """插值处理缺失值"""
     df_copy = df.copy()
     total_filled = 0
-    methods_used = {}
+    cols_filled = {}
 
     # 如果使用KNN方法，需要特殊处理
     if method == "knn":
         numeric_cols = [col for col in columns if pd.api.types.is_numeric_dtype(df_copy[col])]
         if numeric_cols:
+            # 记录KNN处理前的缺失值数量
+            original_null_counts = {}
+            for col in numeric_cols:
+                original_null_counts[col] = df_copy[col].isnull().sum()
+            
             knn_imputer = KNNImputer(n_neighbors=knn_neighbors)
             df_copy[numeric_cols] = knn_imputer.fit_transform(df_copy[numeric_cols])
-            filled_count = df_copy[numeric_cols].isnull().sum().sum()
-            total_filled += filled_count
-            methods_used['knn'] = {'columns': numeric_cols, 'filled': filled_count}
+            
+            # 计算每列填充的缺失值数量
+            for col in numeric_cols:
+                filled_count = original_null_counts[col] - df_copy[col].isnull().sum()
+                if filled_count > 0:  # 只记录实际填充了缺失值的列
+                    cols_filled[col] = int(filled_count)
 
     # 处理其他列
     for column in columns:
@@ -414,96 +437,58 @@ def _interpolate_missing_values(df: pd.DataFrame, columns: List[str], method: st
 
         if pd.api.types.is_numeric_dtype(df_copy[column]):
             # 数值型数据
-            if method in ["linear", "ffill", "bfill"]:
-                df_copy[column] = df_copy[column].interpolate(method=method, limit_direction='both')
-            elif method == "mean":
-                df_copy[column] = df_copy[column].interpolate(method='linear').fillna(df_copy[column].mean())
-            elif method == "median":
-                df_copy[column] = df_copy[column].interpolate(method='linear').fillna(df_copy[column].median())
-            else:
-                df_copy[column] = df_copy[column].interpolate()
-
+            match method:
+                case "linear"  :
+                    df_copy[column] = df_copy[column].interpolate(method=method, limit_direction='both')
+                case "ffill" :
+                    df_copy[column] = df_copy[column].ffill(axis=0)
+                case "bfill":
+                    df_copy[column] = df_copy[column].bfill(axis=0)
+                case "mean":
+                    df_copy[column] = df_copy[column].fillna(df_copy[column].mean())
+                case "median":
+                    df_copy[column] = df_copy[column].fillna(df_copy[column].median())
+                case "constant":
+                    fill_val = fill_value if fill_value is not None else 0
+                    df_copy[column] = df_copy[column].fillna(fill_val)
+                case _:
+                    df_copy[column] = df_copy[column].fillna(0)  # 默认填充值改为0，类似分类数据的默认处理
+            
         elif pd.api.types.is_datetime64_any_dtype(df_copy[column]):
             # 时间型数据
-            if method in ["linear", "ffill", "bfill"]:
-                df_copy[column] = df_copy[column].interpolate(method=method, limit_direction='both')
-            else:
-                df_copy[column] = df_copy[column].interpolate(method='linear')
-
+            match method:
+                case "linear":
+                    df_copy[column] = df_copy[column].interpolate(method=method, limit_direction='both')
+                case "ffill":
+                    df_copy[column] = df_copy[column].ffill(axis=0)
+                case "bfill":
+                    df_copy[column] = df_copy[column].bfill(axis=0)
+                case "constant":
+                    fill_val = fill_value if fill_value is not None else pd.Timestamp.now()
+                    df_copy[column] = df_copy[column].fillna(fill_val)
+                case _:
+                    df_copy[column] = df_copy[column].ffill(axis=0).bfill(axis=0)  # 默认使用前向后向填充
+        
         else:
             # 分类型数据 - 使用填充方法
-            if method == "ffill":
-                df_copy[column] = df_copy[column].fillna(method='ffill')
-            elif method == "bfill":
-                df_copy[column] = df_copy[column].fillna(method='bfill')
-            else:
-                df_copy[column] = df_copy[column].fillna("Missing")
+            match method:
+                case "ffill":
+                    df_copy[column] = df_copy[column].ffill(axis=0)
+                case "bfill":
+                    df_copy[column] = df_copy[column].bfill(axis=0)
+                case "constant":
+                    fill_val = fill_value if fill_value is not None else "Unknown"
+                    df_copy[column] = df_copy[column].fillna(fill_val)
+                case _:
+                    df_copy[column] = df_copy[column].fillna("Missing")
 
         filled_count = original_null_count - df_copy[column].isnull().sum()
         total_filled += filled_count
-        methods_used[column] = {'method': method, 'filled': filled_count}
+        cols_filled[column] = int(filled_count)
+        # 移除值为0的键值对
+        cols_filled = {k: v for k, v in cols_filled.items() if v != 0}
 
-    return df_copy, {'missing_filled': total_filled, 'methods_used': methods_used}
-
-
-def _fill_missing_values(df: pd.DataFrame, columns: List[str], method: str,
-                         fill_value: Any, temporal_columns: List[str]) -> tuple:
-    """填充处理缺失值"""
-    df_copy = df.copy()
-    total_filled = 0
-    methods_used = {}
-
-    for column in columns:
-        if df_copy[column].isnull().sum() == 0:
-            continue
-
-        original_null_count = df_copy[column].isnull().sum()
-
-        if pd.api.types.is_numeric_dtype(df_copy[column]):
-            # 数值型数据
-            if method == "mean":
-                df_copy[column] = df_copy[column].fillna(df_copy[column].mean())
-            elif method == "median":
-                df_copy[column] = df_copy[column].fillna(df_copy[column].median())
-            elif method == "constant":
-                fill_val = fill_value if fill_value is not None else 0
-                df_copy[column] = df_copy[column].fillna(fill_val)
-            else:
-                df_copy[column] = df_copy[column].fillna(df_copy[column].mean())
-
-        elif pd.api.types.is_datetime64_any_dtype(df_copy[column]):
-            # 时间型数据
-            if method == "constant":
-                fill_val = fill_value if fill_value is not None else pd.Timestamp.now()
-                df_copy[column] = df_copy[column].fillna(fill_val)
-            elif method == "ffill":
-                df_copy[column] = df_copy[column].fillna(method='ffill')
-            elif method == "bfill":
-                df_copy[column] = df_copy[column].fillna(method='bfill')
-            else:
-                df_copy[column] = df_copy[column].fillna(method='ffill')
-
-        else:
-            # 分类型数据
-            if method == "mode":
-                mode_value = df_copy[column].mode()
-                fill_val = mode_value[0] if len(mode_value) > 0 else "Unknown"
-                df_copy[column] = df_copy[column].fillna(fill_val)
-            elif method == "constant":
-                fill_val = fill_value if fill_value is not None else "Unknown"
-                df_copy[column] = df_copy[column].fillna(fill_val)
-            elif method == "ffill":
-                df_copy[column] = df_copy[column].fillna(method='ffill')
-            elif method == "bfill":
-                df_copy[column] = df_copy[column].fillna(method='bfill')
-            else:
-                df_copy[column] = df_copy[column].fillna("Missing")
-
-        filled_count = original_null_count - df_copy[column].isnull().sum()
-        total_filled += filled_count
-        methods_used[column] = {'method': method, 'filled': filled_count}
-
-    return df_copy, {'missing_filled': total_filled, 'methods_used': methods_used}
+    return df_copy, {'missing_filled': total_filled, 'cols_filled': cols_filled}
 
 
 def _convert_to_serializable(x):
@@ -519,6 +504,48 @@ def _convert_to_serializable(x):
         return x.strftime('%Y-%m-%d %H:%M:%S')
     return x
 
+
+def delete_columns(file_path: str, columns_to_delete: List[str], session_id: str = None) -> dict:
+    """
+    删除指定的列
+    
+    Args:
+        file_path (str): 文件路径
+        columns_to_delete (List[str]): 要删除的列名列表
+        session_id (str): session_id
+
+    Returns:
+        dict: 只包含data_id和保存路径的字典
+    """
+    # 确保数据目录存在
+    ensure_data_dir()
+
+    if session_id:
+        ensure_session_dir(session_id)
+
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+
+    # 读取文件
+    df = read_any_file(file_path)
+    
+    # 检查要删除的列是否存在
+    existing_columns = [col for col in columns_to_delete if col in df.columns]
+    missing_columns = set(columns_to_delete) - set(existing_columns)
+    if missing_columns:
+        print(f"警告: 以下列不存在于数据集中: {missing_columns}")
+    
+    # 删除指定的列
+    df = df.drop(columns=existing_columns, errors='ignore')
+    
+    # 保存处理后的数据
+    new_filename, new_file_path = generate_new_file_path(file_path, session_id)
+    df.to_csv(new_file_path, index=False, encoding="utf-8-sig")
+    
+    return {
+        "data_id": new_filename,
+        "saved_path": new_file_path
+    }
 
 
 def edit_file_data(file_path: str, edit_func, session_id: str = None, *args, **kwargs) -> dict:
@@ -578,19 +605,14 @@ def edit_file_data(file_path: str, edit_func, session_id: str = None, *args, **k
     }
 
 def test():
-    file_path = f"data/100/asd.xlsx"
-    result=handle_missing_values(file_path, session_id = "100",
-                              row_handling = "interpolate",
-                              col_handling = "interpolate",
-                              interpolation_method= "linear",
-                              fill_value= None,
-                              specified_columns= None,
-                              temporal_columns= None)
+    file_path = f"data/100/x.xlsx"
+    result=handle_missing_values(file_path, "100","knn",888888888,
+                                 5,)
 
     print(json.dumps(result, indent=4, ensure_ascii=False))
 
 def test2():
-    file_path = f"data/100/asd.xlsx"
+    file_path = f"data/100/x.xlsx"
     result = remove_invalid_samples(file_path,"100",True, True, True,
                                     0.5,0.5)
     print(json.dumps(result, indent=4, ensure_ascii=False))

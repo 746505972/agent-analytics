@@ -1,15 +1,12 @@
 # Agent-Analytics: 基于LLM-Agent的自适应数据分析与报告生成系统
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
 <img src="https://qianwen-res.oss-cn-beijing.aliyuncs.com/logo_qwen.jpg" alt="通义千问" height="28">
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
-![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
-![npm](https://img.shields.io/badge/npm-CB3837?style=for-the-badge&logo=npm&logoColor=white)
 ![ngrok](https://img.shields.io/badge/ngrok-1F1E37?style=for-the-badge&logo=ngrok&logoColor=white)
 ![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
 
@@ -84,7 +81,6 @@ project/
 ├── frontend/
 │   └── src/
 │       ├── views/
-│       │   ├── Analysis.vue # 分析界面
 │       │   ├── Dashboard.vue# 主界面
 │       │   ├── Preview.vue  # 预览界面
 │       │   └── Upload.vue   # 上传界面
@@ -148,7 +144,7 @@ npm run dev
 ## 开发路线图
 
 - [x] 基础文件上传功能
-- [ ] 实现基础数据分析 API
+- [x] 实现基础数据分析 API
 - [ ] 添加数据可视化功能
 - [x] 实现自然语言交互
 - [ ] 自动生成分析报告

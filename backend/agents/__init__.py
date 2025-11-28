@@ -121,6 +121,26 @@ class DataAnalysisAgent:
             return add_header_to_file(file_path, column_names, session_id, mode)
         
         self.tools.append(add_header_tool)
+        
+        # 注册删除列工具
+        @tool
+        def delete_columns_tool(file_path: str, columns_to_delete: list, session_id: str = None) -> dict:
+            """
+            删除文件中的指定列并创建新文件
+            Args:
+            file_path (str): 文件路径
+            columns_to_delete (list): 要删除的列名列表
+            session_id (str): session_id
+            """
+            from utils.file_manager import delete_columns, get_file_path
+
+            # 检查文件是否存在
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"文件不存在: {file_path}")
+            
+            return delete_columns(file_path, columns_to_delete, session_id)
+        
+        self.tools.append(delete_columns_tool)
     
     def register_module_tools(self):
         """
@@ -156,36 +176,36 @@ class DataAnalysisAgent:
             
             # 添加系统消息
             system_message = """
-你是一个专业的数据分析助手。你的任务是根据用户的问题，使用提供的工具来分析数据并给出专业的回答。
-
-你会收到以下信息：
-1. 数据上下文信息：包含当前正在分析的文件的相关信息，如文件名、行列数、列名等
-2. 用户问题：用户想要进行的具体分析任务
-
-请严格按照以下规则进行操作：
-1. 仔细区分数据上下文信息和用户问题，不要混淆两者
-2. 根据用户问题，结合数据上下文信息，选择合适的工具进行分析
-3. 如果需要查看数据内容，可以使用文件读取工具
-4. 回答时要专业、清晰、有条理
-5. 如果用户询问你是否知道当前选择的文件，你应该明确告知用户你了解当前正在分析哪个文件
-6. 在回答中主动提及当前分析的文件，让用户知道你了解上下文
-"""
+                你是一个专业的数据分析助手。你的任务是根据用户的问题，使用提供的工具来分析数据并给出专业的回答。
+                
+                你会收到以下信息：
+                1. 数据上下文信息：包含当前正在分析的文件的相关信息，如文件名、行列数、列名等
+                2. 用户问题：用户想要进行的具体分析任务
+                
+                请严格按照以下规则进行操作：
+                1. 仔细区分数据上下文信息和用户问题，不要混淆两者
+                2. 根据用户问题，结合数据上下文信息，选择合适的工具进行分析
+                3. 如果需要查看数据内容，可以使用文件读取工具
+                4. 回答时要专业、清晰、有条理
+                5. 如果用户询问你是否知道当前选择的文件，你应该明确告知用户你了解当前正在分析哪个文件
+                6. 在回答中主动提及当前分析的文件，让用户知道你了解上下文
+                """
             messages.append(SystemMessage(content=system_message))
             
             # 如果有数据上下文，则加入
             if data_context:
                 # 构造更清晰的提示信息
                 context_info = f"""
-<数据上下文信息>
-文件ID(data_id): {data_context.get('data_id', '未知')}
-session_id: {session_id}
-文件路径:{data_context.get('file_path', '未知')}
-数据形状: {data_context.get('shape', '未知')} (行数, 列数)
-列名: {', '.join(data_context.get('columns', []))}
-数据类型: {data_context.get('dtypes', '未知')}
-示例数据: {data_context.get('sample_data', '无')}
-</数据上下文信息>
-"""
+                    <数据上下文信息>
+                    文件ID(data_id): {data_context.get('data_id', '未知')}
+                    session_id: {session_id}
+                    文件路径:{data_context.get('file_path', '未知')}
+                    数据形状: {data_context.get('shape', '未知')} (行数, 列数)
+                    列名: {', '.join(data_context.get('columns', []))}
+                    数据类型: {data_context.get('dtypes', '未知')}
+                    示例数据: {data_context.get('sample_data', '无')}
+                    </数据上下文信息>
+                    """
                 # 移除了数据上下文信息的日志打印，以保护用户隐私
                 messages.append(HumanMessage(content=context_info))
             
