@@ -125,302 +125,27 @@
             <h2>{{ getMethodName(currentMethod) }}分析结果</h2>
           </div>
           
-          <div class="result-content">
-            <!-- 基本信息分析结果 -->
-            <div v-if="currentMethod === 'basic_info' && datasetDetails" class="analysis-section">
-              <div class="basic-info-details">
-                <h3>数据集基本信息</h3>
-                <div class="info-grid">
-                  <div class="info-item">
-                    <span class="info-label">文件名:</span>
-                    <span class="info-value">{{ datasetDetails.filename }}</span>
-                  </div>
-                  <div class="info-item">
-                    <div>
-                      <span class="info-label">行数:</span>
-                      <span class="info-value">{{ datasetDetails.rows.toLocaleString() }}</span>
-                    </div>
-                    <div>
-                      <span class="info-label">列数:</span>
-                      <span class="info-value">{{ datasetDetails.columns.toLocaleString() }}</span>
-                    </div>
-                  </div>
-                  <div class="info-item">
-                    <div>
-                      <span class="info-label">完整性:</span>
-                      <span class="info-value">{{ (datasetDetails.completeness * 100).toFixed(2) }}%</span>
-                    </div>
-                    <div>
-                      <span class="info-label">总单元格数:</span>
-                      <span class="info-value">{{ datasetDetails.total_cells.toLocaleString() }}</span>
-                    </div>
-                    <div>
-                      <span class="info-label">缺失值总数:</span>
-                      <span class="info-value">{{ datasetDetails.total_missing.toLocaleString() }}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <h4>列信息:</h4>
-                <div class="column-table-container">
-                  <table class="column-table">
-                    <thead>
-                      <tr>
-                        <th>列名</th>
-                        <th>数据类型</th>
-                        <th>缺失值数量</th>
-                        <th>列完整性</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(dtype, columnName) in datasetDetails.dtypes" :key="columnName">
-                        <td>{{ columnName }}</td>
-                        <td>{{ dtype }}</td>
-                        <td>{{ datasetDetails.missing_values[columnName].toLocaleString() || 0 }}</td>
-                        <td>{{ (datasetDetails.completeness_values[columnName] * 100).toFixed(2) + '%' || 'unknown' }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                
-                <h4>数值型列统计信息:</h4>
-                <div class="stats-table-container">
-                  <table class="stats-table">
-                    <thead>
-                      <tr>
-                        <th>列名</th>
-                        <th>最小值</th>
-                        <th>最大值</th>
-                        <th>平均值</th>
-                        <th>标准差</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(stats, columnName) in datasetDetails.numeric_stats" :key="columnName">
-                        <td>{{ columnName }}</td>
-                        <td>{{ stats.min !== null ? stats.min.toLocaleString() : 'N/A' }}</td>
-                        <td>{{ stats.max !== null ? stats.max.toLocaleString() : 'N/A' }}</td>
-                        <td>{{ stats.mean !== null ? Number(stats.mean.toFixed(2)).toLocaleString() : 'N/A' }}</td>
-                        <td>{{ stats.std !== null ? Number(stats.std.toFixed(2)).toLocaleString() : 'N/A' }}</td>
-                      </tr>
-                      <tr v-if="Object.keys(datasetDetails.numeric_stats).length === 0">
-                        <td colspan="5" class="no-data">无数值型列</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                
-                <h4>分类型列统计信息:</h4>
-                <div class="stats-table-container">
-                  <table class="stats-table">
-                    <thead>
-                      <tr>
-                        <th>列名</th>
-                        <th>唯一值数量</th>
-                        <th>常见值</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(stats, columnName) in datasetDetails.categorical_stats" :key="columnName">
-                        <td>{{ columnName }}</td>
-                        <td>{{ stats.unique_count }}</td>
-                        <td>
-                          <div v-for="(count, value) in stats.top_values" :key="value" class="top-value-item">
-                            <span class="highlight-param">{{ value }}</span> 出现 <span class="highlight-param">{{ count }}</span> 次
-                          </div>
-                        </td>
-                      </tr>
-                      <tr v-if="Object.keys(datasetDetails.categorical_stats).length === 0">
-                        <td colspan="3" class="no-data">无分类型列</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                
-                <h4>前5行数据预览:</h4>
-                <div class="data-preview">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th v-for="col in datasetDetails.column_names" :key="col">{{ col }}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr v-for="(row, index) in datasetDetails.head" :key="index">
-                        <td v-for="col in datasetDetails.column_names" :key="col">{{ row[col] }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-            
-            <!-- 统计摘要分析结果 -->
-            <div v-else-if="currentMethod === 'statistical_summary'" class="analysis-section">
-              <h3>统计摘要</h3>
-              <p>此功能正在开发中...</p>
-            </div>
-            
-            <!-- 数据可视化分析结果 -->
-            <div v-else-if="currentMethod === 'visualization'" class="analysis-section">
-              <h3>数据可视化</h3>
-              <p>此功能正在开发中...</p>
-            </div>
-            
-            <!-- 机器学习分析结果 -->
-            <div v-else-if="currentMethod === 'ml_analysis'" class="analysis-section">
-              <h3>机器学习分析</h3>
-              <p>此功能正在开发中...</p>
-            </div>
-            
-            <!-- 加载状态 -->
-            <div v-else-if="loadingDetails" class="analysis-section">
-              <div class="loading-spinner">加载分析结果中...</div>
-            </div>
-            
-            <!-- 错误状态 -->
-            <div v-else class="analysis-section">
-              <p>无法加载分析结果</p>
-            </div>
-          </div>
+          <ResultContent
+            :current-method="currentMethod"
+            :dataset-details="datasetDetails"
+            :loading-details="loadingDetails"
+          />
         </div>
         
         <!-- 参数配置区 -->
         <div v-else class="config-section">
-          <!-- 方法描述和执行按钮移到中栏 -->
-          <div v-if="selectedFile" class="method-description-section">
-            <div class="method-description-content">
-              <div class="method-content">
-                <div v-if="currentMethod === 'basic_info'">
-                  <h4>数据集基本信息</h4>
-                  <p>查看数据集的基本信息，包括行列数、列名、数据类型等。</p>
-                </div>
-                <div v-else-if="currentMethod === 'statistical_summary'">
-                  <h4>统计摘要</h4>
-                  <p>获取数据集的统计摘要信息，包括均值、中位数、标准差等。</p>
-                </div>
-                <div v-else-if="currentMethod === 'correlation_analysis'">
-                  <h4>相关性分析</h4>
-                  <p>分析数据集中各变量之间的相关性。</p>
-                </div>
-                <div v-else-if="currentMethod === 'distribution_analysis'">
-                  <h4>分布分析</h4>
-                  <p>分析数据集中各变量的分布情况。</p>
-                </div>
-                <div v-else-if="currentMethod === 'visualization'">
-                  <h4>数据可视化</h4>
-                  <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
-                </div>
-                <div v-else-if="currentMethod === 'ml_analysis'">
-                  <h4>机器学习分析</h4>
-                  <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
-                </div>
-                <div v-else-if="currentMethod === 'clustering'">
-                  <h4>聚类分析</h4>
-                  <p>使用聚类算法对数据进行分组分析。</p>
-                </div>
-                <div v-else-if="currentMethod === 'classification'">
-                  <h4>分类分析</h4>
-                  <p>使用分类算法对数据进行分类预测。</p>
-                </div>
-                <div v-else-if="currentMethod === 'regression'">
-                  <h4>回归分析</h4>
-                  <p>使用回归算法分析变量之间的关系。</p>
-                </div>
-                <div v-else-if="currentMethod === 'text_analysis'">
-                  <h4>文本分析</h4>
-                  <p>对文本数据进行分析，提取关键信息和模式。</p>
-                </div>
-                <div v-else-if="currentMethod === 'sentiment_analysis'">
-                  <h4>情感分析</h4>
-                  <p>分析文本数据中的情感倾向。</p>
-                </div>
-                <div v-else-if="currentMethod === 'invalid_samples'">
-                  <h4>无效样本</h4>
-                  <p>删除重复行、重复列、唯一值列、缺失过多的行列。</p>
-                </div>
-                <div v-else-if="currentMethod === 'missing_value_interpolation'">
-                  <h4>插值法</h4>
-                  <p>对数据中的缺失值进行插值处理，支持多种插值方法。</p>
-                </div>
-                <div v-else-if="currentMethod === 'delete_columns'">
-                  <h4>删除列</h4>
-                  <p>删除指定的列。</p>
-                </div>
-                <div v-else-if="currentMethod === 'data_transformation'">
-                  <h4>数据转换</h4>
-                  <p>对数据进行转换操作，如标准化、归一化等。</p>
-                </div>
-                <div v-else-if="currentMethod === 'add_header'">
-                  <h4>添加/修改标题行</h4>
-                  <p>为没有标题行的文件添加自定义列名，或修改现有标题行。</p>
-                  <div class="header-mode-toggle">
-                    <label>
-                      <input 
-                        type="radio" 
-                        v-model="headerEditMode" 
-                        :value="false" 
-                        @change="handleHeaderModeChange"
-                      > 添加标题行
-                    </label>
-                    <label>
-                      <input 
-                        type="radio" 
-                        v-model="headerEditMode" 
-                        :value="true" 
-                        @change="handleHeaderModeChange"
-                      > 修改标题行
-                    </label>
-                    <label>
-                      <input 
-                        type="radio" 
-                        v-model="headerEditMode" 
-                        value="remove" 
-                        @change="handleHeaderModeChange"
-                      > 删除首行
-                    </label>
-                  </div>
-                </div>
-              </div>
-              <div class="method-actions">
-                <button 
-                  v-if="currentMethod === 'add_header'"
-                  @click="applyHeaderNames"
-                  class="execute-button"
-                >
-                  应用标题
-                </button>
-                <button
-                  v-else-if="currentMethod === 'invalid_samples'"
-                  @click="executeInvalidSamples"
-                  class="execute-button"
-                >
-                  执行操作
-                </button>
-                <button
-                  v-else-if="currentMethod === 'missing_value_interpolation'"
-                  @click="executeMissingValueInterpolation"
-                  class="execute-button"
-                >
-                  执行插值
-                </button>
-                <button
-                  v-else-if="currentMethod === 'delete_columns'"
-                  @click="executeDeleteColumns"
-                  class="execute-button"
-                >
-                  执行操作
-                </button>
-                <button 
-                  v-else
-                  @click="executeMethod"
-                  class="execute-button"
-                >
-                  执行分析
-                </button>
-              </div>
-            </div>
-          </div>
+          <!-- 方法描述和执行按钮 -->
+          <MethodDescription
+            v-if="selectedFile"
+            :current-method="currentMethod"
+            :header-edit-mode="headerEditMode"
+            @update:headerEditMode="handleHeaderModeChange"
+            @apply-header-names="applyHeaderNames"
+            @execute-invalid-samples="executeInvalidSamples"
+            @execute-missing-value-interpolation="executeMissingValueInterpolation"
+            @execute-delete-columns="executeDeleteColumns"
+            @execute-method="executeMethod"
+          />
           
           <!-- 列名列表和添加标题行区域 -->
           <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
@@ -661,10 +386,12 @@
 
 import DataPreview from "@/components/DataPreview.vue";
 import ChatAssistant from "@/components/ChatAssistant.vue";
+import ResultContent from "@/components/ResultContent.vue";
+import MethodDescription from "@/components/MethodDescription.vue";
 
 export default {
   name: "Dashboard",
-  components: {DataPreview, ChatAssistant},
+  components: {MethodDescription, ResultContent, DataPreview, ChatAssistant},
   directives: {
     clickOutside: {
       mounted(el, binding, vnode) {
@@ -2096,37 +1823,6 @@ export default {
   border-color: #409eff;
 }
 
-.method-content {
-  flex: 1;
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-}
-
-.method-content h4 {
-  margin-top: 0;
-}
-
-.method-actions {
-  text-align: center;
-}
-
-.execute-button {
-  padding: 10px 20px;
-  background-color: #67c23a;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s;
-}
-
-.execute-button:hover {
-  background-color: #85ce61;
-}
-
 .column-list-section {
   background: white;
   padding: 20px;
@@ -2201,48 +1897,11 @@ export default {
   background-color: #66b1ff;
 }
 
-.result-content {
-  padding: 20px;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.analysis-section {
-  min-height: 500px;
-}
-
 .loading-spinner {
   text-align: center;
   padding: 50px;
   color: #409eff;
   font-size: 16px;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.info-item {
-  display: flex;
-  flex-direction: column;
-  overflow-wrap: break-word;
-  padding: 10px;
-  background-color: #f5f7fa;
-  border-radius: 8px;
-}
-
-.info-label {
-  font-size: 14px;
-  color: #606266;
-}
-
-.info-value {
-  font-size: 18px;
-  font-weight: bold;
-  color: #303133;
 }
 
 .column-item {
@@ -2251,89 +1910,6 @@ export default {
   background-color: #f5f7fa;
   border-radius: 4px;
   font-size: 14px;
-}
-
-.data-preview {
-  overflow-x: auto;
-}
-
-.data-preview table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-
-.data-preview th,
-.data-preview td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
-  white-space: nowrap;
-}
-
-.data-preview th {
-  background-color: #f5f7fa;
-  font-weight: bold;
-}
-
-.stats-table-container {
-  overflow-x: auto;
-  margin-bottom: 20px;
-}
-
-.stats-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-
-.stats-table th,
-.stats-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
-}
-
-.stats-table th {
-  background-color: #f5f7fa;
-  font-weight: bold;
-}
-
-.no-data {
-  text-align: center;
-  color: #909399;
-  font-style: italic;
-}
-
-.top-value-item {
-  margin-bottom: 3px;
-}
-
-.column-table-container {
-  overflow-x: auto;
-  margin-bottom: 20px;
-}
-
-.column-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-
-.column-table th,
-.column-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
-}
-
-.column-table th {
-  background-color: #f5f7fa;
-  font-weight: bold;
-}
-
-.highlight-param {
-  font-family: 'Courier New', monospace;
 }
 
 /* 添加标题行区域样式 */
@@ -2392,23 +1968,6 @@ export default {
   opacity: 0.7;
 }
 
-
-.header-mode-toggle {
-  margin-bottom: 15px;
-}
-
-.header-mode-toggle label {
-  margin-right: 15px;
-  font-weight: normal;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-}
-
-.header-mode-toggle input[type="radio"] {
-  margin-right: 5px;
-}
-
 .column-inputs {
   flex: 1;
   overflow-y: auto;
@@ -2434,16 +1993,6 @@ export default {
   padding: 8px;
   border: 1px solid #dcdfe6;
   box-sizing: border-box;
-}
-
-.header-mode-toggle {
-  margin-top: 10px;
-}
-
-.header-mode-toggle label {
-  margin-right: 15px;
-  font-weight: normal;
-  cursor: pointer;
 }
 
 .close-button {
@@ -2618,56 +2167,6 @@ export default {
 .loading-spinner {
   font-size: 16px;
   color: #409eff;
-}
-
-/* 方法描述区域样式 */
-.method-description-section {
-  background: white;
-  padding: 0;
-  /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); */
-  margin-bottom: 0;
-  flex: 0 0 auto;
-}
-
-.method-description-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-}
-
-.method-content {
-  flex: 1;
-  margin-bottom: 0;
-  background-color: white;
-  border-radius: 4px;
-}
-
-.method-content h4 {
-  margin-top: 0;
-}
-
-.method-actions {
-  flex: 0 0 auto;
-  text-align: center;
-  align-self: flex-start;
-  margin-top: 15px;
-}
-
-.execute-button {
-  padding: 10px 20px;
-  background-color: #67c23a;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s;
-  white-space: nowrap;
-}
-
-.execute-button:hover {
-  background-color: #85ce61;
 }
 
 @media (max-width: 768px) {
