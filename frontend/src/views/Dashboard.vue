@@ -620,7 +620,7 @@ export default {
       }
 
       try {
-        const response = await fetch(`/data/${this.selectedFile}/remove_invalid_samples`, {
+        const response = await fetch(`/user/${this.selectedFile}/remove_invalid_samples`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -725,7 +725,7 @@ export default {
       }
 
       try {
-        const response = await fetch(`/data/${this.selectedFile}/handle_missing_values`, {
+        const response = await fetch(`/user/${this.selectedFile}/handle_missing_values`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -786,12 +786,12 @@ export default {
       }
 
       if (this.selectedColumns.length === 0) {
-        alert('请至少选择一列进行删除');
+        alert('请选择要删除的列');
         return;
       }
 
       try {
-        const response = await fetch(`/data/${this.selectedFile}/delete_columns`, {
+        const response = await fetch(`/user/${this.selectedFile}/delete_columns`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
@@ -808,11 +808,12 @@ export default {
             // 刷新文件列表并选中处理后的新文件
             await this.loadUploadedFiles();
             await this.selectFile(result.data.data_id);
-
-            // 清空已选择的列
+            
+            // 显示成功信息
+            alert('列删除成功，已自动选择新文件');
+            
+            // 清空选中列
             this.selectedColumns = [];
-
-            alert('列删除成功');
           } else {
             console.error("删除列失败:", result.error);
             alert("删除列失败: " + result.error);
@@ -912,7 +913,7 @@ export default {
           mode = "remove";
         }
         
-        const response = await fetch(`/data/${this.selectedFile}/add_header`, {
+        const response = await fetch(`/user/${this.selectedFile}/add_header`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
