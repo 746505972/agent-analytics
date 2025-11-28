@@ -1,6 +1,6 @@
 # Agent-Analytics: 基于LLM-Agent的自适应数据分析与报告生成系统
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
@@ -144,7 +144,7 @@ npm run dev
 ## 开发路线图
 
 - [x] 基础文件上传功能
-- [ ] 实现基础数据分析 API
+- [x] 实现基础数据分析 API
 - [ ] 添加数据可视化功能
 - [x] 实现自然语言交互
 - [ ] 自动生成分析报告
