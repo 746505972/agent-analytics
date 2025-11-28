@@ -159,6 +159,7 @@ export default {
   word-wrap: break-word;
   overflow-wrap: break-word;
   word-break: break-word; /* 更智能的断行 */
+  user-select: none
 }
 
 .delete-file {
@@ -188,6 +189,7 @@ export default {
   gap: 15px;
   font-size: 14px;
   color: #909399;
+  user-select: none
 }
 
 .file-actions {
@@ -222,6 +224,7 @@ export default {
   cursor: pointer;
   font-size: 14px;
   text-decoration: underline;
+  user-select: none
 }
 
 /* 下载文件链接样式 */
@@ -230,6 +233,7 @@ export default {
   cursor: pointer;
   font-size: 14px;
   text-decoration: underline;
+  user-select: none
 }
 
 @media (max-width: 768px){

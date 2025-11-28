@@ -69,17 +69,19 @@
             <label>
               <input 
                 type="radio" 
-                :checked="headerEditMode === false" 
-                :value="false" 
-                @change="$emit('update:headerEditMode', false)"
+                :checked="headerEditMode === 'add'" 
+                value="add" 
+                @change="$emit('update:headerEditMode', 'add')"
+                name="headerEditMode"
               > 添加标题行
             </label>
             <label>
               <input 
                 type="radio" 
-                :checked="headerEditMode === true" 
-                :value="true" 
-                @change="$emit('update:headerEditMode', true)"
+                :checked="headerEditMode === 'modify'" 
+                value="modify" 
+                @change="$emit('update:headerEditMode', 'modify')"
+                name="headerEditMode"
               > 修改标题行
             </label>
             <label>
@@ -88,6 +90,7 @@
                 :checked="headerEditMode === 'remove'" 
                 value="remove" 
                 @change="$emit('update:headerEditMode', 'remove')"
+                name="headerEditMode"
               > 删除首行
             </label>
           </div>
@@ -143,8 +146,8 @@ export default {
       required: true
     },
     headerEditMode: {
-      type: [Boolean, String],
-      default: true
+      type: String,
+      default: 'add'
     }
   },
   emits: [

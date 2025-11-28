@@ -1,46 +1,17 @@
 <template>
   <div class="dashboard-container">
-    <div class="dashboard-header">
-      <div class="header-content">
-        <div class="file-selector-trigger" @click="toggleFileSection">
-          <h3>选择分析文件</h3>
-          <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
-        </div>
-        <div v-if="selectedFile" class="selected-file-info">
-          当前选中: {{ getSelectedFileName() }}
-        </div>
-        <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
-          <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
-            <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="20" alt="GitHub">
-          </a>
-      </div>
-    </div>
+    <!-- 导航栏 -->
+    <DashboardHeader 
+      :is-file-section-collapsed="isFileSectionCollapsed"
+      :selected-file="selectedFile"
+      :files="files"
+      :analysis-history="analysisHistory"
+      :current-method="currentMethod"
+      @toggle-file-section="toggleFileSection"
+      @load-analysis-from-history="loadAnalysisFromHistory"
+      @remove-from-history="removeFromHistory"
+    />
     
-    <!-- 分析历史区域 -->
-    <div class="analysis-history" v-if="analysisHistory.length > 0">
-      <div class="history-title">分析历史:</div>
-      <div class="history-buttons">
-        <div
-          v-for="(historyItem, index) in analysisHistory"
-          :key="index"
-          class="history-item"
-          :class="{ active: isHistoryItemActive(historyItem) }"
-        >
-          <button
-            @click="loadAnalysisFromHistory(historyItem)"
-            class="history-button"
-          >
-            {{ getMethodName(historyItem.method) }}{{ index + 1 }}
-          </button>
-          <button
-            @click="removeFromHistory(index)"
-            class="delete-history-button"
-          >
-            ×
-          </button>
-        </div>
-      </div>
-    </div>
     <!-- 文件选择悬浮区域 -->
     <FileSelectionOverlay 
       v-if="!isFileSectionCollapsed"
@@ -117,193 +88,34 @@
             @execute-method="executeMethod"
           />
           
-          <!-- 列名列表和添加标题行区域 -->
-          <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
-            <!-- 列名列表区域 -->
-            <div class="column-list-section">
-              <div v-if="['missing_value_interpolation','delete_columns'].includes(currentMethod)">
-                <h3>选择需要处理的列</h3>
-                <p>点击选择列，支持 Ctrl/Shift 多选</p>
-                <p>不选则处理所有列</p>
-              </div>
-              <div v-else>
-                <h3>列名列表</h3>
-              </div>
-
-              <ul class="column-list">
-                <li v-for="(column, index) in selectedFileColumns"
-                    :key="index"
-                    class="column-item"
-                    :class="{
-                      selected: isColumnSelected(column),
-                      clickable: ['missing_value_interpolation','delete_columns'].includes(currentMethod)
-                    }"
-                    @click="toggleColumnSelection($event, column, index)"
-                >
-                  {{ column }}
-                </li>
-              </ul>
-            </div>
-            
-            <!-- 参数配置区域 -->
-            <div v-if="currentMethod === 'add_header' && headerEditMode !== 'remove'" class="param-config-section">
-              <h3>设置列名</h3>
-              <div class="add-header-content">
-                <div class="column-inputs">
-                  <div 
-                    v-for="(column, index) in selectedFileColumns" 
-                    :key="index" 
-                    class="column-input-item"
-                  >
-                    <input 
-                      :id="'column-' + index"
-                      v-model="newColumnNames[index]" 
-                      :placeholder="'列' + (index + 1)"
-                      type="text"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div v-else-if="currentMethod === 'invalid_samples'" class="param-config-section">
-              <h3>设置参数</h3>
-              <div class="add-header-content">
-                <div class="data-cleaning-options">
-                  <div class="option-row">
-                    <label>
-                      <input 
-                        type="checkbox" 
-                        v-model="removeDuplicates"
-                      /> 去除重复行
-                    </label>
-                  </div>
-                  <div class="option-row">
-                    <label>
-                      <input
-                        type="checkbox"
-                        v-model="removeDuplicatesCols"
-                      /> 去除重复列
-                    </label>
-                  </div>
-                  <div class="option-row">
-                    <label>
-                      <input
-                        type="checkbox"
-                        v-model="removeConstantCols"
-                      /> 去除唯一值列
-                    </label>
-                  </div>
-                  <h3>设置阈值，删除缺失超出阈值的行列</h3>
-                  <p>阈值为0-1之间的小数，默认为1时不删除</p>
-                  <div class="option-row">
-                    <label>
-                      行缺失阈值:
-                      <input 
-                        type="number" 
-                        v-model="rowMissingThreshold" 
-                        min="0" 
-                        max="1" 
-                        step="0.01"
-                        class="threshold-input"
-                      />
-                    </label>
-                  </div>
-                  <div class="option-row">
-                    <label>
-                      列缺失阈值:
-                      <input 
-                        type="number" 
-                        v-model="columnMissingThreshold" 
-                        min="0" 
-                        max="1" 
-                        step="0.01"
-                        class="threshold-input"
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div v-else-if="currentMethod === 'missing_value_interpolation'" class="param-config-section">
-              <h3>插值参数设置</h3>
-              <div class="add-header-content">
-                <div class="interpolation-options">
-                  <div class="option-row">
-                    <label>
-                      插值方法:
-                      <select v-model="interpolationMethod" class="interpolation-method-select">
-                        <option value="linear">线性插值</option>
-                        <option value="ffill">前向填充</option>
-                        <option value="bfill">后向填充</option>
-                        <option value="mean">均值填充</option>
-                        <option value="median">中位数填充</option>
-                        <option value="constant">常量填充</option>
-                        <option value="knn">KNN插值</option>
-                      </select>
-                    </label>
-                  </div>
-
-                  <div class="option-row" v-if="interpolationMethod === 'constant'">
-                    <label>
-                      填充值:
-                      <input
-                        type="text"
-                        v-model="fillValue"
-                        placeholder="请输入填充值"
-                        class="input-value"
-                        aria-label="填充值"
-                      />
-                    </label>
-                  </div>
-
-                  <div class="option-row" v-if="interpolationMethod === 'knn'">
-                    <label>
-                      KNN邻居数:
-                      <input
-                        type="number"
-                        v-model="knnNeighbors"
-                        min="1"
-                        max="10"
-                        class="input-value"
-                      />
-                    </label>
-                  </div>
-                  <!-- 方法介绍 -->
-                  <div class="method-description" v-if="interpolationMethod">
-                    <p v-if="interpolationMethod === 'linear'">
-                      线性插值使用线性函数来估算缺失值。它会在已知数据点之间画一条直线，并使用这条直线来估计缺失值。
-                      这种方法适用于数值型数据，假设数据在局部范围内呈线性变化。
-                    </p>
-                    <p v-else-if="interpolationMethod === 'ffill'">
-                      前向填充使用前面最近的有效值来填充缺失值。对于时间序列数据特别有用，
-                      因为它假设有连续性的数据点具有相似的值。
-                    </p>
-                    <p v-else-if="interpolationMethod === 'bfill'">
-                      后向填充使用后面最近的有效值来填充缺失值。这种方法也适用于时间序列数据，
-                      特别是在数据趋势是反向的情况下。
-                    </p>
-                    <p v-else-if="interpolationMethod === 'mean'">
-                      均值填充使用每列的平均值来填充该列的缺失值。这是一种简单而常用的方法，
-                      适用于数值型数据，但可能会降低数据的方差。
-                    </p>
-                    <p v-else-if="interpolationMethod === 'median'">
-                      中位数填充使用每列的中位数来填充该列的缺失值。相比均值填充，它对异常值更鲁棒，
-                      是处理偏态分布数据的一个更好选择。
-                    </p>
-                    <p v-else-if="interpolationMethod === 'constant'">
-                      常量填充使用指定的固定值来填充所有缺失值。这种方法非常直接，
-                      但在后续分析中可能会影响数据的真实分布。
-                    </p>
-                    <p v-else-if="interpolationMethod === 'knn'">
-                      KNN（K最近邻）插值使用机器学习方法，基于最相似的k个样本来估算缺失值。
-                      它会考虑其他列的信息来预测缺失值，因此需要所有列参与计算。
-                      这就是为什么KNN方法会对全体列进行插值的原因。
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <!-- 列名列表和参数配置区域 -->
+          <MethodParameterConfig
+            :current-method="currentMethod"
+            :selected-file="selectedFile"
+            :selected-file-columns="selectedFileColumns"
+            :selected-columns="selectedColumns"
+            :header-edit-mode="headerEditMode"
+            :new-column-names="newColumnNames"
+            :remove-duplicates="removeDuplicates"
+            :remove-duplicates-cols="removeDuplicatesCols"
+            :remove-constant-cols="removeConstantCols"
+            :row-missing-threshold="rowMissingThreshold"
+            :column-missing-threshold="columnMissingThreshold"
+            :interpolation-method="interpolationMethod"
+            :fill-value="fillValue"
+            :knn-neighbors="knnNeighbors"
+            :last-selected-column-index="lastSelectedColumnIndex"
+            @update:removeDuplicates="removeDuplicates = $event"
+            @update:removeDuplicatesCols="removeDuplicatesCols = $event"
+            @update:removeConstantCols="removeConstantCols = $event"
+            @update:rowMissingThreshold="rowMissingThreshold = $event"
+            @update:columnMissingThreshold="columnMissingThreshold = $event"
+            @update:interpolationMethod="interpolationMethod = $event"
+            @update:fillValue="fillValue = $event"
+            @update:knnNeighbors="knnNeighbors = $event"
+            @update:newColumnNames="handleNewColumnNamesUpdate"
+            @toggleColumnSelection="handleToggleColumnSelection"
+          />
         </div>
       </div>
 
@@ -359,11 +171,14 @@ import ChatAssistant from "@/components/ChatAssistant.vue";
 import ResultContent from "@/components/ResultContent.vue";
 import MethodDescription from "@/components/MethodDescription.vue";
 import FileSelectionOverlay from "@/components/FileSelectionOverlay.vue";
+import DashboardHeader from "@/components/DashboardHeader.vue";
+import MethodParameterConfig from "@/components/Config/MethodParameterConfig.vue";
 
 export default {
   name: "Dashboard",
-  components: {FileSelectionOverlay, MethodDescription, ResultContent,
-    DataPreview, ChatAssistant,
+  components: {
+    MethodParameterConfig, FileSelectionOverlay, MethodDescription, ResultContent,
+    DataPreview, ChatAssistant, DashboardHeader
   },
   directives: {
     clickOutside: {
@@ -477,7 +292,7 @@ export default {
       },
       // 添加标题行相关数据
       newColumnNames: [],
-      headerEditMode: true,  // 修改：默认为修改模式
+      headerEditMode: 'add',
       // 分析历史相关数据
       analysisHistory: [],
       // 控制中间区域显示内容的状态
@@ -507,10 +322,8 @@ export default {
     
     // 初始化列名输入框状态
     if (this.currentMethod === 'add_header') {
-      this.headerEditMode = true;
-      if (this.selectedFileColumns.length > 0) {
-        this.newColumnNames = [...this.selectedFileColumns];
-      }
+      this.headerEditMode = 'add';
+      this.initializeColumnNames();
     }
 
     // 恢复分析历史
@@ -594,11 +407,6 @@ export default {
         await this.executeMethod();
       }
     },
-
-    // 添加检查历史记录项是否为当前选中项的方法
-    isHistoryItemActive(historyItem) {
-      return this.selectedFile === historyItem.dataId && this.currentMethod === historyItem.method;
-    },
     
     // 添加切换右侧区域显示/隐藏的方法
     toggleRightSection() {
@@ -606,16 +414,31 @@ export default {
     },
     
     // 处理标题行模式切换
-    handleHeaderModeChange() {
-      if (this.headerEditMode === true && this.selectedFileColumns.length > 0) {
+    handleHeaderModeChange(mode) {
+      this.headerEditMode = mode;
+      if (mode === 'modify' && this.selectedFileColumns.length > 0) {
         // 修改模式：填入当前列名
         this.newColumnNames = [...this.selectedFileColumns];
-      } else if (this.headerEditMode === 'remove') {
+      } else if (mode === 'remove') {
         // 删除模式：不需要处理列名
 
       } else {
         // 添加模式：清空列名
         this.newColumnNames = new Array(this.selectedFileColumns.length).fill('');
+      }
+    },
+    
+    // 添加一个方法来确保在选择文件后正确初始化newColumnNames
+    initializeColumnNames() {
+      if (this.currentMethod === 'add_header') {
+        if (this.headerEditMode === 'modify' && this.selectedFileColumns.length > 0) {
+          // 修改模式：填入当前列名
+          this.newColumnNames = [...this.selectedFileColumns];
+        } else if (this.headerEditMode === 'add') {
+          // 添加模式：清空列名
+          this.newColumnNames = new Array(this.selectedFileColumns.length).fill('');
+        }
+        // 删除模式不需要处理列名
       }
     },
     
@@ -720,6 +543,8 @@ export default {
             this.selectedFileColumns = result.data.column_names;
             // 初始化新的列名数组
             this.newColumnNames = [...result.data.column_names]; // 默认填入原列名
+            // 确保在选择文件后正确初始化列名（特别是对于add_header方法）
+            this.initializeColumnNames();
           } else {
             console.error("获取列名失败:", result.error);
             this.selectedFileColumns = [];
@@ -751,11 +576,9 @@ export default {
       
       // 如果选择的是添加标题行方法，设置编辑模式
       if (methodId === 'add_header') {
-        this.headerEditMode = true; // 修改：默认为修改模式
+        this.headerEditMode = 'add'; // 修改：默认为添加模式
         // 初始化列名输入框为当前列名
-        if (this.selectedFileColumns.length > 0) {
-          this.newColumnNames = [...this.selectedFileColumns];
-        }
+        this.initializeColumnNames();
       }
     },
     async executeMethod() {
@@ -845,17 +668,16 @@ export default {
       }
     },
 
-    // 检查列是否被选中（用于插值法、删除列）
-    isColumnSelected(column) {
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns'];
-      if (!interpolationMethods.includes(this.currentMethod)) {
-        return;
-      }
-      return this.selectedColumns.includes(column);
+    handleNewColumnNamesUpdate({ index, value }) {
+      // 创建一个新的数组副本
+      const updatedColumnNames = [...this.newColumnNames];
+      // 更新指定索引的值
+      updatedColumnNames[index] = value;
+      // 更新整个数组
+      this.newColumnNames = updatedColumnNames;
     },
-
-    // 切换列选中状态（用于插值法、删除列）
-    toggleColumnSelection(event, column, index) {
+    
+    handleToggleColumnSelection({ event, column, index }) {
       // 双重验证
       const interpolationMethods = ['missing_value_interpolation', 'delete_columns'];
 
@@ -1023,7 +845,7 @@ export default {
       this.knnNeighbors= 5;
       this.lastSelectedColumnIndex= -1;
       this.newColumnNames= [];
-      this.headerEditMode= true;  // 修改：默认为修改模式
+      this.headerEditMode= 'add';  // 修改：统一使用字符串类型，默认为添加模式
     },
     
     // 调用API获取分析结果
@@ -1084,7 +906,7 @@ export default {
       try {
         // 确定模式参数
         let mode = "add";
-        if (this.headerEditMode === true) {
+        if (this.headerEditMode === 'modify') {
           mode = "modify";
         } else if (this.headerEditMode === 'remove') {
           mode = "remove";
@@ -1156,7 +978,7 @@ export default {
       
       // 初始化添加/修改标题行模式
       if (this.currentMethod === 'add_header') {
-        this.headerEditMode = true; // 修改：默认为修改模式
+        this.headerEditMode = 'modify'; // 修改：默认为修改模式
         if (this.selectedFileColumns.length > 0) {
           this.newColumnNames = [...this.selectedFileColumns];
         }
@@ -1185,16 +1007,10 @@ export default {
       // 保存展开状态到localStorage
       localStorage.setItem('expandedCategories', JSON.stringify(this.expandedCategories));
     },
-
     
     // 页面激活时恢复状态（从其他页面返回时调用）
     activated() {
       this.restoreState();
-    },
-
-    getSelectedFileName() {
-      const file = this.files.find(f => f.data_id === this.selectedFile);
-      return file ? file.filename : "无";
     },
     
     // 显示数据预览弹窗
@@ -1326,122 +1142,6 @@ export default {
   position: relative;
 }
 
-.dashboard-header {
-  text-align: center;
-  padding: 10px 0 10px 0 ;
-  border-bottom: 1px solid #ebeef5;
-  position: relative;
-}
-
-/* 分析历史区域样式 */
-.analysis-history {
-  display: flex;
-  align-items: center;
-  padding: 10px 20px;
-  background-color: #f5f7fa;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.history-title {
-  font-weight: bold;
-  margin-right: 15px;
-  color: #303133;
-}
-
-.history-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.history-item {
-  display: flex;
-  align-items: center;
-}
-
-.history-item:not(.active) .history-button {
-  background-color: #909399; /* 灰色 */
-  color: #ffffff;
-}
-
-.history-item:not(.active) .history-button:hover {
-  background-color: #a0a3a9;
-}
-
-.history-button {
-  padding: 5px 10px;
-  background-color: #409eff; /* 蓝色 */
-  color: white;
-  border: none;
-  border-radius: 4px 0 0 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
-}
-
-.history-button:hover {
-  background-color: #66b1ff;
-}
-
-.delete-history-button {
-  padding: 5px;
-  background-color: #f56c6c;
-  color: white;
-  border: none;
-  border-radius: 0 4px 4px 0;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: bold;
-  transition: background-color 0.3s;
-}
-
-.delete-history-button:hover {
-  background-color: #ff4d4f;
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 30px;
-  position: relative;
-}
-
-.selected-file-info {
-  display: flex;
-  color: #909399;
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.file-selector-trigger {
-  display: flex;
-  align-items: center;
-  gap: 40px;
-  cursor: pointer;
-  padding: 5px 10px;
-  border-radius: 4px;
-  background-color: #f5f7fa;
-  transition: background-color 0.3s;
-  position: relative;
-  z-index: 101;
-}
-
-.file-selector-trigger:hover {
-  background-color: #e1e6ee;
-}
-
-.file-selector-trigger h3 {
-  margin: 0;
-  color: #303133;
-  font-size: 16px;
-}
-
-.dashboard-header h2 {
-  color: #303133;
-  margin: 0;
-}
-
 .dashboard-content {
   display: flex;
   height: calc(100vh - 120px);
@@ -1504,109 +1204,10 @@ export default {
   height: 100%;
 }
 
-.section-header h3 {
-  margin: 0;
-  color: #303133;
-}
-
 .toggle-icon {
   font-size: 20px;
   font-weight: bold;
   color: #909399;
-}
-
-.file-list-container {
-  min-height: 200px;
-}
-
-.no-files {
-  text-align: center;
-  color: #909399;
-  padding: 40px 20px;
-}
-
-.file-list {
-  max-height: calc(100vh - 300px);
-  overflow-y: auto;
-}
-
-.file-item {
-  padding: 15px;
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-  margin-bottom: 10px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.file-item:hover {
-  border-color: #409eff;
-  box-shadow: 0 2px 6px 0 rgba(64, 158, 255, 0.2);
-}
-
-.file-item.selected {
-  border-color: #409eff;
-  background-color: #ecf5ff;
-}
-
-.file-name {
-  font-weight: bold;
-  color: #303133;
-  margin-bottom: 5px;
-  position: relative;
-  padding-right: 20px;
-  white-space: normal; /* 确保允许换行 */
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  word-break: break-word; /* 更智能的断行 */
-}
-
-.delete-file {
-  position: absolute;
-  right: 0;
-  top: 0;
-  color: #909399;
-  font-size: 20px;
-  font-weight: bold;
-  cursor: pointer;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.3s;
-}
-
-.delete-file:hover {
-  color: #f56c6c;
-  background-color: #fef0f0;
-}
-
-.file-info {
-  display: flex;
-  gap: 15px;
-  font-size: 14px;
-  color: #909399;
-}
-
-.file-actions {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.upload-button {
-  display: inline-block;
-  padding: 10px 20px;
-  background-color: #409eff;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  transition: background-color 0.3s;
-}
-
-.upload-button:hover {
-  background-color: #66b1ff;
 }
 
 /* 方法选择区域样式 */
@@ -1689,51 +1290,6 @@ export default {
   border-color: #409eff;
 }
 
-.column-list-section {
-  background: white;
-  padding: 20px;
-  /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);*/
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid #ededed;
-}
-
-.column-list-section h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #303133;
-}
-
-.column-list-section p {
-  margin-bottom: 5px;
-}
-
-.column-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.column-item {
-  padding: 8px 12px;
-  border-bottom: 1px solid #ebeef5;
-  color: #606266;
-}
-
-.column-item:last-child {
-  border-bottom: none;
-}
-
-/* 列名列表和添加标题行容器 */
-.column-add-header-container {
-  display: flex;
-  gap: 0;
-  flex: 1;
-}
-
 .result-header {
   display: flex;
   align-items: center;
@@ -1770,156 +1326,12 @@ export default {
   font-size: 16px;
 }
 
-.column-item {
-  display: flex;
-  padding: 8px 12px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-/* 添加标题行区域样式 */
-.param-config-section {
-  background: white;
-  padding: 20px;
-  /* box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1); */
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid #ededed;
-  border-top: 1px solid #ededed;
-}
-
-.param-config-section h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #303133;
-}
-
-.add-header-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.interpolation-method-select{
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-
-  cursor: pointer;
-  transition: all 0.2s ease;
-  appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right center;
-  background-size: 16px;
-
-}
-
-.interpolation-method-select:hover {
-  border-color: #999;
-}
-
-.interpolation-method-select:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
-}
-
-.interpolation-method-select:disabled {
-  background-color: #f8f9fa;
-  color: #6c757d;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.column-inputs {
-  flex: 1;
-  overflow-y: auto;
-  margin-bottom: 20px;
-}
-
-.column-input-item {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid #ebeef5;
-  color: #606266;
-  margin-bottom: 0;
-}
-
-.column-input-item label {
-  width: 100px;
-  margin-right: 10px;
-  color: #606266;
-}
-
-.column-input-item input {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #dcdfe6;
-  box-sizing: border-box;
-}
-
 .close-button {
   background: none;
   border: none;
   font-size: 24px;
   cursor: pointer;
   color: #909399;
-}
-
-.column-item {
-  padding: 8px 12px;
-  cursor: default;
-  border-radius: 4px;
-  margin-bottom: 4px;
-  transition: all 0.3s;
-}
-
-.column-item.clickable {
-  cursor: pointer;
-}
-
-.column-item.clickable:hover {
-  background-color: #f0f0f0;
-}
-
-.column-item.selected {
-  background-color: #409eff;
-  color: white;
-}
-.method-description {
-  background-color: #f8f9fa;
-  border-left: 4px solid #409eff;
-  padding: 12px 16px;
-  margin: 15px 0;
-  border-radius: 0 4px 4px 0;
-}
-
-.method-description h4 {
-  margin-top: 0;
-  color: #303133;
-}
-
-.method-description p {
-  margin: 8px 0;
-  line-height: 1.6;
-  color: #606266;
-  font-size: 14px;
-}
-
-.input-value {
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  transition: border-color 0.2s;
-}
-
-.input-value:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
 }
 
 /* 数据预览弹窗样式 */
@@ -1973,33 +1385,6 @@ export default {
   overflow: auto;
 }
 
-/* 数据清洗选项样式 */
-.data-cleaning-options {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.option-row {
-  display: flex;
-  align-items: center;
-}
-
-.option-row label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: normal;
-  margin: 0;
-}
-
-.threshold-input {
-  width: 80px;
-  padding: 5px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-}
-
 .loading-section {
   display: flex;
   align-items: center;
@@ -2017,12 +1402,7 @@ export default {
     flex-direction: column;
     height: auto;
   }
-  
-  .header-content {
-    flex-direction: column;
-    gap: 10px;
-  }
-  
+
   .left-section,
   .middle-section,
   .right-section {
