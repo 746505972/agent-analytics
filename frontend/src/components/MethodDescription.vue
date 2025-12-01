@@ -60,7 +60,7 @@
         </div>
         <div v-else-if="currentMethod === 'data_transformation'">
           <h4>数据转换</h4>
-          <p>对数据进行转换操作，如标准化、归一化等。</p>
+          <p>对数据进行转换操作，包括量纲处理、科学计算、独热编码等。</p>
         </div>
         <div v-else-if="currentMethod === 'add_header'">
           <h4>添加/修改标题行</h4>
@@ -125,6 +125,13 @@
         >
           执行操作
         </button>
+        <button
+          v-else-if="currentMethod === 'data_transformation'"
+          @click="$emit('execute-data-transformation')"
+          class="execute-button"
+        >
+          执行转换
+        </button>
         <button 
           v-else
           @click="$emit('execute-method')"
@@ -156,6 +163,7 @@ export default {
     'execute-invalid-samples',
     'execute-missing-value-interpolation',
     'execute-delete-columns',
+    'execute-data-transformation',
     'execute-method'
   ]
 }

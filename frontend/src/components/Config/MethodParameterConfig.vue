@@ -2,7 +2,7 @@
   <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
     <!-- 列名列表区域 -->
     <div class="column-list-section">
-      <div v-if="['missing_value_interpolation','delete_columns'].includes(currentMethod)">
+      <div v-if="['missing_value_interpolation','delete_columns', 'data_transformation'].includes(currentMethod)">
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则处理所有列</p>
@@ -17,7 +17,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -58,6 +58,12 @@
       @update:knnNeighbors="$emit('update:knnNeighbors', $event)"
     />
     
+    <DataTransformationConfig
+      v-else-if="currentMethod === 'data_transformation'"
+      :selected-file-columns="selectedFileColumns"
+      @config-change="$emit('update:dataTransformationConfig', $event)"
+    />
+    
     <!-- 其他方法的默认配置区域 -->
     <div v-else class="param-config-section">
       <div class="default-config-placeholder">
@@ -71,13 +77,15 @@
 import AddHeaderConfig from './AddHeaderConfig.vue';
 import InvalidSamplesConfig from './InvalidSamplesConfig.vue';
 import MissingValueInterpolationConfig from './MissingValueInterpolationConfig.vue';
+import DataTransformationConfig from './DataTransformationConfig.vue';
 
 export default {
   name: "MethodParameterConfig",
   components: {
     AddHeaderConfig,
     InvalidSamplesConfig,
-    MissingValueInterpolationConfig
+    MissingValueInterpolationConfig,
+    DataTransformationConfig
   },
   props: {
     currentMethod: {
@@ -139,6 +147,10 @@ export default {
     lastSelectedColumnIndex: {
       type: Number,
       default: -1
+    },
+    dataTransformationConfig: {
+      type: Object,
+      default: () => ({})
     }
   },
   emits: [
@@ -151,11 +163,12 @@ export default {
     'update:fillValue',
     'update:knnNeighbors',
     'update:newColumnNames',
+    'update:dataTransformationConfig',
     'toggleColumnSelection'
   ],
   methods: {
     isColumnSelected(column) {
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns'];
+      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation'];
       if (!interpolationMethods.includes(this.currentMethod)) {
         return;
       }
@@ -231,7 +244,7 @@ export default {
 }
 
 .column-item.clickable:hover {
-  background-color: #f0f0f0;
+  background-color: #e1e1e1;
 }
 
 .column-item.selected {

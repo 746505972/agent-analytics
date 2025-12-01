@@ -66,39 +66,53 @@ def handle_missing_values_tool(file_path: str, session_id: str = None,
 # 注册量纲处理工具
 @tool
 def dimensionless_processing_tool(
-    file_path: str,
-    columns: List[str],
+    file_path: str, session_id: str = None,
+    columns: List[str] = None,
     method: str = "standard",
-    session_id: str = None
+    **kwargs
 ) -> dict:
     """
     量纲处理 - 对数据进行标准化、归一化等处理
     Args:
         file_path (str): 文件路径
-        columns (List[str]): 需要处理的列名列表
-        method (str): 处理方法 ("standard", "minmax", "robust", "unit")
         session_id (str): session_id
+        columns (List[str]): 需要处理的列名列表
+        method (str): 处理方法
+            - "standard": Z-score标准化 (默认)
+            - "minmax": 最小-最大归一化 [0,1]
+            - "robust": 鲁棒缩放 (使用中位数和四分位数)
+            - "unit": 单位向量化 (L2范数)
+            - "quantile": 分位数变换
+            - "yeo-johnson": Yeo-Johnson变换
+            - "box-cox": Box-Cox变换
+            - "l1": L1范数标准化
+            - "l2": L2范数标准化 (与unit相同)
+            - "max": 最大值标准化
+        session_id (str): 会话ID
+        **kwargs: 其他参数，用于特定方法的配置
+            - n_quantiles: 分位数变换的分位数数量 (默认100)
+            - output_distribution: 分位数变换的输出分布 ('uniform'或'normal')
+            - standardize: 是否在power变换后标准化数据 (默认True)
     """
-    return dimensionless_processing(file_path, columns, method, session_id)
+    return dimensionless_processing(file_path, columns, method, session_id, **kwargs)
 
 
 # 注册科学计算工具
 @tool
 def scientific_calculation_tool(
-    file_path: str,
-    columns: List[str],
-    operation: str,
-    params: dict = None,
-    session_id: str = None
+    file_path: str, session_id: str = None,
+    columns: List[str] = None,
+    operation: str = None,
+    params: dict = None
 ) -> dict:
     """
     科学计算 - 对数据执行数学运算
     Args:
         file_path (str): 文件路径
+        session_id (str): session_id
         columns (List[str]): 需要处理的列名列表
         operation (str): 运算类型 ("log", "exp", "power", "sqrt", "poly")
         params (dict): 运算参数
-        session_id (str): session_id
     """
     return scientific_calculation(file_path, columns, operation, params, session_id)
 
@@ -106,17 +120,16 @@ def scientific_calculation_tool(
 # 注册独热编码工具
 @tool
 def one_hot_encoding_tool(
-    file_path: str,
-    columns: List[str],
-    session_id: str = None,
+    file_path: str, session_id: str = None,
+    columns: List[str] = None,
     drop_first: bool = False
 ) -> dict:
     """
     独热编码 - 对分类变量进行独热编码处理
     Args:
         file_path (str): 文件路径
-        columns (List[str]): 需要处理的列名列表
         session_id (str): session_id
+        columns (List[str]): 需要处理的列名列表
         drop_first (bool): 是否删除第一个虚拟变量以避免多重共线性
     """
     return one_hot_encoding(file_path, columns, session_id, drop_first)

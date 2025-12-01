@@ -86,6 +86,7 @@
             @execute-missing-value-interpolation="executeMissingValueInterpolation"
             @execute-delete-columns="executeDeleteColumns"
             @execute-method="executeMethod"
+            @execute-data-transformation="executeDataTransformation"
           />
           
           <!-- 列名列表和参数配置区域 -->
@@ -105,6 +106,7 @@
             :fill-value="fillValue"
             :knn-neighbors="knnNeighbors"
             :last-selected-column-index="lastSelectedColumnIndex"
+            :data-transformation-config="dataTransformationConfig"
             @update:removeDuplicates="removeDuplicates = $event"
             @update:removeDuplicatesCols="removeDuplicatesCols = $event"
             @update:removeConstantCols="removeConstantCols = $event"
@@ -114,6 +116,7 @@
             @update:fillValue="fillValue = $event"
             @update:knnNeighbors="knnNeighbors = $event"
             @update:newColumnNames="handleNewColumnNamesUpdate"
+            @update:dataTransformationConfig="updateDataTransformationConfig"
             @toggleColumnSelection="handleToggleColumnSelection"
           />
         </div>
@@ -310,7 +313,9 @@ export default {
       interpolationMethod: 'linear',
       fillValue: '',
       knnNeighbors: 5,
-      lastSelectedColumnIndex: -1
+      lastSelectedColumnIndex: -1,
+      // 数据转换相关配置
+      dataTransformationConfig: {},
     }
   },
   async mounted() {
@@ -677,9 +682,14 @@ export default {
       this.newColumnNames = updatedColumnNames;
     },
     
+    // 更新数据转换配置
+    updateDataTransformationConfig(config) {
+      this.dataTransformationConfig = config;
+    },
+    
     handleToggleColumnSelection({ event, column, index }) {
       // 双重验证
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns'];
+      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation'];
 
       if (!interpolationMethods.includes(this.currentMethod)) {
         return;
@@ -778,6 +788,104 @@ export default {
       }
     },
 
+    // 执行数据转换
+    async executeDataTransformation() {
+      if (!this.selectedFile) {
+        alert('请先选择一个文件');
+        return;
+      }
+
+      if (this.selectedColumns.length === 0) {
+        alert('请选择至少一列进行处理');
+        return;
+      }
+
+      try {
+        let response;
+        let endpoint;
+        let requestBody;
+
+        // 根据转换类型调用不同的API
+        switch (this.dataTransformationConfig.transformationType) {
+          case 'dimensionless':
+            endpoint = `/user/${this.selectedFile}/dimensionless_processing`;
+            requestBody = {
+              columns: this.selectedColumns,
+              method: this.dataTransformationConfig.dimensionless.method,
+              params: this.dataTransformationConfig.dimensionless.params
+            };
+            break;
+            
+          case 'scientific':
+            endpoint = `/user/${this.selectedFile}/scientific_calculation`;
+            requestBody = {
+              columns: this.selectedColumns,
+              operation: this.dataTransformationConfig.scientific.operation,
+              params: this.dataTransformationConfig.scientific.params
+            };
+            break;
+            
+          case 'onehot':
+            endpoint = `/user/${this.selectedFile}/one_hot_encoding`;
+            requestBody = {
+              columns: this.selectedColumns,
+              drop_first: this.dataTransformationConfig.onehot.drop_first
+            };
+            break;
+            
+          default:
+            alert('未知的转换类型');
+            return;
+        }
+
+        response = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody),
+          credentials: 'include'
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            // 刷新文件列表并选中处理后的新文件
+            await this.loadUploadedFiles();
+            await this.selectFile(result.data.data_id);
+            
+            // 显示处理统计信息
+            let statsMessage = '数据转换处理完成：\n';
+            statsMessage += `已自动选择新文件\n\n`;
+            statsMessage += '处理统计信息：\n';
+            
+            if (result.data.processed_columns) {
+              statsMessage += `处理列: ${result.data.processed_columns.join(', ')}\n`;
+            }
+            
+            if (result.data.method) {
+              statsMessage += `处理方法: ${result.data.method}\n`;
+            }
+            
+            if (result.data.operation) {
+              statsMessage += `操作类型: ${result.data.operation}\n`;
+            }
+            
+            alert(statsMessage);
+          } else {
+            console.error("数据转换处理失败:", result.error);
+            alert("数据转换处理失败: " + result.error);
+          }
+        } else {
+          console.error("数据转换处理请求失败，状态码:", response.status);
+          alert("数据转换处理失败，状态码: " + response.status);
+        }
+      } catch (error) {
+        console.error("数据转换处理时发生错误:", error);
+        alert("数据转换处理时发生错误: " + error.message);
+      }
+    },
+
     // 执行删除列
     async executeDeleteColumns() {
       if (!this.selectedFile) {
@@ -847,6 +955,8 @@ export default {
       this.lastSelectedColumnIndex= -1;
       this.newColumnNames= [];
       this.headerEditMode= 'add';  // 修改：统一使用字符串类型，默认为添加模式
+      // 数据转换配置重置
+      this.dataTransformationConfig = {};
     },
     
     // 调用API获取分析结果
@@ -1177,7 +1287,7 @@ export default {
 }
 
 .right-section.collapsed {
-  flex: 0 0 30px;
+  flex: 0 0 20px;
   padding: 0;
 }
 

@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import logging
 from pydantic import BaseModel
-from typing import Any, List
+from typing import Any, List, Dict, Optional, Union
 from backend.routers.data import load_csv_file
 
 # 配置日志
@@ -302,3 +302,185 @@ async def handle_missing_values_endpoint(request: Request, data_id: str, body: H
         )
 
 
+# 数据转换相关模型和端点
+class DimensionlessProcessingRequest(BaseModel):
+    columns: List[str]
+    method: str = "standard"
+    params: Optional[Dict[str, Any]] = None
+
+
+@router.post("/{data_id}/dimensionless_processing")
+async def dimensionless_processing_endpoint(request: Request, data_id: str, body: DimensionlessProcessingRequest):
+    """
+    量纲处理接口
+
+    Args:
+        request (Request): FastAPI请求对象
+        data_id (str): 数据文件ID
+        body (DimensionlessProcessingRequest): 请求体，包含处理参数
+
+    Returns:
+        JSONResponse: 处理结果
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+            
+        # 导入并调用量纲处理函数
+        from utils.pandas_tool import dimensionless_processing
+
+        # 准备额外参数
+        kwargs = {}
+        if body.params:
+            kwargs.update(body.params)
+            
+        result = dimensionless_processing(
+            get_file_path(data_id, session_id), 
+            body.columns, 
+            body.method, 
+            session_id,
+            **kwargs
+        )
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"量纲处理时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+
+class ScientificCalculationRequest(BaseModel):
+    columns: List[str]
+    operation: str
+    params: Optional[Dict[str, Any]] = None
+
+
+@router.post("/{data_id}/scientific_calculation")
+async def scientific_calculation_endpoint(request: Request, data_id: str, body: ScientificCalculationRequest):
+    """
+    科学计算接口
+
+    Args:
+        request (Request): FastAPI请求对象
+        data_id (str): 数据文件ID
+        body (ScientificCalculationRequest): 请求体，包含处理参数
+
+    Returns:
+        JSONResponse: 处理结果
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+            
+        # 导入并调用科学计算函数
+        from utils.pandas_tool import scientific_calculation
+
+        result = scientific_calculation(
+            get_file_path(data_id, session_id), 
+            body.columns, 
+            body.operation, 
+            body.params, 
+            session_id
+        )
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"科学计算时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+
+class OneHotEncodingRequest(BaseModel):
+    columns: List[str]
+    drop_first: bool = False
+
+
+@router.post("/{data_id}/one_hot_encoding")
+async def one_hot_encoding_endpoint(request: Request, data_id: str, body: OneHotEncodingRequest):
+    """
+    独热编码接口
+
+    Args:
+        request (Request): FastAPI请求对象
+        data_id (str): 数据文件ID
+        body (OneHotEncodingRequest): 请求体，包含处理参数
+
+    Returns:
+        JSONResponse: 处理结果
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+            
+        # 导入并调用独热编码函数
+        from utils.pandas_tool import one_hot_encoding
+
+        result = one_hot_encoding(
+            get_file_path(data_id, session_id), 
+            body.columns, 
+            session_id,
+            body.drop_first
+        )
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"独热编码时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
