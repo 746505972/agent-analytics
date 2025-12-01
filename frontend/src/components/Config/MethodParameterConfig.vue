@@ -2,10 +2,14 @@
   <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
     <!-- 列名列表区域 -->
     <div class="column-list-section">
-      <div v-if="['missing_value_interpolation','delete_columns', 'data_transformation'].includes(currentMethod)">
+      <div v-if="['missing_value_interpolation'].includes(currentMethod)">
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则处理所有列</p>
+      </div>
+      <div v-else-if="['data_transformation','delete_columns'].includes(currentMethod)">
+        <h3>选择需要处理的列</h3>
+        <p>点击选择列，支持 Ctrl/Shift 多选</p>
       </div>
       <div v-else>
         <h3>列名列表</h3>

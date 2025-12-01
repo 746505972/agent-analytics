@@ -88,9 +88,16 @@
             @execute-method="executeMethod"
             @execute-data-transformation="executeDataTransformation"
           />
-          
+          <!-- 加载指示器 -->
+          <div v-if="isWaitingForResponse" class="loading-overlay">
+            <div class="loading-content">
+              <img src="@/assets/images/loading.gif" alt="Loading..." class="loading-gif" />
+              <p>正在处理中...</p>
+            </div>
+          </div>
           <!-- 列名列表和参数配置区域 -->
           <MethodParameterConfig
+            v-else
             :current-method="currentMethod"
             :selected-file="selectedFile"
             :selected-file-columns="selectedFileColumns"
@@ -176,6 +183,14 @@ import MethodDescription from "@/components/MethodDescription.vue";
 import FileSelectionOverlay from "@/components/FileSelectionOverlay.vue";
 import DashboardHeader from "@/components/DashboardHeader.vue";
 import MethodParameterConfig from "@/components/Config/MethodParameterConfig.vue";
+import { executeDataTransformation } from "@/api/dataTransformation.js";
+import { executeDeleteColumns, executeMissingValueInterpolation } from "@/api/columnOperations.js";
+import { 
+  generateDataTransformationFeedback, 
+  generateDeleteColumnsFeedback, 
+  generateMissingValueInterpolationFeedback,
+  generateInvalidSamplesFeedback
+} from "@/api/feedbackHandler.js";
 
 export default {
   name: "Dashboard",
@@ -624,6 +639,7 @@ export default {
         return;
       }
 
+      this.isWaitingForResponse = true;
       try {
         const response = await fetch(`/user/${this.selectedFile}/remove_invalid_samples`, {
           method: 'POST',
@@ -648,17 +664,8 @@ export default {
             await this.selectFile(result.data.data_id);
             
             // 显示处理统计信息
-            const stats = result.data.cleaning_stats;
-            let statsMessage = '无效样本处理完成：\n';
-            statsMessage += `已自动选择新文件\n\n`;
-            statsMessage += '处理统计信息：\n';
-            statsMessage += `删除重复行: ${stats.duplicates_removed}\n`;
-            statsMessage += `删除重复列: ${stats.duplicate_cols_removed}\n`;
-            statsMessage += `删除常量列: ${stats.constant_cols_removed}\n`;
-            statsMessage += `删除行数: ${stats.rows_removed}\n`;
-            statsMessage += `删除列数: ${stats.columns_removed}`;
-            
-            alert(statsMessage);
+            const feedbackMessage = generateInvalidSamplesFeedback(result);
+            alert(feedbackMessage);
           } else {
             console.error("处理无效样本失败:", result.error);
             alert("处理无效样本失败: " + result.error);
@@ -670,6 +677,8 @@ export default {
       } catch (error) {
         console.error("处理无效样本时发生错误:", error);
         alert("处理无效样本时发生错误: " + error.message);
+      } finally {
+        this.isWaitingForResponse = false;
       }
     },
 
@@ -723,166 +732,57 @@ export default {
 
     // 执行插值法
     async executeMissingValueInterpolation() {
-      if (!this.selectedFile) {
-        alert('请先选择一个文件');
-        return;
-      }
-
-      // 检查是否选择了列（除非使用KNN方法）
-      if (this.interpolationMethod !== 'knn' && this.selectedColumns.length === 0) {
-        alert('请选择至少一列进行插值处理');
-        return;
-      }
-
+      this.isWaitingForResponse = true;
       try {
-        const response = await fetch(`/user/${this.selectedFile}/handle_missing_values`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            specified_columns: this.interpolationMethod !== 'knn' ? this.selectedColumns : undefined,
-            interpolation_method: this.interpolationMethod,
-            fill_value: this.fillValue || undefined,
-            knn_neighbors: this.knnNeighbors
-          }),
-          credentials: 'include'
-        });
+        const interpolationConfig = {
+          interpolationMethod: this.interpolationMethod,
+          fillValue: this.fillValue,
+          knnNeighbors: this.knnNeighbors
+        };
 
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            // 刷新文件列表并选中处理后的新文件
-            await this.loadUploadedFiles();
-            await this.selectFile(result.data.data_id);
-            
-            // 显示处理统计信息
-            const stats = result.data;
-            let statsMessage = '插值处理完成：\n';
-            statsMessage += `已自动选择新文件\n\n`;
-            statsMessage += '处理统计信息：\n';
-            statsMessage += `处理行数: ${stats.processed_rows}\n`;
-            statsMessage += `处理列数: ${stats.processed_cols}\n`;
-            statsMessage += `剩余缺失值: ${stats.remaining_missing_count}\n`;
-            statsMessage += `填充缺失值: ${stats.missing_filled_count}\n\n`;
-            
-            if (Object.keys(stats.cols_filled).length > 0) {
-              statsMessage += '各列填充详情:\n';
-              for (const [col, count] of Object.entries(stats.cols_filled)) {
-                statsMessage += `${col}: ${count}个缺失值\n`;
-              }
-            }
-            
-            alert(statsMessage);
-          } else {
-            console.error("插值处理失败:", result.error);
-            alert("插值处理失败: " + result.error);
-          }
-        } else {
-          console.error("插值处理请求失败，状态码:", response.status);
-          alert("插值处理失败，状态码: " + response.status);
-        }
+        const result = await executeMissingValueInterpolation(
+          this.selectedFile,
+          this.selectedColumns,
+          interpolationConfig
+        );
+
+        // 刷新文件列表并选中处理后的新文件
+        await this.loadUploadedFiles();
+        await this.selectFile(result.data.data_id);
+        
+        // 显示处理统计信息
+        const feedbackMessage = generateMissingValueInterpolationFeedback(result);
+        alert(feedbackMessage);
       } catch (error) {
         console.error("插值处理时发生错误:", error);
         alert("插值处理时发生错误: " + error.message);
+      } finally {
+        this.isWaitingForResponse = false;
       }
     },
 
     // 执行数据转换
     async executeDataTransformation() {
-      if (!this.selectedFile) {
-        alert('请先选择一个文件');
-        return;
-      }
-
-      if (this.selectedColumns.length === 0) {
-        alert('请选择至少一列进行处理');
-        return;
-      }
-
+      this.isWaitingForResponse = true;
       try {
-        let response;
-        let endpoint;
-        let requestBody;
-
-        // 根据转换类型调用不同的API
-        switch (this.dataTransformationConfig.transformationType) {
-          case 'dimensionless':
-            endpoint = `/user/${this.selectedFile}/dimensionless_processing`;
-            requestBody = {
-              columns: this.selectedColumns,
-              method: this.dataTransformationConfig.dimensionless.method,
-              params: this.dataTransformationConfig.dimensionless.params
-            };
-            break;
-            
-          case 'scientific':
-            endpoint = `/user/${this.selectedFile}/scientific_calculation`;
-            requestBody = {
-              columns: this.selectedColumns,
-              operation: this.dataTransformationConfig.scientific.operation,
-              params: this.dataTransformationConfig.scientific.params
-            };
-            break;
-            
-          case 'onehot':
-            endpoint = `/user/${this.selectedFile}/one_hot_encoding`;
-            requestBody = {
-              columns: this.selectedColumns,
-              drop_first: this.dataTransformationConfig.onehot.drop_first
-            };
-            break;
-            
-          default:
-            alert('未知的转换类型');
-            return;
-        }
-
-        response = await fetch(endpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestBody),
-          credentials: 'include'
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            // 刷新文件列表并选中处理后的新文件
-            await this.loadUploadedFiles();
-            await this.selectFile(result.data.data_id);
-            
-            // 显示处理统计信息
-            let statsMessage = '数据转换处理完成：\n';
-            statsMessage += `已自动选择新文件\n\n`;
-            statsMessage += '处理统计信息：\n';
-            
-            if (result.data.processed_columns) {
-              statsMessage += `处理列: ${result.data.processed_columns.join(', ')}\n`;
-            }
-            
-            if (result.data.method) {
-              statsMessage += `处理方法: ${result.data.method}\n`;
-            }
-            
-            if (result.data.operation) {
-              statsMessage += `操作类型: ${result.data.operation}\n`;
-            }
-            
-            alert(statsMessage);
-          } else {
-            console.error("数据转换处理失败:", result.error);
-            alert("数据转换处理失败: " + result.error);
-          }
-        } else {
-          console.error("数据转换处理请求失败，状态码:", response.status);
-          alert("数据转换处理失败，状态码: " + response.status);
-        }
+        const result = await executeDataTransformation(
+          this.selectedFile, 
+          this.selectedColumns, 
+          this.dataTransformationConfig
+        );
+        
+        // 刷新文件列表并选中处理后的新文件
+        await this.loadUploadedFiles();
+        await this.selectFile(result.data.data_id);
+        
+        // 显示处理统计信息
+        const feedbackMessage = generateDataTransformationFeedback(result);
+        alert(feedbackMessage);
       } catch (error) {
         console.error("数据转换处理时发生错误:", error);
         alert("数据转换处理时发生错误: " + error.message);
+      } finally {
+        this.isWaitingForResponse = false;
       }
     },
 
@@ -898,41 +798,25 @@ export default {
         return;
       }
 
+      this.isWaitingForResponse = true;
       try {
-        const response = await fetch(`/user/${this.selectedFile}/delete_columns`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            columns_to_delete: this.selectedColumns
-          }),
-          credentials: 'include'
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            // 刷新文件列表并选中处理后的新文件
-            await this.loadUploadedFiles();
-            await this.selectFile(result.data.data_id);
-            
-            // 显示成功信息
-            alert('列删除成功，已自动选择新文件');
-            
-            // 清空选中列
-            this.selectedColumns = [];
-          } else {
-            console.error("删除列失败:", result.error);
-            alert("删除列失败: " + result.error);
-          }
-        } else {
-          console.error("删除列请求失败，状态码:", response.status);
-          alert("删除列失败，状态码: " + response.status);
-        }
+        const result = await executeDeleteColumns(this.selectedFile, this.selectedColumns);
+        
+        // 刷新文件列表并选中处理后的新文件
+        await this.loadUploadedFiles();
+        await this.selectFile(result.data.data_id);
+        
+        // 显示成功信息
+        const feedbackMessage = generateDeleteColumnsFeedback(result);
+        alert(feedbackMessage);
+        
+        // 清空选中列
+        this.selectedColumns = [];
       } catch (error) {
         console.error("删除列时发生错误:", error);
         alert("删除列时发生错误: " + error.message);
+      } finally {
+        this.isWaitingForResponse = false;
       }
     },
 
@@ -962,6 +846,7 @@ export default {
     // 调用API获取分析结果
     async fetchAnalysisResult(dataId, method) {
       try {
+        this.isWaitingForResponse = true;
         if (method === 'basic_info') {
           const response = await fetch(`/data/${dataId}/details`, {
             credentials: 'include'
@@ -985,6 +870,8 @@ export default {
       } catch (error) {
         console.error("加载分析结果失败:", error);
         return null;
+      } finally {
+        this.isWaitingForResponse = false;
       }
     },
     
@@ -1014,6 +901,7 @@ export default {
         }
       }
 
+      this.isWaitingForResponse = true;
       try {
         // 确定模式参数
         let mode = "add";
@@ -1061,6 +949,8 @@ export default {
       } catch (error) {
         console.error("添加标题行时发生错误:", error);
         alert("添加标题行时发生错误: " + error.message);
+      } finally {
+        this.isWaitingForResponse = false;
       }
     },
 
@@ -1506,6 +1396,28 @@ export default {
 .loading-spinner {
   font-size: 16px;
   color: #409eff;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-gif {
+  width: 50px;
+  height: 50px;
 }
 
 @media (max-width: 768px) {

@@ -34,6 +34,53 @@
             <option value="max">最大值标准化</option>
           </select>
         </div>
+        
+        <!-- 方法描述 -->
+        <div class="method-description" v-if="dimensionlessMethod === 'standard'">
+          <p>Z-score标准化：将数据转换为均值为0，标准差为1的分布。适用于数据符合正态分布的情况。</p>
+          <p class="formula">公式：z = (x - μ) / σ</p>
+          <p class="formula-desc">其中μ是均值，σ是标准差</p>
+        </div>
+        <div class="method-description" v-else-if="dimensionlessMethod === 'minmax'">
+          <p>最小-最大归一化：将数据线性地缩放到指定范围[0,1]。对异常值敏感，适用于数据分布较为均匀的情况。</p>
+          <p class="formula">公式：x' = (x - min) / (max - min)</p>
+        </div>
+        <div class="method-description" v-else-if="dimensionlessMethod === 'robust'">
+          <p>鲁棒缩放：使用中位数和四分位距进行缩放，对异常值更鲁棒。适用于数据含有较多异常值的情况。</p>
+          <p class="formula">公式：x' = (x - median) / IQR</p>
+          <p class="formula-desc">其中IQR是四分位距(Q3-Q1)</p>
+        </div>
+        <div class="method-description" v-else-if="dimensionlessMethod === 'unit'">
+          <p>单位向量化(L2范数)：将样本缩放到单位范数，使每个样本的欧几里得长度为1。常用于文本分类和聚类。</p>
+          <p class="formula">公式：x' = x / ||x||₂</p>
+          <p class="formula-desc">其中||x||₂是L2范数</p>
+        </div>
+        <div class="method-description" v-else-if="dimensionlessMethod === 'quantile'">
+          <p>分位数变换：将数据映射到均匀分布或正态分布，减少异常值影响。适用于数据分布不均匀的情况。</p>
+        </div>
+        <div class="method-description" v-else-if="dimensionlessMethod === 'yeo-johnson'">
+          <p>Yeo-Johnson变换：使数据更接近正态分布的幂变换方法，可以处理负值。适用于需要正态化数据的情况。</p>
+          <p class="formula">公式：对于x ≥ 0: y = ((x + 1)<sup>λ</sup> - 1) / λ (λ ≠ 0) 或 ln(x + 1) (λ = 0)</p>
+          <p class="formula">对于x < 0: y = -((-x + 1)<sup>2-λ</sup> - 1) / (2 - λ) (λ ≠ 2) 或 -ln(-x + 1) (λ = 2)</p>
+        </div>
+        <div class="method-description" v-else-if="dimensionlessMethod === 'box-cox'">
+          <p>Box-Cox变换：使数据更接近正态分布的幂变换方法，仅适用于正值。适用于需要正态化数据的情况。</p>
+          <p class="formula">公式：y = (x<sup>λ</sup> - 1) / λ (λ ≠ 0) 或 ln(x) (λ = 0)</p>
+        </div>
+        <div class="method-description" v-else-if="dimensionlessMethod === 'l1'">
+          <p>L1范数标准化：使每个样本的绝对值之和为1。适用于稀疏数据的处理。</p>
+          <p class="formula">公式：x' = x / ||x||₁</p>
+          <p class="formula-desc">其中||x||₁是L1范数（各元素绝对值之和）</p>
+        </div>
+        <div class="method-description" v-else-if="dimensionlessMethod === 'l2'">
+          <p>L2范数标准化：使每个样本的平方和的平方根为1。常用于文本处理和神经网络。</p>
+          <p class="formula">公式：x' = x / ||x||₂</p>
+          <p class="formula-desc">其中||x||₂是L2范数（各元素平方和的平方根）</p>
+        </div>
+        <div class="method-description" v-else-if="dimensionlessMethod === 'max'">
+          <p>最大值标准化：将数据除以每行的最大值。适用于需要保留原始数据比例关系的情况。</p>
+          <p class="formula">公式：x' = x / max(|x|)</p>
+        </div>
 
         <!-- 特定方法的额外参数 -->
         <div v-if="dimensionlessMethod === 'quantile'" class="form-group">
@@ -77,6 +124,28 @@
             <option value="poly">多项式特征</option>
           </select>
         </div>
+        
+        <!-- 方法描述 -->
+        <div class="method-description" v-if="scientificOperation === 'log'">
+          <p>对数变换：通过取对数压缩数据范围，使偏态分布更接近正态分布。适用于右偏数据。</p>
+          <p class="formula">公式：y = log(x + 1)</p>
+        </div>
+        <div class="method-description" v-else-if="scientificOperation === 'exp'">
+          <p>指数变换：通过对数变换的逆操作还原数据。适用于需要放大数值差异的场景。</p>
+          <p class="formula">公式：y = e<sup>x</sup></p>
+        </div>
+        <div class="method-description" v-else-if="scientificOperation === 'power'">
+          <p>幂变换：通过对数据进行幂运算调整数据分布。适用于需要非线性变换的场景。</p>
+          <p class="formula">公式：y = x<sup>a</sup></p>
+          <p class="formula-desc">其中a是幂指数</p>
+        </div>
+        <div class="method-description" v-else-if="scientificOperation === 'sqrt'">
+          <p>平方根变换：特殊的幂变换(幂为0.5)，常用于稳定方差。适用于泊松分布的数据。</p>
+          <p class="formula">公式：y = √x</p>
+        </div>
+        <div class="method-description" v-else-if="scientificOperation === 'poly'">
+          <p>多项式特征：生成特征的多项式组合，增加特征维度。适用于捕捉特征间的交互作用。</p>
+        </div>
 
         <!-- 特定操作的参数 -->
         <div v-if="scientificOperation === 'power'" class="form-group">
@@ -112,6 +181,11 @@
             >
             删除第一个虚拟变量（避免多重共线性）
           </label>
+        </div>
+        
+        <!-- 方法描述 -->
+        <div class="method-description">
+          <p>独热编码：将分类变量转换为二进制向量表示，每个类别对应一个新列。适用于机器学习算法处理分类数据。</p>
         </div>
       </div>
     </div>
@@ -289,5 +363,29 @@ export default {
 .form-group input[type="checkbox"] {
   width: auto;
   margin-right: 5px;
+}
+
+.method-description {
+  background-color: #f5f5f5;
+  border-left: 4px solid #409eff;
+  padding: 10px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: #666;
+}
+
+.method-description p {
+  margin: 0 0 5px 0;
+}
+
+.method-description .formula {
+  font-family: 'Cambria Math', 'Arial Unicode MS', serif;
+  margin: 5px 0;
+}
+
+.method-description .formula-desc {
+  font-size: 12px;
+  color: #888;
+  margin: 0;
 }
 </style>
