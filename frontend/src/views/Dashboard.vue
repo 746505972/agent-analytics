@@ -10,6 +10,7 @@
       @toggle-file-section="toggleFileSection"
       @load-analysis-from-history="loadAnalysisFromHistory"
       @remove-from-history="removeFromHistory"
+      @show-preview="showDataPreview"
     />
     
     <!-- 文件选择悬浮区域 -->
@@ -1399,12 +1400,9 @@ export default {
 }
 
 .loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgb(241, 241, 241);
   display: flex;
   justify-content: center;
   align-items: center;

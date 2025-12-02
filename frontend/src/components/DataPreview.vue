@@ -111,6 +111,7 @@ export default {
       default: '数据分析示例文档'
     }
   },
+  emits: ['prev-page', 'next-page', 'change-page', 'go-back', 'enter-analysis'],
   computed: {
     displayedRows() {
       return this.rowData
