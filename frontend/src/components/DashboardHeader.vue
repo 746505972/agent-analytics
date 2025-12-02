@@ -70,7 +70,8 @@ export default {
   emits: [
     'toggle-file-section',
     'load-analysis-from-history',
-    'remove-from-history'
+    'remove-from-history',
+    'show-preview'
   ],
   methods: {
     getSelectedFileName() {
