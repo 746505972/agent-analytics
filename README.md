@@ -19,13 +19,13 @@ Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据�
 ## 应用展示
 
 Agent对话
-![img.png](img.png)
+![img.png](images/img.png)
 
 工具调用
-![img_1.png](img_1.png)
+![img_1.png](images/img_1.png)
 
 分析渲染
-![img_2.png](img_2.png)
+![img_2.png](images/img_2.png)
 
 ## 当前系统架构
 
@@ -71,8 +71,8 @@ Agent对话
 
 ## 系统架构图
 
-![系统架构图.drawio.png](%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84%E5%9B%BE.drawio.png)
-![工程实现图.drawio.png](%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%E5%9B%BE.drawio.png)
+![系统架构图.drawio.png](images/%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84%E5%9B%BE.drawio.png)
+![工程实现图.drawio.png](images/%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%E5%9B%BE.drawio.png)
 
 ## 系统目录结构
 
