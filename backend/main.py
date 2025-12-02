@@ -39,6 +39,7 @@ from utils.cleanup import clean_expired_sessions_and_files
 from routers.chat import router as chat_router
 from routers.data import router as data_router
 from routers.files import router as files_router
+from routers.analysis import router as analysis_router
 
 app = FastAPI(title="Agent-Analytics API", description="数据分析系统的后端API")
 
@@ -55,6 +56,7 @@ app.add_middleware(
 app.include_router(chat_router)
 app.include_router(data_router)
 app.include_router(files_router)
+app.include_router(analysis_router)
 
 # 存储定时任务的引用
 cleanup_task = None

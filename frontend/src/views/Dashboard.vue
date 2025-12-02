@@ -687,7 +687,7 @@ export default {
     
     handleToggleColumnSelection({ event, column, index }) {
       // 双重验证
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation'];
+      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation', 'statistical_summary'];
 
       if (!interpolationMethods.includes(this.currentMethod)) {
         return;
@@ -851,6 +851,34 @@ export default {
             }
           } else {
             console.error("获取分析结果失败，状态码:", response.status);
+            return null;
+          }
+        } else if (method === 'statistical_summary') {
+          // 准备请求体，包含选中的列
+          const requestBody = {};
+          if (this.selectedColumns && this.selectedColumns.length > 0) {
+            requestBody.columns = this.selectedColumns;
+          }
+          
+          const response = await fetch(`/data/${dataId}/statistical_summary`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody),
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+              return result.data;
+            } else {
+              console.error("获取统计摘要失败:", result.error);
+              return null;
+            }
+          } else {
+            console.error("获取统计摘要失败，状态码:", response.status);
             return null;
           }
         }

@@ -135,6 +135,24 @@ def one_hot_encoding_tool(
     return one_hot_encoding(file_path, columns, session_id, drop_first)
 
 
+# 注册统计摘要工具
+@tool
+def statistical_summary_tool(
+    file_path: str, session_id: str = None,
+    columns: List[str] = None
+) -> dict:
+    """
+    统计摘要 - 计算并返回指定列的统计摘要信息
+    返回包括样本量、平均值、中位数、方差、标准差、最小值、最大值、四分位数、峰度、偏度等在内的全面统计信息
+    Args:
+        file_path (str): 文件路径
+        session_id (str): session_id
+        columns (List[str]): 需要处理的列名列表
+    """
+    from utils.pandas_tool import statistical_summary
+    return statistical_summary(file_path, columns, session_id)
+
+
 # 聚类分析工具
 @tool
 def cluster_analysis(df: dict, method: str = 'kmeans', n_clusters: int = 3) -> dict:
@@ -214,6 +232,7 @@ def register_pandas_tools(agent):
     agent.tools.append(dimensionless_processing_tool)
     agent.tools.append(scientific_calculation_tool)
     agent.tools.append(one_hot_encoding_tool)
+    agent.tools.append(statistical_summary_tool)
     agent.tools.append(cluster_analysis)
     agent.tools.append(regression_analysis)
     agent.tools.append(hypothesis_test)

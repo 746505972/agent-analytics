@@ -11,6 +11,11 @@
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
       </div>
+      <div v-else-if="['statistical_summary'].includes(currentMethod)">
+        <h3>选择需要分析的列</h3>
+        <p>点击选择列，支持 Ctrl/Shift 多选</p>
+        <p>不选则分析所有数值型列</p>
+      </div>
       <div v-else>
         <h3>列名列表</h3>
       </div>
@@ -21,7 +26,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -51,7 +56,7 @@
       @update:rowMissingThreshold="$emit('update:rowMissingThreshold', $event)"
       @update:columnMissingThreshold="$emit('update:columnMissingThreshold', $event)"
     />
-    
+
     <MissingValueInterpolationConfig
       v-else-if="currentMethod === 'missing_value_interpolation'"
       :interpolation-method="interpolationMethod"
@@ -61,19 +66,14 @@
       @update:fillValue="$emit('update:fillValue', $event)"
       @update:knnNeighbors="$emit('update:knnNeighbors', $event)"
     />
-    
+
     <DataTransformationConfig
       v-else-if="currentMethod === 'data_transformation'"
       :selected-file-columns="selectedFileColumns"
-      @config-change="$emit('update:dataTransformationConfig', $event)"
+      :selected-columns="selectedColumns"
+      :data-transformation-config="dataTransformationConfig"
+      @update:dataTransformationConfig="$emit('update:dataTransformationConfig', $event)"
     />
-    
-    <!-- 其他方法的默认配置区域 -->
-    <div v-else class="param-config-section">
-      <div class="default-config-placeholder">
-        <p>该方法暂无特殊配置项</p>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -172,7 +172,7 @@ export default {
   ],
   methods: {
     isColumnSelected(column) {
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation'];
+      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation','statistical_summary'];
       if (!interpolationMethods.includes(this.currentMethod)) {
         return;
       }
