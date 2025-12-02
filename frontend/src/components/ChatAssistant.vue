@@ -371,18 +371,18 @@ export default {
   margin-bottom: 15px;
   padding: 10px;
   border-radius: 4px;
-  max-width: 80%;
 }
 
 .message.sent {
   background-color: #409eff;
   color: white;
   margin-left: auto;
+  max-width: 80%;
 }
 
 .message.received {
-  background-color: #f5f5f5;
-  color: #303133;
+  max-width: 100%;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 .message-content-wrapper {

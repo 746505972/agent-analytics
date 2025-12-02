@@ -6,15 +6,18 @@ import os
 import sys
 from typing import Any, List
 
-import pandas as pd
-import numpy as np
-from langchain_core.tools import tool
 # 添加项目根目录到sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
+# 添加绝对导入路径
+sys.path.insert(0, os.path.join(parent_dir, '..'))
+
+from langchain_core.tools import tool
 from utils.file_manager import remove_invalid_samples, handle_missing_values
+from utils.pandas_tool import dimensionless_processing, scientific_calculation, one_hot_encoding
+
 # 注册去除无效样本工具
 @tool
 def remove_invalid_samples_tool(file_path: str, session_id: str = None,
@@ -60,6 +63,76 @@ def handle_missing_values_tool(file_path: str, session_id: str = None,
     return handle_missing_values(file_path, session_id, specified_columns, interpolation_method,
                                  fill_value, knn_neighbors)
 
+# 注册量纲处理工具
+@tool
+def dimensionless_processing_tool(
+    file_path: str, session_id: str = None,
+    columns: List[str] = None,
+    method: str = "standard",
+    **kwargs
+) -> dict:
+    """
+    量纲处理 - 对数据进行标准化、归一化等处理
+    Args:
+        file_path (str): 文件路径
+        session_id (str): session_id
+        columns (List[str]): 需要处理的列名列表
+        method (str): 处理方法
+            - "standard": Z-score标准化 (默认)
+            - "minmax": 最小-最大归一化 [0,1]
+            - "robust": 鲁棒缩放 (使用中位数和四分位数)
+            - "unit": 单位向量化 (L2范数)
+            - "quantile": 分位数变换
+            - "yeo-johnson": Yeo-Johnson变换
+            - "box-cox": Box-Cox变换
+            - "l1": L1范数标准化
+            - "l2": L2范数标准化 (与unit相同)
+            - "max": 最大值标准化
+        session_id (str): 会话ID
+        **kwargs: 其他参数，用于特定方法的配置
+            - n_quantiles: 分位数变换的分位数数量 (默认100)
+            - output_distribution: 分位数变换的输出分布 ('uniform'或'normal')
+            - standardize: 是否在power变换后标准化数据 (默认True)
+    """
+    return dimensionless_processing(file_path, columns, method, session_id, **kwargs)
+
+
+# 注册科学计算工具
+@tool
+def scientific_calculation_tool(
+    file_path: str, session_id: str = None,
+    columns: List[str] = None,
+    operation: str = None,
+    params: dict = None
+) -> dict:
+    """
+    科学计算 - 对数据执行数学运算
+    Args:
+        file_path (str): 文件路径
+        session_id (str): session_id
+        columns (List[str]): 需要处理的列名列表
+        operation (str): 运算类型 ("log", "exp", "power", "sqrt", "poly")
+        params (dict): 运算参数
+    """
+    return scientific_calculation(file_path, columns, operation, params, session_id)
+
+
+# 注册独热编码工具
+@tool
+def one_hot_encoding_tool(
+    file_path: str, session_id: str = None,
+    columns: List[str] = None,
+    drop_first: bool = False
+) -> dict:
+    """
+    独热编码 - 对分类变量进行独热编码处理
+    Args:
+        file_path (str): 文件路径
+        session_id (str): session_id
+        columns (List[str]): 需要处理的列名列表
+        drop_first (bool): 是否删除第一个虚拟变量以避免多重共线性
+    """
+    return one_hot_encoding(file_path, columns, session_id, drop_first)
 
 
 # 聚类分析工具
@@ -138,6 +211,9 @@ def register_pandas_tools(agent):
     # 已经使用装饰器注册为工具，这里只需要将它们添加到agent中
     agent.tools.append(remove_invalid_samples_tool)
     agent.tools.append(handle_missing_values_tool)
+    agent.tools.append(dimensionless_processing_tool)
+    agent.tools.append(scientific_calculation_tool)
+    agent.tools.append(one_hot_encoding_tool)
     agent.tools.append(cluster_analysis)
     agent.tools.append(regression_analysis)
     agent.tools.append(hypothesis_test)

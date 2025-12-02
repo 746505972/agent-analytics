@@ -5,12 +5,12 @@
         <h3>选择分析文件</h3>
         <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
       </div>
-      <div v-if="selectedFile" class="selected-file-info">
+      <div v-if="selectedFile" class="selected-file-info" @click="$emit('show-preview')">
         当前选中: {{ getSelectedFileName() }}
       </div>
       <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
       <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
-        <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" width="20" alt="GitHub">
+        <img src="@/assets/images/github-original.svg" width="20" alt="GitHub">
       </a>
     </div>
   </div>
@@ -70,7 +70,8 @@ export default {
   emits: [
     'toggle-file-section',
     'load-analysis-from-history',
-    'remove-from-history'
+    'remove-from-history',
+    'show-preview'
   ],
   methods: {
     getSelectedFileName() {
@@ -194,6 +195,7 @@ export default {
   color: #909399;
   font-size: 14px;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .file-selector-trigger {

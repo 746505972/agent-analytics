@@ -41,17 +41,33 @@
     </button>
   </template>
   <template v-else>
+    <!-- 第一页 -->
     <button
-      v-for="page in Math.min(3, totalPages)"
+      :class="{ active: currentPage === 1 }"
+      @click="changePage(1)"
+    >
+      1
+    </button>
+    
+    <!-- 前省略号 -->
+    <span v-if="currentPage > 4">...</span>
+    
+    <!-- 当前页前后各两页 -->
+    <button
+      v-for="page in getPageRange()"
       :key="page"
       :class="{ active: currentPage === page }"
       @click="changePage(page)"
     >
       {{ page }}
     </button>
-    <span v-if="totalPages > 3">...</span>
+    
+    <!-- 后省略号 -->
+    <span v-if="currentPage < totalPages - 3">...</span>
+    
+    <!-- 最后一页 -->
     <button
-      v-if="totalPages > 3"
+      v-if="totalPages > 1"
       :class="{ active: currentPage === totalPages }"
       @click="changePage(totalPages)"
     >
@@ -95,6 +111,7 @@ export default {
       default: '数据分析示例文档'
     }
   },
+  emits: ['prev-page', 'next-page', 'change-page', 'go-back', 'enter-analysis'],
   computed: {
     displayedRows() {
       return this.rowData
@@ -115,6 +132,20 @@ export default {
     },
     enterAnalysis() {
       this.$emit('enter-analysis')
+    },
+    getPageRange() {
+      const pages = [];
+      const start = Math.max(2, this.currentPage - 2);
+      const end = Math.min(this.totalPages - 1, this.currentPage + 2);
+      
+      for (let i = start; i <= end; i++) {
+        // 只有当不是第一页或最后一页时才添加
+        if (i !== 1 && i !== this.totalPages) {
+          pages.push(i);
+        }
+      }
+      
+      return pages;
     }
   }
 }

@@ -1,0 +1,82 @@
+/**
+ * 列操作 API 模块
+ * 提供各种列操作功能的封装
+ */
+
+/**
+ * 执行删除列操作
+ * @param {string} fileId - 文件ID
+ * @param {Array} columnsToDelete - 要删除的列数组
+ * @returns {Promise<Object>} 删除结果
+ */
+export async function executeDeleteColumns(fileId, columnsToDelete) {
+  if (!fileId) {
+    throw new Error('请先选择一个文件');
+  }
+
+  if (columnsToDelete.length === 0) {
+    throw new Error('请选择要删除的列');
+  }
+
+  const response = await fetch(`/user/${fileId}/delete_columns`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      columns_to_delete: columnsToDelete
+    }),
+    credentials: 'include'
+  });
+
+  if (!response.ok) {
+    throw new Error(`删除列请求失败，状态码: ${response.status}`);
+  }
+
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || '删除列失败');
+  }
+
+  return result;
+}
+
+/**
+ * 执行插值法处理缺失值
+ * @param {string} fileId - 文件ID
+ * @param {Array} selectedColumns - 选中的列
+ * @param {Object} interpolationConfig - 插值配置
+ * @returns {Promise<Object>} 插值处理结果
+ */
+export async function executeMissingValueInterpolation(fileId, selectedColumns, interpolationConfig) {
+  if (!fileId) {
+    throw new Error('请先选择一个文件');
+  }
+
+  const response = await fetch(`/user/${fileId}/handle_missing_values`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      specified_columns: interpolationConfig.interpolationMethod !== 'knn' ? selectedColumns : undefined,
+      interpolation_method: interpolationConfig.interpolationMethod,
+      fill_value: interpolationConfig.fillValue || undefined,
+      knn_neighbors: interpolationConfig.knnNeighbors
+    }),
+    credentials: 'include'
+  });
+
+  if (!response.ok) {
+    throw new Error(`插值处理请求失败，状态码: ${response.status}`);
+  }
+
+  const result = await response.json();
+  
+  if (!result.success) {
+    throw new Error(result.error || '插值处理失败');
+  }
+
+  return result;
+}
