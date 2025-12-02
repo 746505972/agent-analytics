@@ -16,6 +16,17 @@ Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据�
 
 该系统能够以可视化、0代码方式实现数据清洗、统计建模、机器学习、数据可视化等多种用途，并利用 LLM 进行报告产出、自然语言交互、提些建议。
 
+## 应用展示
+
+Agent对话
+![img.png](img.png)
+
+工具调用
+![img_1.png](img_1.png)
+
+分析渲染
+![img_2.png](img_2.png)
+
 ## 当前系统架构
 
 ### 1. 前端展示层（Vue3 + ECharts）
@@ -58,7 +69,12 @@ Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据�
   * 将分析结果（如表格、指标、图表）输入LLM进行解读
   * 输出自然语言报告、PDF报告
 
-## 实际系统目录结构
+## 系统架构图
+
+![系统架构图.drawio.png](%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84%E5%9B%BE.drawio.png)
+![工程实现图.drawio.png](%E5%B7%A5%E7%A8%8B%E5%AE%9E%E7%8E%B0%E5%9B%BE.drawio.png)
+
+## 系统目录结构
 
 ```bash
 project/
@@ -116,7 +132,7 @@ project/
 pip install -r requirements.txt
 ```
 
-2. 设置环境变量（如果使用通义千问）：
+2. 设置环境变量（使用通义千问）：
 ```bash
 export DASHSCOPE_API_KEY=你的API密钥
 ```
@@ -136,7 +152,7 @@ npm install
 
 2. 运行前端开发服务器：
 ```bash
-npm run dev
+npm run server
 ```
 
 3. 访问 http://localhost:5173 查看应用
