@@ -70,7 +70,8 @@
             <td>{{ item.correlation.toFixed(4) }}</td>
             <td>{{ item.p_value.toFixed(4) }}</td>
             <td>
-              <span v-if="item.p_value < 0.01" class="significance strong">**</span>
+              <span v-if="item.p_value < 0.001" class="significance strong">***</span>
+              <span v-else-if="item.p_value < 0.01" class="significance strong">**</span>
               <span v-else-if="item.p_value < 0.05" class="significance weak">*</span>
               <span v-else>-</span>
             </td>
@@ -143,9 +144,7 @@ export default {
   watch: {
     datasetDetails: {
       handler() {
-        this.$nextTick(() => {
-          this.initChart();
-        });
+        this.redrawChart();
       },
       deep: true
     }
@@ -187,7 +186,8 @@ export default {
           position: 'top',
           formatter: (params) => {
             const [xIndex, yIndex, value] = params.value;
-            return `${columns[yIndex]} - ${columns[xIndex]}<br/>相关系数: ${value.toFixed(4)}`;
+            const pValue = this.pValueMatrix[yIndex][xIndex];
+            return `${columns[yIndex]} - ${columns[xIndex]}<br/>相关系数: ${value.toFixed(4)}<br/>p值: ${pValue.toFixed(4)}`;
           }
         },
         xAxis: {
@@ -211,9 +211,10 @@ export default {
           min: -1,
           max: 1,
           calculable: true,
-          orient: 'horizontal',
-          left: 'center',
-          bottom: '5%'
+          orient: 'vertical',
+          right: '0',
+          top: '10%',
+          bottom: '10%'
         },
         series: [{
           name: '相关性',
@@ -243,6 +244,16 @@ export default {
       }
     },
     
+    redrawChart() {
+      if (this.chart) {
+        this.chart.dispose();
+        this.chart = null;
+      }
+      this.$nextTick(() => {
+        this.initChart();
+      });
+    },
+    
     copyTable() {
       if (!this.formattedCorrelationData.length) {
         alert('没有数据可复制');
@@ -251,7 +262,7 @@ export default {
       
       let csvContent = "变量1,变量2,相关系数,p值,显著性\n";
       this.formattedCorrelationData.forEach(item => {
-        const significance = item.p_value < 0.01 ? '**' : (item.p_value < 0.05 ? '*' : '-');
+        const significance = item.p_value < 0.001 ? '***' : (item.p_value < 0.01 ? '**' : (item.p_value < 0.05 ? '*' : '-'));
         csvContent += `${item.column_x},${item.column_y},${item.correlation.toFixed(4)},${item.p_value.toFixed(4)},${significance}\n`;
       });
       
@@ -302,6 +313,7 @@ export default {
       if (!this.pValueMatrix[rowIndex]) return '';
       
       const pValue = this.pValueMatrix[rowIndex][cellIndex];
+      if (pValue < 0.001) return '***';
       if (pValue < 0.01) return '**';
       if (pValue < 0.05) return '*';
       return '';
@@ -367,13 +379,14 @@ export default {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
+  border-top: 1px solid #333;
+  border-bottom: 1px solid #333;
 }
 
 .correlation-table th,
 .correlation-table td,
 .matrix-table th,
 .matrix-table td {
-  border: 1px solid #ddd;
   padding: 8px;
   text-align: center;
   white-space: nowrap;
@@ -381,8 +394,19 @@ export default {
 
 .correlation-table th,
 .matrix-table th {
-  background-color: #f5f7fa;
   font-weight: bold;
+  border-bottom: 1px solid #333;
+  background-color: transparent;
+}
+
+.correlation-table td,
+.matrix-table td {
+  border: none;
+}
+
+.correlation-table tbody tr:last-child td,
+.matrix-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .no-data {
@@ -420,7 +444,7 @@ export default {
 
 .significance-note {
   margin-top: 5px;
-
   font-size: 14px;
+  color: #666;
 }
 </style>
