@@ -360,6 +360,9 @@ export default {
     
     selectColorScheme(index) {
       this.currentColorScheme = index;
+      this.$nextTick(() => {
+        this.initStatisticalChart();
+      });
     },
     
     getColorSchemeName(index) {
@@ -371,6 +374,9 @@ export default {
       // 使用自定义颜色更新配色方案
       this.colorSchemes[0][0] = this.customColors.primary;
       this.currentColorScheme = 0; // 切换到自定义配色方案
+      this.$nextTick(() => {
+        this.initStatisticalChart();
+      });
     },
     
     applyStyleChanges() {
@@ -785,19 +791,24 @@ export default {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
-}
-
-.stats-summary-table th,
-.stats-summary-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: center;
-  white-space: nowrap;
+  border-top: 2px solid #000;
+  border-bottom: 2px solid #000;
 }
 
 .stats-summary-table th {
-  background-color: #f5f7fa;
+  border-bottom: 1px solid #000;
+  padding: 8px;
+  text-align: center;
+  white-space: nowrap;
+  background-color: transparent;
   font-weight: bold;
+}
+
+.stats-summary-table td {
+  padding: 8px;
+  text-align: center;
+  white-space: nowrap;
+  border: none;
 }
 
 .no-data {

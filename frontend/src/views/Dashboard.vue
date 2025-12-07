@@ -96,6 +96,7 @@
             :knn-neighbors="knnNeighbors"
             :last-selected-column-index="lastSelectedColumnIndex"
             :data-transformation-config="dataTransformationConfig"
+            :correlation-method="correlationMethod"
             @update:removeDuplicates="removeDuplicates = $event"
             @update:removeDuplicatesCols="removeDuplicatesCols = $event"
             @update:removeConstantCols="removeConstantCols = $event"
@@ -106,6 +107,7 @@
             @update:knnNeighbors="knnNeighbors = $event"
             @update:newColumnNames="handleNewColumnNamesUpdate"
             @update:dataTransformationConfig="updateDataTransformationConfig"
+            @update:correlationMethod="correlationMethod = $event"
             @toggleColumnSelection="handleToggleColumnSelection"
           />
         </div>
@@ -168,6 +170,7 @@ import DashboardHeader from "@/components/DashboardHeader.vue";
 import MethodParameterConfig from "@/components/Config/MethodParameterConfig.vue";
 import { executeDataTransformation } from "@/api/dataTransformation.js";
 import { executeDeleteColumns, executeMissingValueInterpolation } from "@/api/columnOperations.js";
+import { applyHeaderNames } from "@/api/headerOperations.js";
 import { 
   generateDataTransformationFeedback, 
   generateDeleteColumnsFeedback, 
@@ -234,11 +237,11 @@ export default {
           id: 'data_processing',
           name: '数据处理',
           methods: [
-            { id: 'invalid_samples', name: '无效样本' },
-            { id: 'delete_columns', name: '删除列' },
-            { id: 'data_transformation', name: '数据转换' },
-            { id: 'missing_value_interpolation', name: '插值法' },
-            { id: 'add_header', name: '添加/修改标题行' },
+            { id: 'invalid_samples', name: '无效样本' }, // 已实现
+            { id: 'delete_columns', name: '删除列' }, // 已实现
+            { id: 'data_transformation', name: '数据转换' }, // 已实现
+            { id: 'missing_value_interpolation', name: '插值法' }, // 已实现
+            { id: 'add_header', name: '添加/修改标题行' }, // 已实现
 
           ]
         },
@@ -246,9 +249,9 @@ export default {
           id: 'statistics',
           name: '统计方法',
           methods: [
-            { id: 'basic_info', name: '基本信息' },
-            { id: 'statistical_summary', name: '统计摘要' },
-            { id: 'correlation_analysis', name: '相关性分析' },
+            { id: 'basic_info', name: '基本信息' }, // 已实现
+            { id: 'statistical_summary', name: '统计摘要' }, // 已实现
+            { id: 'correlation_analysis', name: '相关性分析' }, // 已实现
             { id: 'distribution_analysis', name: '分布分析' }
           ]
         },
@@ -314,6 +317,8 @@ export default {
       lastSelectedColumnIndex: -1,
       // 数据转换相关配置
       dataTransformationConfig: {},
+      // 相关性分析参数
+      correlationMethod: 'pearson',
     }
   },
   async mounted() {
@@ -687,7 +692,7 @@ export default {
     
     handleToggleColumnSelection({ event, column, index }) {
       // 双重验证
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation', 'statistical_summary'];
+      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis'];
 
       if (!interpolationMethods.includes(this.currentMethod)) {
         return;
@@ -830,6 +835,8 @@ export default {
       this.headerEditMode= 'add';  // 修改：统一使用字符串类型，默认为添加模式
       // 数据转换配置重置
       this.dataTransformationConfig = {};
+      // 相关性分析参数重置
+      this.correlationMethod = 'pearson';
     },
     
     // 调用API获取分析结果
@@ -881,6 +888,37 @@ export default {
             console.error("获取统计摘要失败，状态码:", response.status);
             return null;
           }
+        } else if (method === 'correlation_analysis') {
+          // 准备请求体，包含选中的列和方法
+          const requestBody = {
+            method: this.correlationMethod
+          };
+          
+          if (this.selectedColumns && this.selectedColumns.length > 0) {
+            requestBody.columns = this.selectedColumns;
+          }
+          
+          const response = await fetch(`/data/${dataId}/correlation_analysis`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody),
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+              return result.data;
+            } else {
+              console.error("获取相关性分析结果失败:", result.error);
+              return null;
+            }
+          } else {
+            console.error("获取相关性分析结果失败，状态码:", response.status);
+            return null;
+          }
         }
         // 其他分析方法可以在这里添加
         return null;
@@ -909,59 +947,25 @@ export default {
     async applyHeaderNames() {
       if (!this.selectedFile) return;
 
-      // 检查是否所有列都已命名（仅在非删除模式下）
-      if (this.headerEditMode !== 'remove') {
-        const emptyNames = this.newColumnNames.filter(name => !name.trim()).length;
-        if (emptyNames > 0) {
-          alert(`还有 ${emptyNames} 个列未命名，请为所有列提供名称。`);
-          return;
-        }
-      }
-
       this.isWaitingForResponse = true;
       try {
-        // 确定模式参数
-        let mode = "add";
-        if (this.headerEditMode === 'modify') {
-          mode = "modify";
-        } else if (this.headerEditMode === 'remove') {
-          mode = "remove";
-        }
-        
-        const response = await fetch(`/user/${this.selectedFile}/add_header`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            column_names: this.newColumnNames,
-            mode: mode  // 添加模式参数
-          }),
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            // 自动选择新生成的文件
-            await this.loadUploadedFiles(); // 刷新文件列表
-            await this.selectFile(result.data.data_id); // 选择新文件
+        const result = await applyHeaderNames(
+          this.selectedFile, 
+          this.newColumnNames, 
+          this.headerEditMode
+        );
             
-            // 显示成功消息
-            if (this.headerEditMode === 'remove') {
-              alert('首行删除成功，已自动选择新文件');
-            } else if (this.headerEditMode) {
-              alert('标题行修改成功，已自动选择新文件');
-            } else {
-              alert('标题行添加成功，已自动选择新文件');
-            }
-          } else {
-            console.error("添加标题行失败:", result.error);
-            alert("添加标题行失败: " + result.error);
-          }
+        // 自动选择新生成的文件
+        await this.loadUploadedFiles(); // 刷新文件列表
+        await this.selectFile(result.data.data_id); // 选择新文件
+        
+        // 显示成功消息
+        if (this.headerEditMode === 'remove') {
+          alert('首行删除成功，已自动选择新文件');
+        } else if (this.headerEditMode) {
+          alert('标题行修改成功，已自动选择新文件');
         } else {
-          console.error("添加标题行请求失败，状态码:", response.status);
-          alert("添加标题行失败，状态码: " + response.status);
+          alert('标题行添加成功，已自动选择新文件');
         }
       } catch (error) {
         console.error("添加标题行时发生错误:", error);

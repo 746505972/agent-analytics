@@ -414,3 +414,122 @@ def statistical_summary(
     }
     
     return result
+
+
+def correlation_analysis(
+    file_path: str,
+    columns: List[str],
+    method: str = "pearson",
+    session_id: str = None
+) -> Dict[str, Any]:
+    """
+    相关性分析 - 计算并返回指定列之间的相关系数和p值
+    
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表
+        method (str): 相关性计算方法 ("pearson", "spearman", "kendall")
+        session_id (str): 会话ID
+        
+    Returns:
+        Dict[str, Any]: 包含相关性分析结果的字典
+    """
+    # 确保数据目录存在
+    ensure_data_dir()
+    
+    if session_id:
+        ensure_session_dir(session_id)
+        
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+        
+    # 读取文件
+    df = read_any_file(file_path)
+    
+    # 检查列是否存在
+    missing_columns = [col for col in columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
+
+    # 只选择数值型列进行处理
+    numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
+    non_numeric_columns = [col for col in columns if not pd.api.types.is_numeric_dtype(df[col])]
+    
+    if non_numeric_columns:
+        print(f"警告: 以下列为非数值型，将跳过处理: {non_numeric_columns}")
+        
+    if not numeric_columns:
+        raise ValueError("没有有效的数值型列可供处理")
+    
+    from scipy.stats import pearsonr, spearmanr, kendalltau
+    
+    # 计算相关系数和p值
+    correlation_data = []
+    n = len(numeric_columns)
+    
+    # 初始化相关性矩阵和p值矩阵
+    corr_matrix = np.zeros((n, n))
+    p_value_matrix = np.zeros((n, n))
+    
+    # 填充对角线（自相关性为1，p值为0）
+    np.fill_diagonal(corr_matrix, 1.0)
+    
+    # 计算每对列之间的相关性
+    for i in range(n):
+        for j in range(i+1, n):
+            col1 = numeric_columns[i]
+            col2 = numeric_columns[j]
+            
+            # 删除任意一列有缺失值的行
+            clean_data = df[[col1, col2]].dropna()
+            
+            if len(clean_data) < 2:
+                # 数据不足，无法计算相关性
+                corr = 0.0
+                p_value = 1.0
+            else:
+                x = clean_data[col1]
+                y = clean_data[col2]
+                
+                try:
+                    if method == "pearson":
+                        corr, p_value = pearsonr(x, y)
+                    elif method == "spearman":
+                        corr, p_value = spearmanr(x, y)
+                    elif method == "kendall":
+                        corr, p_value = kendalltau(x, y)
+                    else:
+                        raise ValueError(f"不支持的相关性计算方法: {method}")
+                except Exception as e:
+                    # 计算过程中出现异常，返回默认值
+                    print(f"计算 {col1} 和 {col2} 的相关性时出错: {e}")
+                    corr = 0.0
+                    p_value = 1.0
+            
+            # 保存到相关性数据列表
+            correlation_data.append({
+                "column_x": col1,
+                "column_y": col2,
+                "correlation": round(float(corr), 6) if not pd.isna(corr) else 0.0,
+                "p_value": round(float(p_value), 6) if not pd.isna(p_value) else 1.0
+            })
+            
+            # 保存到矩阵中
+            corr_matrix[i, j] = corr_matrix[j, i] = corr
+            p_value_matrix[i, j] = p_value_matrix[j, i] = p_value
+    
+    # 构造相关性矩阵和p值矩阵的表格形式
+    correlation_matrix = {
+        "columns": numeric_columns,
+        "correlations": corr_matrix.tolist(),
+        "p_values": p_value_matrix.tolist()
+    }
+    
+    # 准备返回结果
+    result = {
+        "columns": numeric_columns,
+        "correlation_data": correlation_data,
+        "correlation_matrix": correlation_matrix
+    }
+    
+    return result

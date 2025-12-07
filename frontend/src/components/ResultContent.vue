@@ -10,6 +10,11 @@
       <StatisticalSummaryResult :dataset-details="datasetDetails" />
     </div>
     
+    <!-- 相关性分析结果 -->
+    <div v-else-if="currentMethod === 'correlation_analysis' && datasetDetails" class="analysis-section">
+      <CorrelationAnalysisResult :dataset-details="datasetDetails" />
+    </div>
+    
     <!-- 数据可视化分析结果 -->
     <div v-else-if="currentMethod === 'visualization'" class="analysis-section">
       <h3>数据可视化</h3>
@@ -37,12 +42,14 @@
 <script>
 import BasicInfoResult from './AnalyseResult/BasicInfoResult.vue';
 import StatisticalSummaryResult from './AnalyseResult/StatisticalSummaryResult.vue';
+import CorrelationAnalysisResult from './AnalyseResult/CorrelationAnalysisResult.vue';
 
 export default {
   name: "ResultContent",
   components: {
     BasicInfoResult,
-    StatisticalSummaryResult
+    StatisticalSummaryResult,
+    CorrelationAnalysisResult
   },
   props: {
     currentMethod: {

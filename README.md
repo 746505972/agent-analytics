@@ -170,14 +170,14 @@ npm run server
 - [ ] 添加用户认证和权限管理
 
 ## Languages
+Total : 61 files, 8533 codes, 1218 comments, 1231 blanks, all 10982 lines
 | language | files | code | comment | blank | total |
 | :--- | ---: | ---: | ---: | ---: | ---: |
-| vue | 19 | 4,640 | 24 | 512 | 5,176 |
-| Python | 17 | 1,550 | 884 | 361 | 2,795 |
-| Markdown | 9 | 380 | 0 | 105 | 485 |
-| CSV | 4 | 96 | 0 | 0 | 96 |
-| JavaScript | 3 | 77 | 3 | 6 | 86 |
-| JSON | 3 | 25 | 0 | 1 | 26 |
-| XML | 3 | 25 | 0 | 0 | 25 |
+| vue | 23 | 6,032 | 44 | 651 | 6,727 |
+| Python | 18 | 2,003 | 1,110 | 482 | 3,595 |
+| JavaScript | 6 | 230 | 56 | 42 | 328 |
+| Markdown | 1 | 139 | 0 | 44 | 183 |
+| XML | 10 | 73 | 1 | 5 | 79 |
+| JSON | 1 | 26 | 0 | 1 | 27 |
 | pip requirements | 1 | 17 | 7 | 6 | 30 |
 | HTML | 1 | 13 | 0 | 0 | 13 |

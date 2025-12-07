@@ -11,7 +11,7 @@
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
       </div>
-      <div v-else-if="['statistical_summary'].includes(currentMethod)">
+      <div v-else-if="['statistical_summary','correlation_analysis'].includes(currentMethod)">
         <h3>选择需要分析的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则分析所有数值型列</p>
@@ -26,7 +26,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -74,14 +74,21 @@
       :data-transformation-config="dataTransformationConfig"
       @update:dataTransformationConfig="$emit('update:dataTransformationConfig', $event)"
     />
+
+    <CorrelationAnalysisConfig
+      v-else-if="currentMethod === 'correlation_analysis'"
+      :correlation-method="correlationMethod"
+      @update:correlationMethod="$emit('update:correlationMethod', $event)"
+    />
   </div>
 </template>
 
 <script>
-import AddHeaderConfig from './AddHeaderConfig.vue';
-import InvalidSamplesConfig from './InvalidSamplesConfig.vue';
-import MissingValueInterpolationConfig from './MissingValueInterpolationConfig.vue';
-import DataTransformationConfig from './DataTransformationConfig.vue';
+import AddHeaderConfig from "./AddHeaderConfig.vue";
+import InvalidSamplesConfig from "./InvalidSamplesConfig.vue";
+import MissingValueInterpolationConfig from "./MissingValueInterpolationConfig.vue";
+import DataTransformationConfig from "./DataTransformationConfig.vue";
+import CorrelationAnalysisConfig from "./CorrelationAnalysisConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
@@ -89,20 +96,21 @@ export default {
     AddHeaderConfig,
     InvalidSamplesConfig,
     MissingValueInterpolationConfig,
-    DataTransformationConfig
+    DataTransformationConfig,
+    CorrelationAnalysisConfig
   },
   props: {
     currentMethod: {
       type: String,
-      default: 'basic_info'
+      required: true
     },
     selectedFile: {
-      type: [String, Object],
-      default: null
+      type: String,
+      required: true
     },
     selectedFileColumns: {
       type: Array,
-      default: () => []
+      required: true
     },
     selectedColumns: {
       type: Array,
@@ -110,7 +118,7 @@ export default {
     },
     headerEditMode: {
       type: String,
-      default: 'modify'
+      default: 'add'
     },
     newColumnNames: {
       type: Array,
@@ -155,6 +163,10 @@ export default {
     dataTransformationConfig: {
       type: Object,
       default: () => ({})
+    },
+    correlationMethod: {
+      type: String,
+      default: 'pearson'
     }
   },
   emits: [
@@ -168,18 +180,28 @@ export default {
     'update:knnNeighbors',
     'update:newColumnNames',
     'update:dataTransformationConfig',
+    'update:correlationMethod',
     'toggleColumnSelection'
   ],
   methods: {
     isColumnSelected(column) {
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation','statistical_summary'];
-      if (!interpolationMethods.includes(this.currentMethod)) {
-        return;
-      }
       return this.selectedColumns.includes(column);
     },
     
     toggleColumnSelection(event, column, index) {
+      // 双重验证
+      const selectableMethods = [
+        'missing_value_interpolation', 
+        'delete_columns', 
+        'data_transformation', 
+        'statistical_summary',
+        'correlation_analysis'
+      ];
+
+      if (!selectableMethods.includes(this.currentMethod)) {
+        return;
+      }
+      
       this.$emit('toggleColumnSelection', { event, column, index });
     },
     
@@ -191,7 +213,6 @@ export default {
 </script>
 
 <style scoped>
-/* 列名列表和添加标题行容器 */
 .column-add-header-container {
   display: flex;
   gap: 0;
