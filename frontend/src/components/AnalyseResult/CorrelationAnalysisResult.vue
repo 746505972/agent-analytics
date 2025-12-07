@@ -190,6 +190,24 @@ export default {
             return `${columns[yIndex]} - ${columns[xIndex]}<br/>相关系数: ${value.toFixed(4)}<br/>p值: ${pValue.toFixed(4)}`;
           }
         },
+        toolbox: {
+          show: true,
+          feature: {
+            saveAsImage: { 
+              show: true, 
+              title: '保存为图片',
+              pixelRatio: 2 
+            },
+            restore: { 
+              show: true, 
+              title: '刷新' 
+            }
+          }
+        },
+        grid: {
+          height: '70%',
+          top: '15%'
+        },
         xAxis: {
           type: 'category',
           data: columns,
@@ -220,6 +238,8 @@ export default {
           name: '相关性',
           type: 'heatmap',
           data: data,
+          xAxisIndex: 0,
+          yAxisIndex: 0,
           label: {
             show: true,
             formatter: (params) => {

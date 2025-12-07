@@ -443,11 +443,7 @@ export default {
         toolbox: {
           show: true,
           feature: {
-            dataZoom: {
-              yAxisIndex: false
-            },
             dataView: { readOnly: false },
-            magicType: { type: ['line', 'bar'] },
             restore: {},
             saveAsImage: {}
           }
@@ -510,11 +506,7 @@ export default {
         toolbox: {
           show: true,
           feature: {
-            dataZoom: {
-              yAxisIndex: false
-            },
             dataView: { readOnly: false },
-            magicType: { type: ['line', 'bar'] },
             restore: {},
             saveAsImage: {}
           }
@@ -571,11 +563,7 @@ export default {
         toolbox: {
           show: true,
           feature: {
-            dataZoom: {
-              yAxisIndex: false
-            },
             dataView: { readOnly: false },
-            magicType: { type: ['line', 'bar'] },
             restore: {},
             saveAsImage: {}
           }
