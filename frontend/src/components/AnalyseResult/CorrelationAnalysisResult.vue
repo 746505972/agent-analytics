@@ -368,8 +368,6 @@ export default {
           name: '相关性',
           type: 'heatmap',
           data: data,
-          xAxisIndex: 0,
-          yAxisIndex: 0,
           label: {
             show: true,
             formatter: (params) => {
@@ -749,7 +747,7 @@ export default {
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 20px;
-  width: 90%;
+  width: 60%;
   max-height: 80vh;
   overflow-y: auto;
 }
@@ -757,7 +755,7 @@ export default {
 .custom-color-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+
   max-height: calc(80vh - 100px);
   overflow-y: auto;
 }
@@ -766,7 +764,7 @@ export default {
   display: flex;
   height: 60px;
   border-radius: 4px;
-  overflow: hidden;
+
   margin-bottom: 10px;
 }
 
