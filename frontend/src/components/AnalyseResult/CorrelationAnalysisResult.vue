@@ -33,6 +33,69 @@
             </div>
             <div class="scheme-name">{{ scheme.name }}</div>
           </div>
+          
+          <!-- 自定义配色选项 -->
+          <div 
+            class="color-scheme-option custom-option" 
+            :class="{ active: colorScheme === 'custom' }"
+            @click="openCustomColorModal"
+          >
+            <div class="color-preview">
+              <div 
+                v-for="color in customColors" 
+                :key="color" 
+                class="color-item" 
+                :style="{ backgroundColor: color }"
+              ></div>
+            </div>
+            <div class="scheme-name">自定义</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 自定义配色弹窗 -->
+    <div v-if="showCustomColorModal" class="modal-overlay" @click="showCustomColorModal = false">
+      <div class="custom-color-modal" @click.stop>
+        <div class="modal-header">
+          <h3>自定义配色方案</h3>
+          <button class="close-button" @click="showCustomColorModal = false">×</button>
+        </div>
+        <div class="custom-color-content">
+          <div class="color-preview-large">
+            <div 
+              v-for="(color, index) in customColors" 
+              :key="index" 
+              class="color-item-large" 
+              :style="{ backgroundColor: color }"
+            >
+              <div class="color-value">{{ color }}</div>
+            </div>
+          </div>
+          <div class="color-inputs">
+            <div 
+              v-for="(color, index) in customColors" 
+              :key="index" 
+              class="color-input-item"
+            >
+              <label>颜色 {{ index + 1 }}:</label>
+              <input 
+                type="color" 
+                :value="color" 
+                @input="updateCustomColor(index, $event.target.value)"
+              />
+              <input 
+                type="text" 
+                :value="color" 
+                @input="updateCustomColor(index, $event.target.value)"
+                class="color-text-input"
+              />
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="apply-button" @click="applyCustomColors">应用配色</button>
+            <button class="cancel-button" @click="showCustomColorModal = false">取消</button>
+          </div>
         </div>
       </div>
     </div>
@@ -131,64 +194,24 @@ export default {
       chart: null,
       colorScheme: 'default',
       showColorSchemeModal: false,
+      showCustomColorModal: false,
+      customColors: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026'],
       colorSchemes: {
         default: {
           name: '默认',
-          colors: [
-            '#313695',
-            '#4575b4',
-            '#74add1',
-            '#abd9e9',
-            '#e0f3f8',
-            '#ffffbf',
-            '#fee090',
-            '#fdae61',
-            '#f46d43',
-            '#d73027',
-            '#a50026'
-          ]
+          colors: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026']
         },
         blue: {
           name: '蓝色',
-          colors: [
-            '#f7fbff',
-            '#deebf7',
-            '#c6dbef',
-            '#9ecae1',
-            '#6baed6',
-            '#4292c6',
-            '#2171b5',
-            '#08519c',
-            '#08306b'
-          ]
+          colors: ['#f7fbff', '#deebf7', '#c6dbef', '#9ecae1', '#6baed6', '#4292c6', '#2171b5', '#08519c', '#08306b']
         },
         green: {
           name: '绿色',
-          colors: [
-            '#f7fcf5',
-            '#e5f5e0',
-            '#c7e9c0',
-            '#a1d99b',
-            '#74c476',
-            '#41ab5d',
-            '#238b45',
-            '#006d2c',
-            '#00441b'
-          ]
+          colors: ['#f7fcf5', '#e5f5e0', '#c7e9c0', '#a1d99b', '#74c476', '#41ab5d', '#238b45', '#006d2c', '#00441b']
         },
         red: {
           name: '红色',
-          colors: [
-            '#fff5f0',
-            '#fee0d2',
-            '#fcbba1',
-            '#fc9272',
-            '#fb6a4a',
-            '#ef3b2c',
-            '#cb181d',
-            '#a50f15',
-            '#67000d'
-          ]
+          colors: ['#fff5f0', '#fee0d2', '#fcbba1', '#fc9272', '#fb6a4a', '#ef3b2c', '#cb181d', '#a50f15', '#67000d']
         }
       }
     };
@@ -296,7 +319,7 @@ export default {
             },
             restore: { 
               show: true, 
-              title: '刷新' 
+              title: '重置' 
             },
             myColorScheme: {
               show: true,
@@ -338,7 +361,7 @@ export default {
           top: '10%',
           bottom: '10%',
           inRange: {
-            color: this.colorSchemes[this.colorScheme]
+            color: this.colorScheme === 'custom' ? this.customColors : this.colorSchemes[this.colorScheme].colors
           }
         },
         series: [{
@@ -387,12 +410,44 @@ export default {
       this.updateChartColorScheme();
     },
     
+    openCustomColorModal() {
+      this.showColorSchemeModal = false;
+      this.showCustomColorModal = true;
+    },
+    
+    updateCustomColor(index, colorValue) {
+      // 验证颜色值是否有效
+      const hexRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/;
+      if (hexRegex.test(colorValue) || colorValue.startsWith('#')) {
+        this.customColors[index] = colorValue;
+      } else if (!colorValue.startsWith('#') && colorValue.length <= 6) {
+        // 自动补全 # 符号
+        const fullColorValue = '#' + colorValue;
+        if (hexRegex.test(fullColorValue)) {
+          this.customColors[index] = fullColorValue;
+        }
+      }
+    },
+    
+    applyCustomColors() {
+      this.colorScheme = 'custom';
+      this.showCustomColorModal = false;
+      this.updateChartColorScheme();
+    },
+    
     updateChartColorScheme() {
       if (this.chart) {
+        let colors;
+        if (this.colorScheme === 'custom') {
+          colors = this.customColors;
+        } else {
+          colors = this.colorSchemes[this.colorScheme].colors;
+        }
+        
         const option = {
           visualMap: {
             inRange: {
-              color: this.colorSchemes[this.colorScheme].colors
+              color: colors
             }
           }
         };
@@ -611,8 +666,8 @@ export default {
   background: white;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 20px;
-  width: 500px;
+  padding: 15px;
+  width: 450px;
   max-width: 90%;
 }
 
@@ -648,8 +703,8 @@ export default {
 
 .color-schemes {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 15px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
 }
 
 .color-scheme-option {
@@ -673,10 +728,10 @@ export default {
 
 .color-preview {
   display: flex;
-  height: 40px;
+  height: 30px;
   border-radius: 4px;
   overflow: hidden;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .color-item {
@@ -687,5 +742,114 @@ export default {
   text-align: center;
   font-size: 14px;
   color: #333;
+}
+
+.custom-color-modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.custom-color-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: calc(80vh - 100px);
+  overflow-y: auto;
+}
+
+.color-preview-large {
+  display: flex;
+  height: 60px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.color-item-large {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+}
+
+.color-value {
+  background: rgba(255, 255, 255, 0.8);
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 2px;
+  color: #333;
+}
+
+.color-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 15px;
+}
+
+.color-input-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.color-input-item label {
+  font-size: 14px;
+  color: #333;
+}
+
+.color-input-item input[type="color"] {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.color-input-item input[type="text"] {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+}
+
+.apply-button {
+  padding: 8px 16px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.apply-button:hover {
+  background-color: #337ecc;
+}
+
+.cancel-button {
+  padding: 8px 16px;
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-button:hover {
+  background-color: #ebebeb;
 }
 </style>
