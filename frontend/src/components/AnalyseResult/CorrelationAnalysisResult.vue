@@ -7,6 +7,35 @@
         <img src="@/assets/images/copy.svg" alt="复制" />
       </button>
     </div>
+    
+    <!-- 配色方案选择弹窗 -->
+    <div v-if="showColorSchemeModal" class="modal-overlay" @click="showColorSchemeModal = false">
+      <div class="color-scheme-modal" @click.stop>
+        <div class="modal-header">
+          <h3>选择配色方案</h3>
+          <button class="close-button" @click="showColorSchemeModal = false">×</button>
+        </div>
+        <div class="color-schemes">
+          <div 
+            v-for="(scheme, key) in colorSchemes" 
+            :key="key" 
+            class="color-scheme-option" 
+            :class="{ active: colorScheme === key }"
+            @click="selectColorScheme(key)"
+          >
+            <div class="color-preview">
+              <div 
+                v-for="color in scheme.colors" 
+                :key="color" 
+                class="color-item" 
+                :style="{ backgroundColor: color }"
+              ></div>
+            </div>
+            <div class="scheme-name">{{ scheme.name }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="matrix-container">
       <table class="matrix-table">
@@ -99,7 +128,69 @@ export default {
   },
   data() {
     return {
-      chart: null
+      chart: null,
+      colorScheme: 'default',
+      showColorSchemeModal: false,
+      colorSchemes: {
+        default: {
+          name: '默认',
+          colors: [
+            '#313695',
+            '#4575b4',
+            '#74add1',
+            '#abd9e9',
+            '#e0f3f8',
+            '#ffffbf',
+            '#fee090',
+            '#fdae61',
+            '#f46d43',
+            '#d73027',
+            '#a50026'
+          ]
+        },
+        blue: {
+          name: '蓝色',
+          colors: [
+            '#f7fbff',
+            '#deebf7',
+            '#c6dbef',
+            '#9ecae1',
+            '#6baed6',
+            '#4292c6',
+            '#2171b5',
+            '#08519c',
+            '#08306b'
+          ]
+        },
+        green: {
+          name: '绿色',
+          colors: [
+            '#f7fcf5',
+            '#e5f5e0',
+            '#c7e9c0',
+            '#a1d99b',
+            '#74c476',
+            '#41ab5d',
+            '#238b45',
+            '#006d2c',
+            '#00441b'
+          ]
+        },
+        red: {
+          name: '红色',
+          colors: [
+            '#fff5f0',
+            '#fee0d2',
+            '#fcbba1',
+            '#fc9272',
+            '#fb6a4a',
+            '#ef3b2c',
+            '#cb181d',
+            '#a50f15',
+            '#67000d'
+          ]
+        }
+      }
     };
   },
   computed: {
@@ -147,6 +238,11 @@ export default {
         this.redrawChart();
       },
       deep: true
+    },
+    colorScheme: {
+      handler() {
+        this.updateChartColorScheme();
+      }
     }
   },
   mounted() {
@@ -201,6 +297,14 @@ export default {
             restore: { 
               show: true, 
               title: '刷新' 
+            },
+            myColorScheme: {
+              show: true,
+              title: '切换配色',
+              icon: 'path://M12,2C13.1,2 14,2.9 14,4C14,5.1 13.1,6 12,6C10.9,6 10,5.1 10,4C10,2.9 10.9,2 12,2M21,9V7L15,1H5C3.89,1 3,1.89 3,3V21A2,2 0 0,0 5,23H19A2,2 0 0,0 21,21V9M19,9H14V4H19V9Z',
+              onclick: () => {
+                this.showColorSchemeModal = true;
+              }
             }
           }
         },
@@ -232,7 +336,10 @@ export default {
           orient: 'vertical',
           right: '0',
           top: '10%',
-          bottom: '10%'
+          bottom: '10%',
+          inRange: {
+            color: this.colorSchemes[this.colorScheme]
+          }
         },
         series: [{
           name: '相关性',
@@ -272,6 +379,25 @@ export default {
       this.$nextTick(() => {
         this.initChart();
       });
+    },
+    
+    selectColorScheme(schemeKey) {
+      this.colorScheme = schemeKey;
+      this.showColorSchemeModal = false;
+      this.updateChartColorScheme();
+    },
+    
+    updateChartColorScheme() {
+      if (this.chart) {
+        const option = {
+          visualMap: {
+            inRange: {
+              color: this.colorSchemes[this.colorScheme].colors
+            }
+          }
+        };
+        this.chart.setOption(option);
+      }
     },
     
     copyTable() {
@@ -466,5 +592,100 @@ export default {
   margin-top: 5px;
   font-size: 14px;
   color: #666;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.color-scheme-modal {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  width: 500px;
+  max-width: 90%;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  color: #333;
+}
+
+.color-schemes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.color-scheme-option {
+  border: 2px solid #eee;
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.color-scheme-option:hover {
+  border-color: #409eff;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.color-scheme-option.active {
+  border-color: #409eff;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+.color-preview {
+  display: flex;
+  height: 40px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.color-item {
+  flex: 1;
+}
+
+.scheme-name {
+  text-align: center;
+  font-size: 14px;
+  color: #333;
 }
 </style>
