@@ -1,5 +1,13 @@
 <template>
-  <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
+  <!-- 加载指示器 -->
+  <div v-if="isWaitingForResponse" class="loading-overlay">
+    <div class="loading-content">
+      <img src="@/assets/images/loading.gif" alt="Loading..." class="loading-gif" />
+      <p>正在处理中...</p>
+    </div>
+  </div>
+  <div v-else>
+    <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
     <!-- 列名列表区域 -->
     <div class="column-list-section">
       <div v-if="['missing_value_interpolation'].includes(currentMethod)">
@@ -34,7 +42,7 @@
         </li>
       </ul>
     </div>
-    
+
     <!-- 参数配置区域 -->
     <AddHeaderConfig
       v-if="currentMethod === 'add_header' && headerEditMode !== 'remove'"
@@ -42,7 +50,7 @@
       :new-column-names="newColumnNames"
       @update:newColumnNames="handleNewColumnNamesUpdate"
     />
-    
+
     <InvalidSamplesConfig
       v-else-if="currentMethod === 'invalid_samples'"
       :remove-duplicates="removeDuplicates"
@@ -80,6 +88,7 @@
       :correlation-method="correlationMethod"
       @update:correlationMethod="$emit('update:correlationMethod', $event)"
     />
+  </div>
   </div>
 </template>
 
@@ -167,6 +176,10 @@ export default {
     correlationMethod: {
       type: String,
       default: 'pearson'
+    },
+    isWaitingForResponse: {
+      type: Boolean,
+      default: false
     }
   },
   emits: [
@@ -293,5 +306,30 @@ export default {
   align-items: center;
   height: 100%;
   color: #909399;
+}
+
+.loading-overlay {
+  width: 100%;
+  height: 100%;
+  background-color: rgb(241, 241, 241);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-gif {
+  width: 50px;
+  height: 50px;
+}
+
+.loading-content p {
+  margin-top: 10px;
+  font-size: 16px;
+  color: #303133;
 }
 </style>

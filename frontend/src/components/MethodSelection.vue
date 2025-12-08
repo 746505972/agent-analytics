@@ -1,8 +1,18 @@
 <template>
-  <div class="method-selection-section">
+  <div v-if="selectedFile" class="method-selection-section">
+    <!-- 搜索框 -->
+    <div class="search-container">
+      <input
+        type="text"
+        v-model="searchQuery"
+        placeholder="搜索方法..."
+        class="search-input"
+      />
+    </div>
+
     <div class="method-categories">
       <div 
-        v-for="category in methodCategories" 
+        v-for="category in filteredCategories"
         :key="category.id"
         class="method-category"
         :class="{ active: expandedCategories.includes(category.id) }"
@@ -25,6 +35,9 @@
       </div>
     </div>
   </div>
+  <div v-else>
+      请选择一个文件
+  </div>
 </template>
 
 <script>
@@ -42,6 +55,40 @@ export default {
     expandedCategories: {
       type: Array,
       required: true
+    },
+    selectedFile: {
+      type: String,
+      default: null
+    }
+  },
+  data() {
+    return {
+      searchQuery: ''
+    }
+  },
+  computed: {
+    filteredCategories() {
+      if (!this.searchQuery) {
+        return this.methodCategories;
+      }
+
+      const query = this.searchQuery.toLowerCase();
+      return this.methodCategories
+        .map(category => {
+          const filteredMethods = category.methods.filter(method =>
+            method.name.toLowerCase().includes(query)
+          );
+
+          // 只有当类别中有匹配的方法时才返回该类别
+          if (filteredMethods.length > 0) {
+            return {
+              ...category,
+              methods: filteredMethods
+            };
+          }
+          return null;
+        })
+        .filter(category => category !== null);
     }
   },
   emits: ['select-method', 'toggle-category'],
@@ -58,12 +105,28 @@ export default {
 
 <style scoped>
 .method-selection-section {
-  background: white;
-  padding-top: 10px;
   margin-bottom: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+/* 新增搜索框样式 */
+.search-container {
+  padding: 10px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid #dcdfe6;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #409eff;
 }
 
 .method-selection-section h3 {

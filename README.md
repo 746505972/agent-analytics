@@ -1,6 +1,6 @@
 <div align="center">
 
-# Agent-Analytics: 基于LLM-Agent的自适应数据分析与报告生成系统
+# Agent-Analytics: 基于LLM-Agent的数据分析与报告生成系统
 
 ![Python](https://img.shields.io/badge/Python3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)
@@ -21,13 +21,13 @@ Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据�
 
 ## 应用展示
 
-Agent对话
+#### Agent对话
 ![img.png](images/img.png)
 
-工具调用
+#### 工具调用
 ![img_1.png](images/img_1.png)
 
-分析渲染
+#### 分析渲染
 ![img_2.png](images/img_2.png)
 
 ## 当前系统架构
@@ -164,7 +164,7 @@ npm run server
 
 - [x] 基础文件上传功能
 - [x] 实现基础数据分析 API
-- [ ] 添加数据可视化功能
+- [x] 添加数据可视化功能
 - [x] 实现自然语言交互
 - [ ] 自动生成分析报告
 - [ ] 集成更多机器学习算法
@@ -173,14 +173,10 @@ npm run server
 - [ ] 添加用户认证和权限管理
 
 ## Languages
-Total : 61 files, 8533 codes, 1218 comments, 1231 blanks, all 10982 lines
-| language | files | code | comment | blank | total |
-| :--- | ---: | ---: | ---: | ---: | ---: |
-| vue | 23 | 6,032 | 44 | 651 | 6,727 |
-| Python | 18 | 2,003 | 1,110 | 482 | 3,595 |
-| JavaScript | 6 | 230 | 56 | 42 | 328 |
-| Markdown | 1 | 139 | 0 | 44 | 183 |
-| XML | 10 | 73 | 1 | 5 | 79 |
-| JSON | 1 | 26 | 0 | 1 | 27 |
-| pip requirements | 1 | 17 | 7 | 6 | 30 |
-| HTML | 1 | 13 | 0 | 0 | 13 |
+Total : 68 files,  9838 codes, 1296 comments, 1401 blanks, all 12535 lines
+
+| language   | files |  code | comment | blank | total |
+|:-----------|------:|------:|--------:|------:|------:|
+| vue        |    26 | 7,101 |      54 |   770 | 7,925 |
+| Python     |    18 | 2,149 |   1,159 |   520 | 3,828 |
+| JavaScript |     8 |   302 |      75 |    51 |   428 |
