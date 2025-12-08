@@ -28,3 +28,4 @@ uvicorn>=0.23.0
 # 其他工具
 python-multipart>=0.0.6  # 用于文件上传
 pydantic>=2.0.0         # 数据验证
+xlrd>=2.0.0

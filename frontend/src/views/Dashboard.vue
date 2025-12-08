@@ -180,6 +180,7 @@ import {
   generateMissingValueInterpolationFeedback,
   generateInvalidSamplesFeedback
 } from "@/api/feedbackHandler.js";
+import { getMethodName } from "@/utils/methodUtils.js";
 
 export default {
   name: "Dashboard",
@@ -255,24 +256,40 @@ export default {
             { id: 'basic_info', name: '基本信息' }, // 已实现
             { id: 'statistical_summary', name: '统计摘要' }, // 已实现
             { id: 'correlation_analysis', name: '相关性分析' }, // 已实现
-            { id: 'distribution_analysis', name: '分布分析' }
+            { id: 't_test', name: 'T检验' },
+            { id: 'f_test', name: 'F检验' },
+            { id: 'chi_square_test', name: '卡方检验' },
+            { id: 'linear_regression', name: '线性回归' },
+            { id: 'normality_test', name: '正态性检验' },
+            { id: 'non_parametric_test', name: '非参数检验' }
           ]
         },
         {
           id: 'ml',
           name: '机器学习',
           methods: [
-            { id: 'ml_analysis', name: '机器学习分析' },
             { id: 'clustering', name: '聚类分析' },
             { id: 'classification', name: '分类分析' },
-            { id: 'regression', name: '回归分析' }
+            { id: 'logistic_regression', name: '逻辑回归' },
+            { id: 'decision_tree', name: '决策树' },
+            { id: 'random_forest', name: '随机森林' },
+            { id: 'knn', name: 'KNN' },
+            { id: 'naive_bayes', name: '朴素贝叶斯' },
+            { id: 'svm', name: '支持向量机' },
+            { id: 'neural_network', name: '神经网络' },
+            { id: 'xgboost', name: 'XGBoost' }
           ]
         },
         {
           id: 'visualization',
           name: '可视化',
           methods: [
-            { id: 'visualization', name: '数据可视化' }
+            { id: 'line_chart', name: '折线图' },
+            { id: 'scatter_plot', name: '散点图' },
+            { id: 'bar_chart', name: '柱状图' },
+            { id: 'histogram', name: '直方图' },
+            { id: 'pie_chart', name: '饼图' },
+            { id: 'box_plot', name: '箱线图' }
           ]
         },
         {
@@ -341,6 +358,7 @@ export default {
     this.restoreAnalysisHistory();
   },
   methods: {
+    getMethodName,
     // 清除localStorage中的数据
     clearLocalStorage() {
       // 清除与文件相关的localStorage项
@@ -352,29 +370,6 @@ export default {
       localStorage.removeItem('isFileSectionCollapsed');
       localStorage.removeItem('session_id');
     },
-
-    // 添加获取方法名称的方法
-    getMethodName(methodId) {
-      const methods = {
-        'basic_info': '基本信息',
-        'statistical_summary': '统计摘要',
-        'correlation_analysis': '相关性分析',
-        'distribution_analysis': '分布分析',
-        'visualization': '数据可视化',
-        'ml_analysis': '机器学习分析',
-        'clustering': '聚类分析',
-        'classification': '分类分析',
-        'regression': '回归分析',
-        'text_analysis': '文本分析',
-        'sentiment_analysis': '情感分析',
-        'invalid_samples': '无效样本',
-        'data_transformation': '数据转换',
-        'add_header': '添加/修改标题行',
-        'delete_columns': '删除列',
-      };
-      return methods[methodId] || '未知分析';
-    },
-
 
     removeFromHistory(index) {
       // 从历史记录中移除

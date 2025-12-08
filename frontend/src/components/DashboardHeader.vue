@@ -43,6 +43,8 @@
 </template>
 
 <script>
+import { getMethodName } from "@/utils/methodUtils.js";
+
 export default {
   name: "DashboardHeader",
   props: {
@@ -74,33 +76,11 @@ export default {
     'show-preview'
   ],
   methods: {
+    getMethodName,
     getSelectedFileName() {
       const file = this.files.find(f => f.data_id === this.selectedFile);
       return file ? file.filename : "无";
     },
-    
-    // 添加获取方法名称的方法
-    getMethodName(methodId) {
-      const methods = {
-        'basic_info': '基本信息',
-        'statistical_summary': '统计摘要',
-        'correlation_analysis': '相关性分析',
-        'distribution_analysis': '分布分析',
-        'visualization': '数据可视化',
-        'ml_analysis': '机器学习分析',
-        'clustering': '聚类分析',
-        'classification': '分类分析',
-        'regression': '回归分析',
-        'text_analysis': '文本分析',
-        'sentiment_analysis': '情感分析',
-        'invalid_samples': '无效样本',
-        'data_transformation': '数据转换',
-        'add_header': '添加/修改标题行',
-        'delete_columns': '删除列',
-      };
-      return methods[methodId] || '未知分析';
-    },
-    
     isHistoryItemActive(historyItem) {
       return this.selectedFile === historyItem.dataId && this.currentMethod === historyItem.method;
     }

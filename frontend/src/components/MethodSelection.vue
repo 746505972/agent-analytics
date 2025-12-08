@@ -79,8 +79,6 @@ export default {
 }
 
 .method-category {
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
   margin-bottom: 10px;
 }
 
@@ -95,7 +93,6 @@ export default {
 
 .method-category.active .category-header {
   background-color: #ecf5ff;
-  border-bottom: 1px solid #ebeef5;
 }
 
 .category-header h4 {
@@ -107,22 +104,28 @@ export default {
   font-size: 18px;
   font-weight: bold;
   color: #909399;
+  user-select: none;
 }
 
 .category-methods {
-  padding: 10px 15px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  padding: 5px 7px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
 }
 
 .method-tab {
-  padding: 8px 16px;
+  padding: 8px 5px;
   background-color: #f5f7fa;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
+  border: 1px solid #f5f7fa;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s;
+  text-align: center;
+  word-break: break-word;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .method-tab:hover {
