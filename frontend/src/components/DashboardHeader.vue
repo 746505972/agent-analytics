@@ -1,22 +1,27 @@
 <template>
   <div class="dashboard-header">
     <div class="header-content">
-      <div class="file-selector-trigger" @click="$emit('toggle-file-section')">
-        <h3>选择分析文件</h3>
-        <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
+      <div class="left-section">
+        <div class="file-selector-trigger" @click="$emit('toggle-file-section')">
+          <h3>选择分析文件</h3>
+          <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
+        </div>
+        <div v-if="selectedFile" class="selected-file-info" @click="$emit('show-preview')">
+          当前选中: {{ getSelectedFileName() }}
+        </div>
       </div>
-      <div v-if="selectedFile" class="selected-file-info" @click="$emit('show-preview')">
-        当前选中: {{ getSelectedFileName() }}
+      <div class="center-section">
+        <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
+          <img src="@/assets/images/logo.png" width="100" alt="Agent-Analytics">
+        </a>
       </div>
-      <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
-      <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
-        <img src="@/assets/images/github-original.svg" width="20" alt="GitHub">
-      </a>
+      <div class="right-section">
+      </div>
     </div>
   </div>
   
   <!-- 分析历史区域 -->
-  <div class="analysis-history" v-if="analysisHistory.length > 0">
+  <div class="analysis-history">
     <div class="history-title">分析历史:</div>
     <div class="history-buttons">
       <div
@@ -43,6 +48,8 @@
 </template>
 
 <script>
+import { getMethodName } from "@/utils/methodUtils.js";
+
 export default {
   name: "DashboardHeader",
   props: {
@@ -74,33 +81,11 @@ export default {
     'show-preview'
   ],
   methods: {
+    getMethodName,
     getSelectedFileName() {
       const file = this.files.find(f => f.data_id === this.selectedFile);
       return file ? file.filename : "无";
     },
-    
-    // 添加获取方法名称的方法
-    getMethodName(methodId) {
-      const methods = {
-        'basic_info': '基本信息',
-        'statistical_summary': '统计摘要',
-        'correlation_analysis': '相关性分析',
-        'distribution_analysis': '分布分析',
-        'visualization': '数据可视化',
-        'ml_analysis': '机器学习分析',
-        'clustering': '聚类分析',
-        'classification': '分类分析',
-        'regression': '回归分析',
-        'text_analysis': '文本分析',
-        'sentiment_analysis': '情感分析',
-        'invalid_samples': '无效样本',
-        'data_transformation': '数据转换',
-        'add_header': '添加/修改标题行',
-        'delete_columns': '删除列',
-      };
-      return methods[methodId] || '未知分析';
-    },
-    
     isHistoryItemActive(historyItem) {
       return this.selectedFile === historyItem.dataId && this.currentMethod === historyItem.method;
     }
@@ -111,8 +96,7 @@ export default {
 <style scoped>
 .dashboard-header {
   text-align: center;
-  padding: 10px 0 10px 0;
-  border-bottom: 1px solid #ebeef5;
+  padding: 5px 0 5px 0;
   position: relative;
 }
 
@@ -185,9 +169,29 @@ export default {
 .header-content {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 30px;
+  justify-content: space-between;
   position: relative;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.left-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.center-section {
+  display: flex;
+  justify-content: center;
+  flex: 1;
+}
+
+.right-section {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .selected-file-info {
@@ -231,6 +235,23 @@ export default {
   .header-content {
     flex-direction: column;
     gap: 10px;
+  }
+  
+  .left-section, .center-section, .right-section {
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .left-section {
+    order: 2;
+  }
+  
+  .center-section {
+    order: 1;
+  }
+  
+  .right-section {
+    order: 3;
   }
 }
 </style>

@@ -14,17 +14,53 @@
           <h4>相关性分析</h4>
           <p>分析数据集中各变量之间的相关性。</p>
         </div>
-        <div v-else-if="currentMethod === 'distribution_analysis'">
-          <h4>分布分析</h4>
-          <p>分析数据集中各变量的分布情况。</p>
+        <div v-else-if="currentMethod === 't_test'">
+          <h4>T检验</h4>
+          <p>执行T检验以比较两组数据的均值是否存在显著差异。</p>
         </div>
-        <div v-else-if="currentMethod === 'visualization'">
-          <h4>数据可视化</h4>
-          <p>生成数据集的可视化图表，帮助理解数据分布和关系。</p>
+        <div v-else-if="currentMethod === 'f_test'">
+          <h4>F检验</h4>
+          <p>执行F检验以比较两个或多个样本的方差是否存在显著差异。</p>
         </div>
-        <div v-else-if="currentMethod === 'ml_analysis'">
-          <h4>机器学习分析</h4>
-          <p>执行机器学习分析任务，如聚类、分类、回归等。</p>
+        <div v-else-if="currentMethod === 'chi_square_test'">
+          <h4>卡方检验</h4>
+          <p>执行卡方检验以判断观测值与期望值之间的差异是否显著。</p>
+        </div>
+        <div v-else-if="currentMethod === 'linear_regression'">
+          <h4>线性回归</h4>
+          <p>使用线性回归模型分析变量之间的线性关系。</p>
+        </div>
+        <div v-else-if="currentMethod === 'normality_test'">
+          <h4>正态性检验</h4>
+          <p>检验数据是否符合正态分布。</p>
+        </div>
+        <div v-else-if="currentMethod === 'non_parametric_test'">
+          <h4>非参数检验</h4>
+          <p>在不假设数据分布的情况下进行统计检验。</p>
+        </div>
+        <div v-else-if="currentMethod === 'line_chart'">
+          <h4>折线图</h4>
+          <p>使用折线图展示数据随时间或其他连续变量的变化趋势。</p>
+        </div>
+        <div v-else-if="currentMethod === 'scatter_plot'">
+          <h4>散点图</h4>
+          <p>使用散点图展示两个变量之间的关系和相关性。</p>
+        </div>
+        <div v-else-if="currentMethod === 'bar_chart'">
+          <h4>柱状图</h4>
+          <p>使用柱状图比较不同类别之间的数值大小。</p>
+        </div>
+        <div v-else-if="currentMethod === 'histogram'">
+          <h4>直方图</h4>
+          <p>使用直方图展示数据的分布情况。</p>
+        </div>
+        <div v-else-if="currentMethod === 'pie_chart'">
+          <h4>饼图</h4>
+          <p>使用饼图展示各部分占整体的比例关系。</p>
+        </div>
+        <div v-else-if="currentMethod === 'box_plot'">
+          <h4>箱线图</h4>
+          <p>使用箱线图展示数据的分布、中位数、四分位数及异常值。</p>
         </div>
         <div v-else-if="currentMethod === 'clustering'">
           <h4>聚类分析</h4>
@@ -34,9 +70,37 @@
           <h4>分类分析</h4>
           <p>使用分类算法对数据进行分类预测。</p>
         </div>
-        <div v-else-if="currentMethod === 'regression'">
-          <h4>回归分析</h4>
-          <p>使用回归算法分析变量之间的关系。</p>
+        <div v-else-if="currentMethod === 'logistic_regression'">
+          <h4>逻辑回归</h4>
+          <p>使用逻辑回归算法进行二分类或多分类分析。</p>
+        </div>
+        <div v-else-if="currentMethod === 'decision_tree'">
+          <h4>决策树</h4>
+          <p>使用决策树算法进行分类或回归分析。</p>
+        </div>
+        <div v-else-if="currentMethod === 'random_forest'">
+          <h4>随机森林</h4>
+          <p>使用随机森林算法进行分类或回归分析。</p>
+        </div>
+        <div v-else-if="currentMethod === 'knn'">
+          <h4>KNN</h4>
+          <p>使用K近邻算法进行分类或回归分析。</p>
+        </div>
+        <div v-else-if="currentMethod === 'naive_bayes'">
+          <h4>朴素贝叶斯</h4>
+          <p>使用朴素贝叶斯算法进行分类分析。</p>
+        </div>
+        <div v-else-if="currentMethod === 'svm'">
+          <h4>支持向量机</h4>
+          <p>使用支持向量机算法进行分类或回归分析。</p>
+        </div>
+        <div v-else-if="currentMethod === 'neural_network'">
+          <h4>神经网络</h4>
+          <p>使用神经网络进行复杂的非线性建模分析。</p>
+        </div>
+        <div v-else-if="currentMethod === 'xgboost'">
+          <h4>XGBoost</h4>
+          <p>使用XGBoost算法进行高效的梯度提升分析。</p>
         </div>
         <div v-else-if="currentMethod === 'text_analysis'">
           <h4>文本分析</h4>

@@ -1,4 +1,6 @@
-# Agent-Analytics: 基于LLM-Agent的自适应数据分析与报告生成系统
+<div align="center">
+
+# Agent-Analytics: 基于LLM-Agent的数据分析与报告生成系统
 
 ![Python](https://img.shields.io/badge/Python3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)
@@ -7,8 +9,9 @@
 <img src="https://qianwen-res.oss-cn-beijing.aliyuncs.com/logo_qwen.jpg" alt="通义千问" height="28">
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
-![ngrok](https://img.shields.io/badge/ngrok-1F1E37?style=for-the-badge&logo=ngrok&logoColor=white)
-![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
+
+<img src="frontend/src/assets/images/logo.png" alt="Logo" width="200" align="center">
+</div>
 
 ## 项目简介
 
@@ -18,13 +21,13 @@ Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据�
 
 ## 应用展示
 
-Agent对话
+#### Agent对话
 ![img.png](images/img.png)
 
-工具调用
+#### 工具调用
 ![img_1.png](images/img_1.png)
 
-分析渲染
+#### 分析渲染
 ![img_2.png](images/img_2.png)
 
 ## 当前系统架构
@@ -161,7 +164,7 @@ npm run server
 
 - [x] 基础文件上传功能
 - [x] 实现基础数据分析 API
-- [ ] 添加数据可视化功能
+- [x] 添加数据可视化功能
 - [x] 实现自然语言交互
 - [ ] 自动生成分析报告
 - [ ] 集成更多机器学习算法
@@ -170,14 +173,10 @@ npm run server
 - [ ] 添加用户认证和权限管理
 
 ## Languages
-| language | files | code | comment | blank | total |
-| :--- | ---: | ---: | ---: | ---: | ---: |
-| vue | 19 | 4,640 | 24 | 512 | 5,176 |
-| Python | 17 | 1,550 | 884 | 361 | 2,795 |
-| Markdown | 9 | 380 | 0 | 105 | 485 |
-| CSV | 4 | 96 | 0 | 0 | 96 |
-| JavaScript | 3 | 77 | 3 | 6 | 86 |
-| JSON | 3 | 25 | 0 | 1 | 26 |
-| XML | 3 | 25 | 0 | 0 | 25 |
-| pip requirements | 1 | 17 | 7 | 6 | 30 |
-| HTML | 1 | 13 | 0 | 0 | 13 |
+Total : 68 files,  9838 codes, 1296 comments, 1401 blanks, all 12535 lines
+
+| language   | files |  code | comment | blank | total |
+|:-----------|------:|------:|--------:|------:|------:|
+| vue        |    26 | 7,101 |      54 |   770 | 7,925 |
+| Python     |    18 | 2,149 |   1,159 |   520 | 3,828 |
+| JavaScript |     8 |   302 |      75 |    51 |   428 |

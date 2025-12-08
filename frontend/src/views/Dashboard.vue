@@ -22,7 +22,6 @@
       @delete-file="deleteFile"
       @close="closeFileSelection"
       @show-preview="showDataPreview"
-      @download-file="downloadFile"
     />
     
     <div class="dashboard-content">
@@ -30,7 +29,7 @@
       <div class="left-section">
         <!-- 方法选择区域移到左栏 -->
         <MethodSelection
-          v-if="selectedFile"
+          :selected-file="selectedFile"
           :method-categories="methodCategories"
           :current-method="currentMethod"
           :expanded-categories="expandedCategories"
@@ -70,16 +69,8 @@
             @execute-method="executeMethod"
             @execute-data-transformation="executeDataTransformation"
           />
-          <!-- 加载指示器 -->
-          <div v-if="isWaitingForResponse" class="loading-overlay">
-            <div class="loading-content">
-              <img src="@/assets/images/loading.gif" alt="Loading..." class="loading-gif" />
-              <p>正在处理中...</p>
-            </div>
-          </div>
           <!-- 列名列表和参数配置区域 -->
           <MethodParameterConfig
-            v-else
             :current-method="currentMethod"
             :selected-file="selectedFile"
             :selected-file-columns="selectedFileColumns"
@@ -96,6 +87,8 @@
             :knn-neighbors="knnNeighbors"
             :last-selected-column-index="lastSelectedColumnIndex"
             :data-transformation-config="dataTransformationConfig"
+            :correlation-method="correlationMethod"
+            :is-waiting-for-response="isWaitingForResponse"
             @update:removeDuplicates="removeDuplicates = $event"
             @update:removeDuplicatesCols="removeDuplicatesCols = $event"
             @update:removeConstantCols="removeConstantCols = $event"
@@ -106,6 +99,7 @@
             @update:knnNeighbors="knnNeighbors = $event"
             @update:newColumnNames="handleNewColumnNamesUpdate"
             @update:dataTransformationConfig="updateDataTransformationConfig"
+            @update:correlationMethod="correlationMethod = $event"
             @toggleColumnSelection="handleToggleColumnSelection"
           />
         </div>
@@ -125,40 +119,21 @@
         </div>
       </div>
   </div>
-    
-    <!-- 数据预览弹窗 -->
-    <div class="preview-modal" v-if="showPreviewModal">
-      <div class="preview-modal-content">
-        <div class="preview-header">
-          <h3>数据预览</h3>
-          <button class="close-button" @click="closePreviewModal">×</button>
-        </div>
-        <div class="preview-body">
-          <DataPreview
-            v-if="!previewData.loading"
-            :column-headers="previewData.columnHeaders"
-            :row-data="previewData.rowData"
-            :total-rows="previewData.totalRows"
-            :total-pages="previewData.totalPages"
-            :current-page="previewData.currentPage"
-            :header-width="previewData.headerWidth"
-            :document-name="previewData.documentName"
-            @prev-page="prevPage"
-            @next-page="nextPage"
-            @change-page="changePage"
-          />
-          <div class="loading-section" v-else>
-            <div class="loading-spinner">加载中...</div>
-          </div>
-        </div>
-      </div>
-    </div>
+
+    <!-- 预览模态框 -->
+    <PreviewModal
+      :visible="showPreviewModal"
+      :loading="previewData.loading"
+      :preview-data="previewData"
+      @close="closePreviewModal"
+      @prev-page="prevPage"
+      @next-page="nextPage"
+      @change-page="changePage"
+    />
   </div>
 </template>
 
 <script>
-
-import DataPreview from "@/components/DataPreview.vue";
 import ChatAssistant from "@/components/ChatAssistant.vue";
 import ResultContent from "@/components/ResultContent.vue";
 import MethodDescription from "@/components/MethodDescription.vue";
@@ -166,20 +141,23 @@ import MethodSelection from "@/components/MethodSelection.vue";
 import FileSelectionOverlay from "@/components/FileSelectionOverlay.vue";
 import DashboardHeader from "@/components/DashboardHeader.vue";
 import MethodParameterConfig from "@/components/Config/MethodParameterConfig.vue";
+import PreviewModal from "@/components/PreviewModal.vue";
 import { executeDataTransformation } from "@/api/dataTransformation.js";
 import { executeDeleteColumns, executeMissingValueInterpolation } from "@/api/columnOperations.js";
+import { applyHeaderNames } from "@/api/headerOperations.js";
 import { 
   generateDataTransformationFeedback, 
   generateDeleteColumnsFeedback, 
   generateMissingValueInterpolationFeedback,
   generateInvalidSamplesFeedback
 } from "@/api/feedbackHandler.js";
+import { getMethodName } from "@/utils/methodUtils.js";
 
 export default {
   name: "Dashboard",
   components: {
     MethodParameterConfig, FileSelectionOverlay, MethodDescription, ResultContent,
-    DataPreview, ChatAssistant, DashboardHeader, MethodSelection
+    ChatAssistant, DashboardHeader, MethodSelection, PreviewModal
   },
   directives: {
     clickOutside: {
@@ -234,39 +212,55 @@ export default {
           id: 'data_processing',
           name: '数据处理',
           methods: [
-            { id: 'invalid_samples', name: '无效样本' },
-            { id: 'delete_columns', name: '删除列' },
-            { id: 'data_transformation', name: '数据转换' },
-            { id: 'missing_value_interpolation', name: '插值法' },
-            { id: 'add_header', name: '添加/修改标题行' },
-
+            { id: 'invalid_samples', name: '无效样本' }, // 已实现
+            { id: 'delete_columns', name: '删除列' }, // 已实现
+            { id: 'data_transformation', name: '数据转换' }, // 已实现
+            { id: 'missing_value_interpolation', name: '插值法' }, // 已实现
+            { id: 'add_header', name: '添加/修改标题行' }, // 已实现
+            // TODO: 添加数据转换（去除，K,M,G等）
           ]
         },
         {
           id: 'statistics',
           name: '统计方法',
           methods: [
-            { id: 'basic_info', name: '基本信息' },
-            { id: 'statistical_summary', name: '统计摘要' },
-            { id: 'correlation_analysis', name: '相关性分析' },
-            { id: 'distribution_analysis', name: '分布分析' }
+            { id: 'basic_info', name: '基本信息' }, // 已实现
+            { id: 'statistical_summary', name: '统计摘要' }, // 已实现
+            { id: 'correlation_analysis', name: '相关性分析' }, // 已实现
+            { id: 't_test', name: 'T检验' },
+            { id: 'f_test', name: 'F检验' },
+            { id: 'chi_square_test', name: '卡方检验' },
+            { id: 'linear_regression', name: '线性回归' },
+            { id: 'normality_test', name: '正态性检验' },
+            { id: 'non_parametric_test', name: '非参数检验' }
           ]
         },
         {
           id: 'ml',
           name: '机器学习',
           methods: [
-            { id: 'ml_analysis', name: '机器学习分析' },
             { id: 'clustering', name: '聚类分析' },
             { id: 'classification', name: '分类分析' },
-            { id: 'regression', name: '回归分析' }
+            { id: 'logistic_regression', name: '逻辑回归' },
+            { id: 'decision_tree', name: '决策树' },
+            { id: 'random_forest', name: '随机森林' },
+            { id: 'knn', name: 'KNN' },
+            { id: 'naive_bayes', name: '朴素贝叶斯' },
+            { id: 'svm', name: '支持向量机' },
+            { id: 'neural_network', name: '神经网络' },
+            { id: 'xgboost', name: 'XGBoost' }
           ]
         },
         {
           id: 'visualization',
           name: '可视化',
           methods: [
-            { id: 'visualization', name: '数据可视化' }
+            { id: 'line_chart', name: '折线图' },
+            { id: 'scatter_plot', name: '散点图' },
+            { id: 'bar_chart', name: '柱状图' },
+            { id: 'histogram', name: '直方图' },
+            { id: 'pie_chart', name: '饼图' },
+            { id: 'box_plot', name: '箱线图' }
           ]
         },
         {
@@ -314,6 +308,8 @@ export default {
       lastSelectedColumnIndex: -1,
       // 数据转换相关配置
       dataTransformationConfig: {},
+      // 相关性分析参数
+      correlationMethod: 'pearson',
     }
   },
   async mounted() {
@@ -322,17 +318,16 @@ export default {
     this.restoreState();
     // 检查是否有刚上传的文件需要默认选中
     this.checkAndSelectUploadedFile();
-    
     // 初始化列名输入框状态
     if (this.currentMethod === 'add_header') {
       this.headerEditMode = 'add';
       this.initializeColumnNames();
     }
-
     // 恢复分析历史
     this.restoreAnalysisHistory();
   },
   methods: {
+    getMethodName,
     // 清除localStorage中的数据
     clearLocalStorage() {
       // 清除与文件相关的localStorage项
@@ -345,33 +340,9 @@ export default {
       localStorage.removeItem('session_id');
     },
 
-    // 添加获取方法名称的方法
-    getMethodName(methodId) {
-      const methods = {
-        'basic_info': '基本信息',
-        'statistical_summary': '统计摘要',
-        'correlation_analysis': '相关性分析',
-        'distribution_analysis': '分布分析',
-        'visualization': '数据可视化',
-        'ml_analysis': '机器学习分析',
-        'clustering': '聚类分析',
-        'classification': '分类分析',
-        'regression': '回归分析',
-        'text_analysis': '文本分析',
-        'sentiment_analysis': '情感分析',
-        'invalid_samples': '无效样本',
-        'data_transformation': '数据转换',
-        'add_header': '添加/修改标题行',
-        'delete_columns': '删除列',
-      };
-      return methods[methodId] || '未知分析';
-    },
-
-
     removeFromHistory(index) {
       // 从历史记录中移除
       this.analysisHistory.splice(index, 1);
-
       // 更新localStorage
       localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
     },
@@ -431,7 +402,7 @@ export default {
       }
     },
     
-    // 添加一个方法来确保在选择文件后正确初始化newColumnNames
+    // 确保在选择文件后正确初始化newColumnNames
     initializeColumnNames() {
       if (this.currentMethod === 'add_header') {
         if (this.headerEditMode === 'modify' && this.selectedFileColumns.length > 0) {
@@ -621,7 +592,7 @@ export default {
       }
     },
     
-    // 添加无效样本处理方法
+    // 无效样本处理方法
     async executeInvalidSamples() {
       if (!this.selectedFile) {
         alert('请先选择一个文件');
@@ -687,7 +658,7 @@ export default {
     
     handleToggleColumnSelection({ event, column, index }) {
       // 双重验证
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation'];
+      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis'];
 
       if (!interpolationMethods.includes(this.currentMethod)) {
         return;
@@ -830,6 +801,8 @@ export default {
       this.headerEditMode= 'add';  // 修改：统一使用字符串类型，默认为添加模式
       // 数据转换配置重置
       this.dataTransformationConfig = {};
+      // 相关性分析参数重置
+      this.correlationMethod = 'pearson';
     },
     
     // 调用API获取分析结果
@@ -840,18 +813,60 @@ export default {
           const response = await fetch(`/data/${dataId}/details`, {
             credentials: 'include'
           });
-          
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-              return result.data;
-            } else {
-              console.error("获取分析结果失败:", result.error);
-              return null;
-            }
+
+          const result = await response.json();
+          if (result.success) {
+            return result.data;
           } else {
-            console.error("获取分析结果失败，状态码:", response.status);
+            console.error("获取分析结果失败:", result.error);
             return null;
+          }
+        } else if (method === 'statistical_summary') {
+          // 准备请求体，包含选中的列
+          const requestBody = {};
+          if (this.selectedColumns && this.selectedColumns.length > 0) {
+            requestBody.columns = this.selectedColumns;
+          }
+          
+          const response = await fetch(`/data/${dataId}/statistical_summary`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody),
+            credentials: 'include'
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            return result.data;
+          } else {
+            alert("获取统计摘要失败: " + result.error);
+          }
+        } else if (method === 'correlation_analysis') {
+          // 准备请求体，包含选中的列和方法
+          const requestBody = {
+            method: this.correlationMethod
+          };
+          
+          if (this.selectedColumns && this.selectedColumns.length > 0) {
+            requestBody.columns = this.selectedColumns;
+          }
+          
+          const response = await fetch(`/data/${dataId}/correlation_analysis`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody),
+            credentials: 'include'
+          });
+
+          const result = await response.json();
+          if (result.success) {
+            return result.data;
+          } else {
+            alert("获取相关性分析结果失败: " + result.error)
           }
         }
         // 其他分析方法可以在这里添加
@@ -881,59 +896,25 @@ export default {
     async applyHeaderNames() {
       if (!this.selectedFile) return;
 
-      // 检查是否所有列都已命名（仅在非删除模式下）
-      if (this.headerEditMode !== 'remove') {
-        const emptyNames = this.newColumnNames.filter(name => !name.trim()).length;
-        if (emptyNames > 0) {
-          alert(`还有 ${emptyNames} 个列未命名，请为所有列提供名称。`);
-          return;
-        }
-      }
-
       this.isWaitingForResponse = true;
       try {
-        // 确定模式参数
-        let mode = "add";
-        if (this.headerEditMode === 'modify') {
-          mode = "modify";
-        } else if (this.headerEditMode === 'remove') {
-          mode = "remove";
-        }
-        
-        const response = await fetch(`/user/${this.selectedFile}/add_header`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            column_names: this.newColumnNames,
-            mode: mode  // 添加模式参数
-          }),
-          credentials: 'include'
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            // 自动选择新生成的文件
-            await this.loadUploadedFiles(); // 刷新文件列表
-            await this.selectFile(result.data.data_id); // 选择新文件
+        const result = await applyHeaderNames(
+          this.selectedFile, 
+          this.newColumnNames, 
+          this.headerEditMode
+        );
             
-            // 显示成功消息
-            if (this.headerEditMode === 'remove') {
-              alert('首行删除成功，已自动选择新文件');
-            } else if (this.headerEditMode) {
-              alert('标题行修改成功，已自动选择新文件');
-            } else {
-              alert('标题行添加成功，已自动选择新文件');
-            }
-          } else {
-            console.error("添加标题行失败:", result.error);
-            alert("添加标题行失败: " + result.error);
-          }
+        // 自动选择新生成的文件
+        await this.loadUploadedFiles(); // 刷新文件列表
+        await this.selectFile(result.data.data_id); // 选择新文件
+        
+        // 显示成功消息
+        if (this.headerEditMode === 'remove') {
+          alert('首行删除成功，已自动选择新文件');
+        } else if (this.headerEditMode) {
+          alert('标题行修改成功，已自动选择新文件');
         } else {
-          console.error("添加标题行请求失败，状态码:", response.status);
-          alert("添加标题行失败，状态码: " + response.status);
+          alert('标题行添加成功，已自动选择新文件');
         }
       } catch (error) {
         console.error("添加标题行时发生错误:", error);
@@ -943,8 +924,7 @@ export default {
       }
     },
 
-    
-    // 新增方法：恢复保存的状态
+    // 恢复保存的状态
     restoreState() {
       // 恢复选中的文件
       const savedSelectedFile = localStorage.getItem('selectedFile');
@@ -1094,31 +1074,6 @@ export default {
       if (this.previewData.currentPage < this.previewData.totalPages) {
         this.changePage(this.previewData.currentPage + 1);
       }
-    },
-    
-    // 下载文件方法
-    downloadFile() {
-      if (!this.selectedFile) return;
-      
-      // 获取选中的文件信息
-      const selectedFile = this.files.find(file => file.data_id === this.selectedFile);
-      if (!selectedFile) return;
-      
-      // 构造下载链接
-      const downloadUrl = `/data/${this.selectedFile}/download`;
-      
-      // 创建一个隐藏的a标签用于下载
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = selectedFile.filename;
-      link.style.display = 'none';
-      
-      // 添加到页面并触发点击
-      document.body.appendChild(link);
-      link.click();
-      
-      // 清理
-      document.body.removeChild(link);
     }
   }
 }
@@ -1223,103 +1178,6 @@ export default {
   background-color: #66b1ff;
 }
 
-.loading-spinner {
-  text-align: center;
-  padding: 50px;
-  color: #409eff;
-  font-size: 16px;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #909399;
-}
-
-/* 数据预览弹窗样式 */
-.preview-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.preview-modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 1200px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.preview-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.preview-header h3 {
-  margin: 0;
-  color: #303133;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  color: #909399;
-}
-
-.preview-body {
-  flex: 1;
-  padding: 20px;
-  overflow: auto;
-}
-
-.loading-section {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 50px;
-}
-
-.loading-spinner {
-  font-size: 16px;
-  color: #409eff;
-}
-
-.loading-overlay {
-  width: 100%;
-  height: 100%;
-  background-color: rgb(241, 241, 241);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-}
-
-.loading-content {
-  text-align: center;
-}
-
-.loading-gif {
-  width: 50px;
-  height: 50px;
-}
-
 @media (max-width: 768px) {
   .dashboard-content {
     flex-direction: column;
@@ -1331,15 +1189,6 @@ export default {
   .right-section {
     padding: 0 10px;
     max-height: none;
-  }
-  
-  .preview-modal-content {
-    width: 95%;
-    height: 95%;
-  }
-  
-  .preview-body {
-    padding: 10px;
   }
 }
 </style>

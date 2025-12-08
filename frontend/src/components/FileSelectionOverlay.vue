@@ -96,7 +96,27 @@ export default {
       this.$emit('show-preview');
     },
     downloadFile() {
-      this.$emit('download-file');
+      if (!this.selectedFile) return;
+      
+      // 获取选中的文件信息
+      const selectedFile = this.files.find(file => file.data_id === this.selectedFile);
+      if (!selectedFile) return;
+      
+      // 构造下载链接
+      const downloadUrl = `/data/${this.selectedFile}/download`;
+      
+      // 创建一个隐藏的a标签用于下载
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = selectedFile.filename;
+      link.style.display = 'none';
+      
+      // 添加到页面并触发点击
+      document.body.appendChild(link);
+      link.click();
+      
+      // 清理
+      document.body.removeChild(link);
     }
   }
 }

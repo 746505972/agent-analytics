@@ -1,5 +1,13 @@
 <template>
-  <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
+  <!-- 加载指示器 -->
+  <div v-if="isWaitingForResponse" class="loading-overlay">
+    <div class="loading-content">
+      <img src="@/assets/images/loading.gif" alt="Loading..." class="loading-gif" />
+      <p>正在处理中...</p>
+    </div>
+  </div>
+  <div v-else>
+    <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
     <!-- 列名列表区域 -->
     <div class="column-list-section">
       <div v-if="['missing_value_interpolation'].includes(currentMethod)">
@@ -11,6 +19,11 @@
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
       </div>
+      <div v-else-if="['statistical_summary','correlation_analysis'].includes(currentMethod)">
+        <h3>选择需要分析的列</h3>
+        <p>点击选择列，支持 Ctrl/Shift 多选</p>
+        <p>不选则分析所有数值型列</p>
+      </div>
       <div v-else>
         <h3>列名列表</h3>
       </div>
@@ -21,7 +34,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -29,7 +42,7 @@
         </li>
       </ul>
     </div>
-    
+
     <!-- 参数配置区域 -->
     <AddHeaderConfig
       v-if="currentMethod === 'add_header' && headerEditMode !== 'remove'"
@@ -37,7 +50,7 @@
       :new-column-names="newColumnNames"
       @update:newColumnNames="handleNewColumnNamesUpdate"
     />
-    
+
     <InvalidSamplesConfig
       v-else-if="currentMethod === 'invalid_samples'"
       :remove-duplicates="removeDuplicates"
@@ -51,7 +64,7 @@
       @update:rowMissingThreshold="$emit('update:rowMissingThreshold', $event)"
       @update:columnMissingThreshold="$emit('update:columnMissingThreshold', $event)"
     />
-    
+
     <MissingValueInterpolationConfig
       v-else-if="currentMethod === 'missing_value_interpolation'"
       :interpolation-method="interpolationMethod"
@@ -61,27 +74,30 @@
       @update:fillValue="$emit('update:fillValue', $event)"
       @update:knnNeighbors="$emit('update:knnNeighbors', $event)"
     />
-    
+
     <DataTransformationConfig
       v-else-if="currentMethod === 'data_transformation'"
       :selected-file-columns="selectedFileColumns"
-      @config-change="$emit('update:dataTransformationConfig', $event)"
+      :selected-columns="selectedColumns"
+      :data-transformation-config="dataTransformationConfig"
+      @update:dataTransformationConfig="$emit('update:dataTransformationConfig', $event)"
     />
-    
-    <!-- 其他方法的默认配置区域 -->
-    <div v-else class="param-config-section">
-      <div class="default-config-placeholder">
-        <p>该方法暂无特殊配置项</p>
-      </div>
-    </div>
+
+    <CorrelationAnalysisConfig
+      v-else-if="currentMethod === 'correlation_analysis'"
+      :correlation-method="correlationMethod"
+      @update:correlationMethod="$emit('update:correlationMethod', $event)"
+    />
+  </div>
   </div>
 </template>
 
 <script>
-import AddHeaderConfig from './AddHeaderConfig.vue';
-import InvalidSamplesConfig from './InvalidSamplesConfig.vue';
-import MissingValueInterpolationConfig from './MissingValueInterpolationConfig.vue';
-import DataTransformationConfig from './DataTransformationConfig.vue';
+import AddHeaderConfig from "./AddHeaderConfig.vue";
+import InvalidSamplesConfig from "./InvalidSamplesConfig.vue";
+import MissingValueInterpolationConfig from "./MissingValueInterpolationConfig.vue";
+import DataTransformationConfig from "./DataTransformationConfig.vue";
+import CorrelationAnalysisConfig from "./CorrelationAnalysisConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
@@ -89,20 +105,21 @@ export default {
     AddHeaderConfig,
     InvalidSamplesConfig,
     MissingValueInterpolationConfig,
-    DataTransformationConfig
+    DataTransformationConfig,
+    CorrelationAnalysisConfig
   },
   props: {
     currentMethod: {
       type: String,
-      default: 'basic_info'
+      required: true
     },
     selectedFile: {
-      type: [String, Object],
+      type: String,
       default: null
     },
     selectedFileColumns: {
       type: Array,
-      default: () => []
+      required: true
     },
     selectedColumns: {
       type: Array,
@@ -110,7 +127,7 @@ export default {
     },
     headerEditMode: {
       type: String,
-      default: 'modify'
+      default: 'add'
     },
     newColumnNames: {
       type: Array,
@@ -155,6 +172,14 @@ export default {
     dataTransformationConfig: {
       type: Object,
       default: () => ({})
+    },
+    correlationMethod: {
+      type: String,
+      default: 'pearson'
+    },
+    isWaitingForResponse: {
+      type: Boolean,
+      default: false
     }
   },
   emits: [
@@ -168,18 +193,28 @@ export default {
     'update:knnNeighbors',
     'update:newColumnNames',
     'update:dataTransformationConfig',
+    'update:correlationMethod',
     'toggleColumnSelection'
   ],
   methods: {
     isColumnSelected(column) {
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation'];
-      if (!interpolationMethods.includes(this.currentMethod)) {
-        return;
-      }
       return this.selectedColumns.includes(column);
     },
     
     toggleColumnSelection(event, column, index) {
+      // 双重验证
+      const selectableMethods = [
+        'missing_value_interpolation', 
+        'delete_columns', 
+        'data_transformation', 
+        'statistical_summary',
+        'correlation_analysis'
+      ];
+
+      if (!selectableMethods.includes(this.currentMethod)) {
+        return;
+      }
+      
       this.$emit('toggleColumnSelection', { event, column, index });
     },
     
@@ -191,7 +226,6 @@ export default {
 </script>
 
 <style scoped>
-/* 列名列表和添加标题行容器 */
 .column-add-header-container {
   display: flex;
   gap: 0;
@@ -272,5 +306,30 @@ export default {
   align-items: center;
   height: 100%;
   color: #909399;
+}
+
+.loading-overlay {
+  width: 100%;
+  height: 100%;
+  background-color: rgb(241, 241, 241);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.loading-content {
+  text-align: center;
+}
+
+.loading-gif {
+  width: 50px;
+  height: 50px;
+}
+
+.loading-content p {
+  margin-top: 10px;
+  font-size: 16px;
+  color: #303133;
 }
 </style>
