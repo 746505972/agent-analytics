@@ -37,6 +37,9 @@
           @select-method="handleSelectMethod"
           @toggle-category="toggleCategory"
         />
+        <div v-else>
+            请选择一个文件
+        </div>
       </div>
       
       <!-- 中间：列名列表区域 -->
