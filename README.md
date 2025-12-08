@@ -1,3 +1,5 @@
+<div align="center">
+
 # Agent-Analytics: 基于LLM-Agent的自适应数据分析与报告生成系统
 
 ![Python](https://img.shields.io/badge/Python3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -7,8 +9,9 @@
 <img src="https://qianwen-res.oss-cn-beijing.aliyuncs.com/logo_qwen.jpg" alt="通义千问" height="28">
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
-![ngrok](https://img.shields.io/badge/ngrok-1F1E37?style=for-the-badge&logo=ngrok&logoColor=white)
-![Nginx](https://img.shields.io/badge/Nginx-009639?style=for-the-badge&logo=nginx&logoColor=white)
+
+<img src="frontend/src/assets/images/logo.png" alt="Logo" width="200" align="center">
+</div>
 
 ## 项目简介
 

@@ -106,7 +106,7 @@ export default {
     },
     selectedFile: {
       type: String,
-      required: true
+      default: null
     },
     selectedFileColumns: {
       type: Array,

@@ -1,22 +1,27 @@
 <template>
   <div class="dashboard-header">
     <div class="header-content">
-      <div class="file-selector-trigger" @click="$emit('toggle-file-section')">
-        <h3>选择分析文件</h3>
-        <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
+      <div class="left-section">
+        <div class="file-selector-trigger" @click="$emit('toggle-file-section')">
+          <h3>选择分析文件</h3>
+          <span class="toggle-icon">{{ isFileSectionCollapsed ? '+' : '-' }}</span>
+        </div>
+        <div v-if="selectedFile" class="selected-file-info" @click="$emit('show-preview')">
+          当前选中: {{ getSelectedFileName() }}
+        </div>
       </div>
-      <div v-if="selectedFile" class="selected-file-info" @click="$emit('show-preview')">
-        当前选中: {{ getSelectedFileName() }}
+      <div class="center-section">
+        <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
+          <img src="@/assets/images/logo.png" width="100" alt="Agent-Analytics">
+        </a>
       </div>
-      <h2>欢迎使用 Agent-Analytics 智能数据分析平台</h2>
-      <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
-        <img src="@/assets/images/github-original.svg" width="20" alt="GitHub">
-      </a>
+      <div class="right-section">
+      </div>
     </div>
   </div>
   
   <!-- 分析历史区域 -->
-  <div class="analysis-history" v-if="analysisHistory.length > 0">
+  <div class="analysis-history">
     <div class="history-title">分析历史:</div>
     <div class="history-buttons">
       <div
@@ -91,8 +96,7 @@ export default {
 <style scoped>
 .dashboard-header {
   text-align: center;
-  padding: 10px 0 10px 0;
-  border-bottom: 1px solid #ebeef5;
+  padding: 5px 0 5px 0;
   position: relative;
 }
 
@@ -165,9 +169,29 @@ export default {
 .header-content {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 30px;
+  justify-content: space-between;
   position: relative;
+  padding-left: 5px;
+  padding-right: 5px;
+}
+
+.left-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.center-section {
+  display: flex;
+  justify-content: center;
+  flex: 1;
+}
+
+.right-section {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .selected-file-info {
@@ -211,6 +235,23 @@ export default {
   .header-content {
     flex-direction: column;
     gap: 10px;
+  }
+  
+  .left-section, .center-section, .right-section {
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .left-section {
+    order: 2;
+  }
+  
+  .center-section {
+    order: 1;
+  }
+  
+  .right-section {
+    order: 3;
   }
 }
 </style>
