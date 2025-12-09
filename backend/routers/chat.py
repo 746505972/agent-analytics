@@ -7,7 +7,6 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 import os
-import pandas as pd
 import numpy as np
 import json
 import logging
@@ -121,72 +120,3 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
             yield f"data: {json.dumps({'error': error_msg})}\n\n"
     
     return StreamingResponse(generate(), media_type="text/event-stream")
-
-@router.post("/execute")
-async def execute_command(request: Request, chat_request: ChatRequest):
-    """
-    执行特定命令接口
-    """
-    try:
-        # 调试：打印从cookie获取的session_id
-        session_id = request.state.session_id
-        logger.info(f"调试信息 - Session ID: {session_id}")
-        
-        logger.info("开始处理命令执行请求")
-        
-        # 如果有data_id，获取文件路径并读取数据作为上下文
-        data_context = None
-        if chat_request.data_id:
-            try:
-                from utils.file_manager import get_file_path
-                # 获取session_id
-                file_path = get_file_path(chat_request.data_id, session_id)
-                if os.path.exists(file_path):
-                    import pandas as pd
-                    df = pd.read_csv(file_path, encoding="utf-8-sig")
-                    # 处理NaN值，将其替换为None以便JSON序列化
-                    df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
-                    
-                    # 确保所有值都可以被JSON序列化
-                    for col in df.columns:
-                        def convert_value(x):
-                            if pd.isna(x) or x is None:
-                                return None
-                            if hasattr(x, 'item'):
-                                try:
-                                    return x.item()
-                                except (ValueError, OverflowError):
-                                    return str(x)
-                            return x
-                        df[col] = df[col].apply(convert_value)
-                    
-                    data_context = {
-                        "data_id": chat_request.data_id,
-                        "filename": f"{chat_request.data_id}.csv",
-                        "shape": df.shape,
-                        "columns": list(df.columns),
-                        "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
-                        "sample_data": df.head().to_dict(),
-                        "session_id": session_id  # 添加session_id到数据上下文
-                    }
-            except Exception as e:
-                logger.warning(f"读取数据上下文时出错: {e}")
-        
-        # 使用agent处理查询，传递session_id
-        result = agent.process_query(chat_request.message, data_context, session_id)
-        
-        return JSONResponse(content={
-            "success": True,
-            "result": result['result'],
-            "tool_calls": result.get('tool_calls', [])
-        })
-    except Exception as e:
-        error_msg = f'执行命令时出错: {str(e)}'
-        logger.error(error_msg, exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={
-                "success": False,
-                "error": error_msg
-            }
-        )
