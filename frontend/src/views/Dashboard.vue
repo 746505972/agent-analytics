@@ -217,7 +217,7 @@ export default {
             { id: 'data_transformation', name: '数据转换' }, // 已实现
             { id: 'missing_value_interpolation', name: '插值法' }, // 已实现
             { id: 'add_header', name: '添加/修改标题行' }, // 已实现
-            // TODO: 添加数据转换（去除，K,M,G等）
+
           ]
         },
         {

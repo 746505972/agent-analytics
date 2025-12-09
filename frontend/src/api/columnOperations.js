@@ -29,10 +29,6 @@ export async function executeDeleteColumns(fileId, columnsToDelete) {
     credentials: 'include'
   });
 
-  if (!response.ok) {
-    throw new Error(`删除列请求失败，状态码: ${response.status}`);
-  }
-
   const result = await response.json();
   
   if (!result.success) {
@@ -67,10 +63,6 @@ export async function executeMissingValueInterpolation(fileId, selectedColumns, 
     }),
     credentials: 'include'
   });
-
-  if (!response.ok) {
-    throw new Error(`插值处理请求失败，状态码: ${response.status}`);
-  }
 
   const result = await response.json();
   

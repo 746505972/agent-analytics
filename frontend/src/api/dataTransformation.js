@@ -51,7 +51,7 @@ export async function executeDataTransformation(fileId, selectedColumns, config)
       break;
       
     default:
-      throw new Error('未知的转换类型');
+      throw new Error(`未知的转换类型: ${config.transformationType}。支持的类型包括: dimensionless, scientific, onehot`);
   }
 
   const response = await fetch(endpoint, {
@@ -62,10 +62,6 @@ export async function executeDataTransformation(fileId, selectedColumns, config)
     body: JSON.stringify(requestBody),
     credentials: 'include'
   });
-
-  if (!response.ok) {
-    throw new Error(`数据转换处理请求失败，状态码: ${response.status}`);
-  }
 
   const result = await response.json();
   
