@@ -506,8 +506,7 @@ def text_to_numeric_or_datetime(
                     df[col] = pd.to_datetime(df[col])
                 processed_columns.append(col)
             except Exception as e:
-                print(f"列 {col} 转换为时间失败: {e}")
-                continue
+                raise ValueError(f"列 {col} 转换为时间失败: {e}")
     else:
         raise ValueError(f"不支持的转换类型: {convert_to}，仅支持 'numeric' 或 'datetime'")
         

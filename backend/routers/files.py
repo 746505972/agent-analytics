@@ -484,3 +484,63 @@ async def one_hot_encoding_endpoint(request: Request, data_id: str, body: OneHot
                 "error": str(e)
             }
         )
+
+
+class TextToNumericOrDatetimeRequest(BaseModel):
+    columns: List[str]
+    convert_to: str = "numeric"  # "numeric" or "datetime"
+    datetime_format: Optional[str] = None
+
+
+@router.post("/{data_id}/text_to_numeric_or_datetime")
+async def text_to_numeric_or_datetime_endpoint(request: Request, data_id: str, body: TextToNumericOrDatetimeRequest):
+    """
+    文本转数值/时间接口
+
+    Args:
+        request (Request): FastAPI请求对象
+        data_id (str): 数据文件ID
+        body (TextToNumericOrDatetimeRequest): 请求体，包含处理参数
+
+    Returns:
+        JSONResponse: 处理结果
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+            
+        # 导入并调用文本转数值/时间函数
+        from utils.pandas_tool import text_to_numeric_or_datetime
+
+        result = text_to_numeric_or_datetime(
+            get_file_path(data_id, session_id), 
+            body.columns, 
+            body.convert_to,
+            session_id,
+            body.datetime_format
+        )
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"文本转数值/时间时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
