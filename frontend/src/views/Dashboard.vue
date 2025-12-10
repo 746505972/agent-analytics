@@ -145,6 +145,7 @@ import PreviewModal from "@/components/PreviewModal.vue";
 import { executeDataTransformation } from "@/api/dataTransformation.js";
 import { executeDeleteColumns, executeMissingValueInterpolation } from "@/api/columnOperations.js";
 import { applyHeaderNames } from "@/api/headerOperations.js";
+import { fetchAnalysisResult } from "@/api/analysisResults.js";
 import { 
   generateDataTransformationFeedback, 
   generateDeleteColumnsFeedback, 
@@ -577,18 +578,28 @@ export default {
       
       // 直接调用API获取分析结果
       this.loadingDetails = true;
-      const result = await this.fetchAnalysisResult(this.selectedFile, this.currentMethod);
-      this.loadingDetails = false;
-      
-      if (result) {
-        // 将结果保存到历史记录中
-        this.addToHistory(this.selectedFile, this.currentMethod, result);
+      this.isWaitingForResponse = true;
+      try {
+        const result = await fetchAnalysisResult(this.selectedFile, this.currentMethod, {
+          selectedColumns: this.selectedColumns,
+          correlationMethod: this.correlationMethod
+        });
         
-        // 设置分析结果数据
-        this.datasetDetails = result;
-        
-        // 切换到结果视图
-        this.switchToResultView();
+        if (result) {
+          // 将结果保存到历史记录中
+          this.addToHistory(this.selectedFile, this.currentMethod, result);
+          
+          // 设置分析结果数据
+          this.datasetDetails = result;
+          
+          // 切换到结果视图
+          this.switchToResultView();
+        }
+      } catch (error) {
+        alert("获取分析结果失败: " + error.message);
+      } finally {
+        this.loadingDetails = false;
+        this.isWaitingForResponse = false;
       }
     },
     
@@ -803,80 +814,6 @@ export default {
       this.dataTransformationConfig = {};
       // 相关性分析参数重置
       this.correlationMethod = 'pearson';
-    },
-    
-    // 调用API获取分析结果
-    async fetchAnalysisResult(dataId, method) {
-      try {
-        this.isWaitingForResponse = true;
-        if (method === 'basic_info') {
-          const response = await fetch(`/data/${dataId}/details`, {
-            credentials: 'include'
-          });
-
-          const result = await response.json();
-          if (result.success) {
-            return result.data;
-          } else {
-            console.error("获取分析结果失败:", result.error);
-            return null;
-          }
-        } else if (method === 'statistical_summary') {
-          // 准备请求体，包含选中的列
-          const requestBody = {};
-          if (this.selectedColumns && this.selectedColumns.length > 0) {
-            requestBody.columns = this.selectedColumns;
-          }
-          
-          const response = await fetch(`/data/${dataId}/statistical_summary`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody),
-            credentials: 'include'
-          });
-
-          const result = await response.json();
-          if (result.success) {
-            return result.data;
-          } else {
-            alert("获取统计摘要失败: " + result.error);
-          }
-        } else if (method === 'correlation_analysis') {
-          // 准备请求体，包含选中的列和方法
-          const requestBody = {
-            method: this.correlationMethod
-          };
-          
-          if (this.selectedColumns && this.selectedColumns.length > 0) {
-            requestBody.columns = this.selectedColumns;
-          }
-          
-          const response = await fetch(`/data/${dataId}/correlation_analysis`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody),
-            credentials: 'include'
-          });
-
-          const result = await response.json();
-          if (result.success) {
-            return result.data;
-          } else {
-            alert("获取相关性分析结果失败: " + result.error)
-          }
-        }
-        // 其他分析方法可以在这里添加
-        return null;
-      } catch (error) {
-        console.error("加载分析结果失败:", error);
-        return null;
-      } finally {
-        this.isWaitingForResponse = false;
-      }
     },
     
     // 修改添加到历史记录的方法，增加result参数
