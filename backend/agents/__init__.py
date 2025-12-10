@@ -18,6 +18,21 @@ class DataAnalysisAgent:
         self.tools = []
         self.agent = None
         self.setup_agent()
+        self.system_message ="""
+            你是一个专业的数据分析助手。你的任务是根据用户的问题，使用提供的工具来分析数据并给出专业的回答。
+            
+            你会收到以下信息：
+            1. 数据上下文信息：包含当前正在分析的文件的相关信息，如文件名、行列数、列名等
+            2. 用户问题：用户想要进行的具体分析任务
+            
+            请严格按照以下规则进行操作：
+            1. 仔细区分数据上下文信息和用户问题，不要混淆两者
+            2. 调用工具时一定要传入session_id          
+            3. 根据用户问题，结合数据上下文信息，选择合适的工具进行分析
+            4. 如果需要查看数据内容，可以使用文件读取工具
+            5. 回答时要专业、清晰、有条理
+            6. 在回答中主动提及当前分析的文件ID，让用户知道你了解上下文，但不要说出文件路径
+            """
     
     def setup_agent(self):
         """
@@ -103,14 +118,13 @@ class DataAnalysisAgent:
         
         # 注册添加标题行工具
         @tool
-        def add_header_tool(file_path: str, column_names: list, session_id: str = None, mode: str = "add") -> dict:
+        def add_header_row_tool(file_path: str, column_names: list, session_id: str = None) -> dict:
             """
-            为文件添加/修改标题行或单纯删除首行并创建新文件
+            为没有标题行的文件添加标题行并创建新文件
             Args:
             file_path (str): 文件路径
-            column_names (list): 列名列表(当mode="remove"时可以为空)
+            column_names (list): 列名列表
             session_id: session_id
-            mode (str): 操作模式，"add"表示添加标题行(产生新行)，"modify"表示修改现有标题行(不产生新行)，"remove"表示单纯删除第一行
             """
             from utils.file_manager import add_header_to_file, get_file_path
 
@@ -118,9 +132,48 @@ class DataAnalysisAgent:
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"文件不存在: {file_path}")
             
-            return add_header_to_file(file_path, column_names, session_id, mode)
+            return add_header_to_file(file_path, column_names, session_id, mode="add")
         
-        self.tools.append(add_header_tool)
+        self.tools.append(add_header_row_tool)
+        
+        # 注册修改标题行工具
+        @tool
+        def modify_header_row_tool(file_path: str, column_names: list, session_id: str = None) -> dict:
+            """
+            修改文件的现有标题行并创建新文件
+            Args:
+            file_path (str): 文件路径
+            column_names (list): 新的列名列表
+            session_id: session_id
+            """
+            from utils.file_manager import add_header_to_file, get_file_path
+
+            # 检查文件是否存在
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"文件不存在: {file_path}")
+            
+            return add_header_to_file(file_path, column_names, session_id, mode="modify")
+        
+        self.tools.append(modify_header_row_tool)
+        
+        # 注册删除首行工具
+        @tool
+        def remove_first_row_tool(file_path: str, session_id: str = None) -> dict:
+            """
+            删除文件的第一行（通常是有问题的标题行）并创建新文件
+            Args:
+            file_path (str): 文件路径
+            session_id: session_id
+            """
+            from utils.file_manager import add_header_to_file, get_file_path
+
+            # 检查文件是否存在
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"文件不存在: {file_path}")
+            
+            return add_header_to_file(file_path, [], session_id, mode="remove")
+        
+        self.tools.append(remove_first_row_tool)
         
         # 注册删除列工具
         @tool
@@ -158,9 +211,101 @@ class DataAnalysisAgent:
         register_ml_tools(self)
         register_visualization_tools(self)
     
+    def process_query_stream(self, query: str, data_context=None, session_id=None):
+        """
+        流式处理用户查询
+        
+        Args:
+            query (str): 用户的自然语言查询
+            data_context: 当前数据上下文
+            session_id: 用户会话ID
+            
+        Yields:
+            dict: 处理过程中的流式响应
+        """
+        try:
+            # 准备输入
+            messages = []
+            
+            # 添加系统消息
+
+            messages.append(SystemMessage(content=self.system_message))
+            
+            # 如果有数据上下文，则加入
+            if data_context:
+                # 构造更清晰的提示信息
+                context_info = f"""
+                    <数据上下文信息>
+                    文件ID(data_id): {data_context.get('data_id', '未知')}
+                    session_id: {session_id}
+                    文件路径:{data_context.get('file_path', '未知')}
+                    数据形状: {data_context.get('shape', '未知')} (行数, 列数)
+                    列名: {', '.join(data_context.get('columns', []))}
+                    数据类型: {data_context.get('dtypes', '未知')}
+                    示例数据: {data_context.get('sample_data', '无')}
+                    </数据上下文信息>
+                    """
+                # 移除了数据上下文信息的日志打印，以保护用户隐私
+                messages.append(HumanMessage(content=context_info))
+            
+            # 添加用户问题
+            messages.append(HumanMessage(content=f"<用户问题>{query}</用户问题>"))
+            
+            # 执行agent，传递session_id给工具
+            config = {"recursion_limit": 50}
+            if session_id:
+                config["session_id"] = session_id
+                
+            # 使用stream模式获取工具调用的详细信息
+            tool_calls_info = []
+            
+            for chunk in self.agent.stream(
+                {"messages": messages}, 
+                config=config, 
+                stream_mode="updates"
+            ):
+                # 检查是否有工具调用信息
+                if "agent" in chunk and "messages" in chunk["agent"]:
+                    message = chunk["agent"]["messages"][0]
+                    if hasattr(message, 'tool_calls') and message.tool_calls:
+                        for tool_call in message.tool_calls:
+                            tool_call_info = {
+                                "name": tool_call["name"],
+                                "args": tool_call["args"]
+                            }
+                            tool_calls_info.append(tool_call_info)
+                            # 流式返回工具调用信息
+                            yield {
+                                'type': 'tool_calls',
+                                'data': [tool_call_info]
+                            }
+                
+                # 流式返回响应内容
+                if "agent" in chunk and "messages" in chunk["agent"]:
+                    message = chunk["agent"]["messages"][0]
+                    if hasattr(message, 'content') and message.content:
+                        yield {
+                            'type': 'content',
+                            'data': message.content
+                        }
+            
+            # 发送结束标记
+            yield {
+                'type': 'end',
+                'data': None
+            }
+        except Exception as e:
+            import traceback
+            error_info = f"处理查询时发生错误: {traceback.format_exc()}"
+            print(error_info)
+            yield {
+                'type': 'error',
+                'data': str(e)
+            }
+    
     def process_query(self, query: str, data_context=None, session_id=None):
         """
-        处理用户查询
+        处理用户查询 (兼容旧版非流式接口)
         
         Args:
             query (str): 用户的自然语言查询
@@ -173,24 +318,8 @@ class DataAnalysisAgent:
         try:
             # 准备输入
             messages = []
-            
-            # 添加系统消息
-            system_message = """
-                你是一个专业的数据分析助手。你的任务是根据用户的问题，使用提供的工具来分析数据并给出专业的回答。
-                
-                你会收到以下信息：
-                1. 数据上下文信息：包含当前正在分析的文件的相关信息，如文件名、行列数、列名等
-                2. 用户问题：用户想要进行的具体分析任务
-                
-                请严格按照以下规则进行操作：
-                1. 仔细区分数据上下文信息和用户问题，不要混淆两者
-                2. 根据用户问题，结合数据上下文信息，选择合适的工具进行分析
-                3. 如果需要查看数据内容，可以使用文件读取工具
-                4. 回答时要专业、清晰、有条理
-                5. 如果用户询问你是否知道当前选择的文件，你应该明确告知用户你了解当前正在分析哪个文件
-                6. 在回答中主动提及当前分析的文件，让用户知道你了解上下文，但不要泄露session_id这种敏感数据
-                """
-            messages.append(SystemMessage(content=system_message))
+
+            messages.append(SystemMessage(content=self.system_message))
             
             # 如果有数据上下文，则加入
             if data_context:

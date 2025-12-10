@@ -72,11 +72,33 @@ export default {
       isWaitingForResponse: false
     }
   },
+  async created() {
+    // 在组件创建时调用测试接口获取session_id
+    await this.initializeSession();
+  },
   mounted() {
     // 恢复保存的聊天记录
     this.restoreChatHistory();
   },
   methods: {
+    // 添加初始化session的方法
+    async initializeSession() {
+      try {
+        const response = await fetch('/chat/test', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          console.log('Session initialized successfully');
+        } else {
+          console.error('Failed to initialize session, status:', response.status);
+        }
+      } catch (error) {
+        console.error('Error initializing session:', error);
+      }
+    },
+    
     // 添加Markdown渲染方法
     renderMarkdown(content) {
       if (!content) return '';
@@ -119,8 +141,6 @@ export default {
           data_id: this.selectedFile,
           history: this.chatMessages.slice(0, -1) // 不包括刚添加的AI回复占位符
         };
-        
-        console.log("发送请求数据:", requestData);
         
         // 发起流式请求
         const response = await fetch('/chat/stream', {
@@ -179,15 +199,15 @@ export default {
                       // 处理工具调用信息
                       toolCalls = parsed.tool_calls;
                       
-                      // 如果是添加标题行工具，需要刷新文件列表并选中新文件
+                      // 如果产生新文件，需要刷新文件列表并选中新文件
                       for (const toolCall of toolCalls) {
-                        if (toolCall.name === 'add_header_tool') {
-                          // 显示工具调用信息
-                          const toolInfo = `
-                            **工具调用详情:**
-                            - 工具名称: ${toolCall.name}
-                            - 参数: ${JSON.stringify(toolCall.args, null, 2)}`;
-                          this.chatMessages[aiMessageIndex].content += toolInfo;
+                        if (['add_header_tool','remove_first_row_tool','modify_header_row_tool',
+                        'delete_columns_tool','remove_invalid_samples_tool','handle_missing_values_tool',
+                        'dimensionless_processing_tool','scientific_calculation_tool',
+                        'one_hot_encoding_tool','text_to_numeric_or_datetime_tool'].includes(toolCall.name)) {
+                          // 显示工具调用通知
+                          const toolInfo = `工具调用详情:\n工具名称: ${toolCall.name}\n参数: ${JSON.stringify(toolCall.args, null, 2)}`;
+                          this.showCopyNotification(toolInfo, false);
                           
                           // 等待一段时间后刷新文件列表
                           setTimeout(async () => {
@@ -198,12 +218,9 @@ export default {
                             this.showCopyNotification(`工具执行成功，请在文件列表中查看新文件`, false);
                           }, 1000);
                         } else {
-                          // 显示其他工具调用信息
-                          const toolInfo = `
-                            **工具调用详情:**
-                            - 工具名称: ${toolCall.name}
-                            - 参数: ${JSON.stringify(toolCall.args, null, 2)}`;
-                          this.chatMessages[aiMessageIndex].content += toolInfo;
+                          // 显示其他工具调用信息的通知
+                          const toolInfo = `工具调用详情:\n工具名称: ${toolCall.name}\n参数: ${JSON.stringify(toolCall.args, null, 2)}`;
+                          this.showCopyNotification(toolInfo, false);
                         }
                       }
                     } else if (parsed.error) {
@@ -249,15 +266,32 @@ export default {
     
     // 复制消息文本
     copyMessageText(text) {
-      navigator.clipboard.writeText(text).then(() => {
-        // 添加视觉反馈
-        console.log('文本已复制到剪贴板');
-        // 创建一个临时的提示元素
-        this.showCopyNotification('文本已复制到剪贴板');
-      }).catch(err => {
-        console.error('复制失败:', err);
-        this.showCopyNotification('复制失败: ' + err.message, true);
-      });
+      // 检查 Clipboard API 是否可用
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          // 添加视觉反馈
+          console.log('文本已复制到剪贴板');
+          // 创建一个临时的提示元素
+          this.showCopyNotification('文本已复制到剪贴板');
+        }).catch(err => {
+          console.error('复制失败:', err);
+          this.showCopyNotification('复制失败: ' + err.message, true);
+        });
+      } else {
+        // 降级处理：使用传统的 execCommand 方法
+        try {
+          const textArea = document.createElement('textarea');
+          textArea.value = text;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          this.showCopyNotification('文本已复制到剪贴板');
+        } catch (err) {
+          console.error('复制失败:', err);
+          this.showCopyNotification('复制失败: ' + err.message, true);
+        }
+      }
     },
     
     // 显示复制通知
@@ -276,6 +310,7 @@ export default {
         box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
         z-index: 2000;
         font-size: 14px;
+        max-width: 30%;
       `;
       
       // 添加到页面

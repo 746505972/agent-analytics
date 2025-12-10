@@ -98,21 +98,18 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     import traceback
                     logger.error(traceback.format_exc())
             
-            # 执行agent，传递session_id给工具
-            result = agent.process_query(chat_request.message, data_context, session_id)
+            # 流式执行agent，传递session_id给工具
+            for response_chunk in agent.process_query_stream(chat_request.message, data_context, session_id):
+                if response_chunk['type'] == 'tool_calls':
+                    yield f"data: {json.dumps({'tool_calls': response_chunk['data']})}\n\n"
+                elif response_chunk['type'] == 'content':
+                    yield f"data: {json.dumps({'content': response_chunk['data']})}\n\n"
+                elif response_chunk['type'] == 'error':
+                    yield f"data: {json.dumps({'error': response_chunk['data']})}\n\n"
+                elif response_chunk['type'] == 'end':
+                    yield "data: [DONE]\n\n"
+                    break
             
-            # 发送工具调用信息
-            if result.get('tool_calls'):
-                yield f"data: {json.dumps({'tool_calls': result['tool_calls']})}\n\n"
-            
-            # 发送结果信息
-            response_text = result['result']
-            for i in range(0, len(response_text), 10):
-                chunk = response_text[i:i+10]
-                yield f"data: {json.dumps({'content': chunk})}\n\n"
-            
-            # 发送结束标记
-            yield "data: [DONE]\n\n"
             logger.info("流式响应完成")
         except Exception as e:
             error_msg = f'后端错误: {str(e)}'
