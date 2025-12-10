@@ -296,30 +296,51 @@ export default {
     
     // 显示复制通知
     showCopyNotification(message, isError = false) {
+      // 创建或获取通知容器
+      let notificationContainer = document.getElementById('notification-container');
+      if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notification-container';
+        notificationContainer.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          z-index: 2000;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        `;
+        document.body.appendChild(notificationContainer);
+      }
+      
       // 创建通知元素
       const notification = document.createElement('div');
       notification.textContent = message;
       notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
         padding: 12px 20px;
         background-color: ${isError ? '#f56c6c' : '#67c23a'};
         color: white;
         border-radius: 4px;
         box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-        z-index: 2000;
         font-size: 14px;
-        max-width: 30%;
+        max-width: 300px;
+        animation: slideIn 0.3s ease-out;
       `;
       
-      // 添加到页面
-      document.body.appendChild(notification);
+      // 添加到通知容器
+      notificationContainer.appendChild(notification);
       
       // 3秒后移除
       setTimeout(() => {
         if (notification.parentNode) {
           notification.parentNode.removeChild(notification);
+          
+          // 如果容器为空，移除容器
+          if (notificationContainer.children.length === 0) {
+            if (notificationContainer.parentNode) {
+              notificationContainer.parentNode.removeChild(notificationContainer);
+            }
+          }
         }
       }, 3000);
     },

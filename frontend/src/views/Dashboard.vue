@@ -106,18 +106,13 @@
       </div>
 
       <!-- 右侧：聊天分析区域 -->
-      <div :class="['right-section', { collapsed: isRightSectionCollapsed }]">
-        <div class="collapse-toggle" @click="toggleRightSection">
-          {{ isRightSectionCollapsed ? '<' : '>' }}
-        </div>
-        <div v-show="!isRightSectionCollapsed">
-          <ChatAssistant 
-            :selected-file="selectedFile"
-            :files="files"
-            @refresh-files="loadUploadedFiles"
-          />
-        </div>
-      </div>
+      <RightSidebar
+        :selected-file="selectedFile"
+        :files="files"
+        :is-collapsed="isRightSectionCollapsed"
+        @toggle-collapse="toggleRightSection"
+        @refresh-files="loadUploadedFiles"
+      />
   </div>
 
     <!-- 预览模态框 -->
@@ -154,10 +149,12 @@ import {
 } from "@/api/feedbackHandler.js";
 import { getMethodName } from "@/utils/methodUtils.js";
 import methodCategories from "@/utils/methodCategories.json";
+import RightSidebar from "@/components/RightSidebar.vue";
 
 export default {
   name: "Dashboard",
   components: {
+    RightSidebar,
     MethodParameterConfig, FileSelectionOverlay, MethodDescription, ResultContent,
     ChatAssistant, DashboardHeader, MethodSelection, PreviewModal
   },
@@ -945,37 +942,6 @@ export default {
   max-height: 100%;
 }
 
-.right-section {
-  flex: 1;
-  padding-right: 10px;
-  overflow-y: auto;
-  max-height: 100%;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.right-section.collapsed {
-  flex: 0 0 20px;
-  padding: 0;
-}
-
-.collapse-toggle {
-  position: absolute;
-  top: 25px;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 40px;
-  background-color: #419fff;
-  color: white;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-  font-weight: bold;
-}
-
 .config-section,
 .result-section {
   display: flex;
@@ -1018,11 +984,5 @@ export default {
     height: auto;
   }
 
-  .left-section,
-  .middle-section,
-  .right-section {
-    padding: 0 10px;
-    max-height: none;
-  }
 }
 </style>
