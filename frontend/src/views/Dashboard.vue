@@ -68,6 +68,7 @@
             @execute-delete-columns="executeDeleteColumns"
             @execute-method="executeMethod"
             @execute-data-transformation="executeDataTransformation"
+            @goto-chart="switchToResultView"
           />
           <!-- 列名列表和参数配置区域 -->
           <MethodParameterConfig

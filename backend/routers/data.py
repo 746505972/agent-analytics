@@ -13,7 +13,6 @@ from pydantic import BaseModel
 import pandas as pd
 import numpy as np
 import logging
-from typing import Any, List
 
 from utils.file_manager import get_file_path, delete_file, sanitize_filename
 
@@ -504,6 +503,78 @@ async def download_data(request: Request, data_id: str):
         )
     except Exception as e:
         logger.error(f"下载数据文件时出错: {str(e)}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+
+@router.get("/{data_id}/complete")
+async def get_complete_data(request: Request, data_id: str):
+    """
+    获取完整的数据文件内容接口，用于可视化等功能
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+
+        # 加载CSV文件
+        success, result, status_code = load_csv_file(data_id, session_id)
+        if not success:
+            return JSONResponse(
+                status_code=status_code,
+                content={
+                    "success": False,
+                    "error": result
+                }
+            )
+
+        df = result
+
+        # 检查DataFrame是否为空
+        if df.empty:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "error": "数据文件为空"
+                }
+            )
+
+        # 处理NaN值，将其替换为None以便JSON序列化
+        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+
+        # 确保所有的数据都可以被JSON序列化
+        for col in df.columns:
+            def convert_value(x):
+                if pd.isna(x) or x is None:
+                    return None
+                # 处理特殊浮点值
+                if isinstance(x, float):
+                    if np.isnan(x) or np.isinf(x):
+                        return None
+                if hasattr(x, 'item'):  # numpy标量类型
+                    try:
+                        val = x.item()
+                        # 再次检查特殊值
+                        if isinstance(val, float) and (np.isnan(val) or np.isinf(val)):
+                            return None
+                        return val
+                    except (ValueError, OverflowError):
+                        return str(x)
+                return x
+
+            df[col] = df[col].apply(convert_value)
+
+        return JSONResponse(content={
+            "success": True,
+            "data": df.to_dict('records')
+        })
+    except Exception as e:
+        logger.error(f"获取完整数据时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={
