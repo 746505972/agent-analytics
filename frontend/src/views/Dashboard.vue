@@ -68,7 +68,6 @@
             @execute-delete-columns="executeDeleteColumns"
             @execute-method="executeMethod"
             @execute-data-transformation="executeDataTransformation"
-            @goto-chart="switchToResultView"
           />
           <!-- 列名列表和参数配置区域 -->
           <MethodParameterConfig
@@ -141,7 +140,7 @@ import PreviewModal from "@/components/PreviewModal.vue";
 import { executeDataTransformation } from "@/api/dataTransformation.js";
 import { executeDeleteColumns, executeMissingValueInterpolation, executeInvalidSamples } from "@/api/columnOperations.js";
 import { applyHeaderNames } from "@/api/headerOperations.js";
-import { fetchAnalysisResult } from "@/api/analysisResults.js";
+import { fetchResult } from "@/api/results.js";
 import { 
   generateDataTransformationFeedback, 
   generateDeleteColumnsFeedback, 
@@ -498,14 +497,18 @@ export default {
       this.loadingDetails = true;
       this.isWaitingForResponse = true;
       try {
-        const result = await fetchAnalysisResult(this.selectedFile, this.currentMethod, {
+        const result = await fetchResult(this.selectedFile, this.currentMethod, {
           selectedColumns: this.selectedColumns,
           correlationMethod: this.correlationMethod
         });
         
         if (result) {
           // 将结果保存到历史记录中
-          this.addToHistory(this.selectedFile, this.currentMethod, result);
+          if (['line_chart'].includes(this.currentMethod)){
+            this.addToHistory(this.selectedFile, this.currentMethod, null);
+          } else {
+            this.addToHistory(this.selectedFile, this.currentMethod, result);
+          }
           
           // 设置分析结果数据
           this.datasetDetails = result;

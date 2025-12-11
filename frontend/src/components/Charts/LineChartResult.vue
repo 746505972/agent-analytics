@@ -1,9 +1,6 @@
 <template>
   <div class="line-chart-result">
     <h3>折线图</h3>
-    <div class="chart-container">
-      <div ref="chart" class="chart"></div>
-    </div>
     <div class="controls">
       <div class="control-group">
         <label>X轴字段:</label>
@@ -23,6 +20,9 @@
           图表配置
         </button>
       </div>
+    </div>
+    <div class="chart-container">
+      <div ref="chart" class="chart"></div>
     </div>
     
     <!-- 图表配置浮窗 -->
@@ -105,8 +105,6 @@
         </div>
       </div>
     </div>
-    
-    <div v-if="loading" class="loading">加载数据中...</div>
   </div>
 </template>
 
@@ -158,13 +156,21 @@ export default {
   },
   watch: {
     datasetDetails: {
-      handler() {
-        this.$nextTick(() => {
-          this.initChart();
-        });
+      handler(newVal) {
+        if (newVal && newVal.data && newVal.data.length > 0) {
+          this.$nextTick(() => {
+            this.initChart();
+          });
+        }
       },
       deep: true,
       immediate: true
+    },
+    xAxisColumn() {
+      this.drawChart();
+    },
+    yAxisColumn() {
+      this.drawChart();
     }
   },
   methods: {
@@ -173,79 +179,77 @@ export default {
         this.chart = echarts.init(this.$refs.chart);
       }
       
-      // 设置默认的X轴和Y轴
-      if (this.numericColumns.length >= 2) {
-        this.xAxisColumn = this.numericColumns[0];
-        this.yAxisColumn = this.numericColumns[1];
-      } else if (this.numericColumns.length === 1) {
-        this.xAxisColumn = this.numericColumns[0];
-        this.yAxisColumn = this.numericColumns[0];
+      // 只有当还没有选择字段时才设置默认的X轴和Y轴
+      if (!this.xAxisColumn && !this.yAxisColumn) {
+        if (this.numericColumns.length >= 2) {
+          this.xAxisColumn = this.numericColumns[0];
+          this.yAxisColumn = this.numericColumns[1];
+        } else if (this.numericColumns.length === 1) {
+          this.xAxisColumn = this.numericColumns[0];
+          this.yAxisColumn = this.numericColumns[0];
+        }
       }
       
       this.drawChart();
     },
     
-    async drawChart() {
-      if (!this.chart || !this.xAxisColumn || !this.yAxisColumn) return;
+    drawChart() {
+      // 检查必要条件是否满足
+      if (!this.chart || !this.xAxisColumn || !this.yAxisColumn || 
+          !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
+        return;
+      }
       
-      // 从新接口获取完整数据
       try {
-        this.loading = true;
-        const response = await fetch(`/data/${this.datasetDetails.data_id}/complete`);
-        const rawData = await response.json();
+        // 直接从传入的数据中提取数据
+        const data = this.datasetDetails.data;
         
-        if (rawData.success) {
-          const data = rawData.data;
-          
-          // 提取X轴和Y轴数据
-          const xAxisData = data.map(row => row[this.xAxisColumn]);
-          const yAxisData = data.map(row => row[this.yAxisColumn]);
-          
-          const option = {
-            title: {
-              text: '折线图'
-            },
-            tooltip: {
-              trigger: 'axis'
-            },
-            toolbox: {
-              show: true,
-              feature: {
-                dataView: { readOnly: false },
-                restore: {},
-                saveAsImage: {}
-              }
-            },
-            xAxis: {
-              type: 'category',
-              data: xAxisData
-            },
-            yAxis: {
-              type: 'value'
-            },
-            series: [{
-              data: yAxisData,
-              type: 'line',
-              smooth: this.chartStyles.smoothLine,
-              areaStyle: this.chartStyles.showArea ? {} : undefined,
-              itemStyle: {
-                color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line
-              }
-            }]
-          };
-          
-          // 如果不显示网格线
-          if (!this.chartStyles.showGrid) {
-            option.xAxis.splitLine = { show: false };
-            option.yAxis.splitLine = { show: false };
-          }
-          
-          this.chart.setOption(option, true);
+        // 提取X轴和Y轴数据
+        const xAxisData = data.map(row => row[this.xAxisColumn]);
+        const yAxisData = data.map(row => row[this.yAxisColumn]);
+        
+        const option = {
+          title: {
+            text: '折线图'
+          },
+          tooltip: {
+            trigger: 'axis'
+          },
+          toolbox: {
+            show: true,
+            feature: {
+              dataView: { readOnly: false },
+              restore: {},
+              saveAsImage: {}
+            }
+          },
+          xAxis: {
+            type: 'category',
+            data: xAxisData
+          },
+          yAxis: {
+            type: 'value'
+          },
+          series: [{
+            data: yAxisData,
+            type: 'line',
+            smooth: this.chartStyles.smoothLine,
+            areaStyle: this.chartStyles.showArea ? {} : undefined,
+            itemStyle: {
+              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line
+            }
+          }]
+        };
+        
+        // 如果不显示网格线
+        if (!this.chartStyles.showGrid) {
+          option.xAxis.splitLine = { show: false };
+          option.yAxis.splitLine = { show: false };
         }
+        
+        this.chart.setOption(option, true);
       } catch (error) {
-        console.error('获取数据失败:', error);
-      } finally {
-        this.loading = false;
+        console.error('绘制图表失败:', error);
       }
     },
     
@@ -336,12 +340,6 @@ export default {
 
 .config-button:hover {
   background-color: #e9e9eb;
-}
-
-.loading {
-  text-align: center;
-  padding: 20px;
-  color: #666;
 }
 
 /* 图表配置浮窗样式 */

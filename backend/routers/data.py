@@ -568,10 +568,24 @@ async def get_complete_data(request: Request, data_id: str):
                 return x
 
             df[col] = df[col].apply(convert_value)
+            
+        # 在最终转换为dict之前，再做一次全局替换以确保没有遗漏的NaN值
+        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
+        
+        # 构建列信息
+        column_info = {}
+        for col in df.columns:
+            dtype = str(df[col].dtype)
+            # 将pandas数据类型映射为前端更容易理解的类型
+            if 'int' in dtype or 'float' in dtype:
+                column_info[col] = {'dtype': 'numeric'}
+            else:
+                column_info[col] = {'dtype': 'categorical'}
 
         return JSONResponse(content={
             "success": True,
-            "data": df.to_dict('records')
+            "data": {"data": df.to_dict('records'),
+                    "column_info": column_info}
         })
     except Exception as e:
         logger.error(f"获取完整数据时出错: {str(e)}")

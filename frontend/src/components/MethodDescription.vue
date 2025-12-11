@@ -198,7 +198,7 @@
         </button>
         <button
           v-else-if="currentMethod === 'line_chart'"
-          @click="$emit('goto-chart')"
+          @click="$emit('execute-method')"
           class="execute-button"
         >
           跳转
@@ -235,7 +235,6 @@ export default {
     'execute-missing-value-interpolation',
     'execute-delete-columns',
     'execute-data-transformation',
-    'goto-chart',
     'execute-method'
   ]
 }

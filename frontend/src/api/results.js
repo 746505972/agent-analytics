@@ -2,6 +2,35 @@
  * 分析结果 API 模块
  * 提供获取各种分析结果功能的封装
  */
+export async function fetchResult(dataId, method, options = {}){
+  if(method === 'line_chart'){
+    return await fetchCompleteData(dataId);
+  }else{
+    return await fetchAnalysisResult(dataId, method, options);
+  }
+}
+/**
+ * 获取完整数据
+ * @param {string} dataId - 数据文件ID
+ * @returns {Promise<Object|null>} 完整数据或null（如果失败）
+ */
+export async function fetchCompleteData(dataId) {
+  try {
+    const response = await fetch(`/data/${dataId}/complete`, {
+      credentials: 'include'
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      return result.data;
+    } else {
+      throw new Error(result.error || "获取完整数据失败");
+    }
+  } catch (error) {
+    console.error("加载完整数据失败:", error);
+    throw error;
+  }
+}
 
 /**
  * 获取分析结果
