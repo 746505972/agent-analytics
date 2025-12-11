@@ -183,17 +183,15 @@ export default {
                       accumulatedContent += parsed.content;
                       // 更新AI回复内容
                       this.chatMessages[aiMessageIndex].content = accumulatedContent;
-                      // 滚动到底部并触发更新
-                      await this.$nextTick(() => {
-                        const messagesContainer = document.querySelector('.messages');
-                        if (messagesContainer) {
-                          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                        }
-                      });
-                                          
-                      // 每累积一定字符数就强制更新DOM以实现实时显示效果
-                      if (accumulatedContent.length % 5 === 0) {
-                        await this.$nextTick();
+                      console.log(accumulatedContent)
+                      
+                      // 强制更新DOM以实现实时显示效果
+                      await this.$nextTick();
+                      
+                      // 滚动到底部
+                      const messagesContainer = document.querySelector('.messages');
+                      if (messagesContainer) {
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight;
                       }
                     } else if (parsed.tool_calls !== undefined) {
                       // 处理工具调用信息
@@ -206,9 +204,9 @@ export default {
                         'dimensionless_processing_tool','scientific_calculation_tool',
                         'one_hot_encoding_tool','text_to_numeric_or_datetime_tool'].includes(toolCall.name)) {
                           // 显示工具调用通知
-                          const toolInfo = `工具调用详情:\n工具名称: ${toolCall.name}\n参数: ${JSON.stringify(toolCall.args, null, 2)}`;
+                          const toolInfo = `工具调用:\n${toolCall.name}`;
                           this.showCopyNotification(toolInfo, false);
-                          
+                          // TODO: 工具名反映射回中文
                           // 等待一段时间后刷新文件列表
                           setTimeout(async () => {
                             // 触发父组件刷新文件列表的事件
@@ -216,10 +214,10 @@ export default {
                             
                             // 显示通知
                             this.showCopyNotification(`工具执行成功，请在文件列表中查看新文件`, false);
-                          }, 1000);
+                          }, 500);
                         } else {
                           // 显示其他工具调用信息的通知
-                          const toolInfo = `工具调用详情:\n工具名称: ${toolCall.name}\n参数: ${JSON.stringify(toolCall.args, null, 2)}`;
+                          const toolInfo = `工具调用:\n${toolCall.name}`;
                           this.showCopyNotification(toolInfo, false);
                         }
                       }
