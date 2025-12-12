@@ -5,7 +5,7 @@
       <div class="control-group">
         <label>X轴字段:</label>
         <select v-model="xAxisColumn" @change="drawChart">
-          <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
+          <option v-for="col in availableColumns" :key="col" :value="col">{{ col }}</option>
         </select>
       </div>
       <div class="control-group">
@@ -152,6 +152,17 @@ export default {
         );
       }
       return [];
+    },
+    availableColumns() {
+      // 获取所有可用列（包括数值型、分类型、日期时间型等）
+      if (this.datasetDetails && this.datasetDetails.column_info) {
+        return Object.keys(this.datasetDetails.column_info).filter(col => 
+          ['numeric', 'categorical', 'datetime', 'ordinal'].includes(
+            this.datasetDetails.column_info[col].dtype
+          )
+        );
+      }
+      return [];
     }
   },
   watch: {
@@ -181,12 +192,16 @@ export default {
       
       // 只有当还没有选择字段时才设置默认的X轴和Y轴
       if (!this.xAxisColumn && !this.yAxisColumn) {
-        if (this.numericColumns.length >= 2) {
-          this.xAxisColumn = this.numericColumns[0];
-          this.yAxisColumn = this.numericColumns[1];
-        } else if (this.numericColumns.length === 1) {
-          this.xAxisColumn = this.numericColumns[0];
+        // X轴可以选择任何支持的类型
+        if (this.availableColumns.length >= 1) {
+          this.xAxisColumn = this.availableColumns[0];
+        }
+        
+        // Y轴优先选择数值型列
+        if (this.numericColumns.length >= 1) {
           this.yAxisColumn = this.numericColumns[0];
+        } else if (this.availableColumns.length >= 2) {
+          this.yAxisColumn = this.availableColumns[1];
         }
       }
       
@@ -199,6 +214,7 @@ export default {
           !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
         return;
       }
+      this.chart.clear();
       
       try {
         // 直接从传入的数据中提取数据
@@ -208,12 +224,76 @@ export default {
         const xAxisData = data.map(row => row[this.xAxisColumn]);
         const yAxisData = data.map(row => row[this.yAxisColumn]);
         
+        // 根据X轴数据类型确定X轴类型
+        const xColumnType = this.datasetDetails.column_info[this.xAxisColumn]?.dtype || 'category';
+        const xAxisType = ['numeric', 'datetime'].includes(xColumnType) ? 'value' : 'category';
+        
+        // Y轴通常应该是数值型的
+        const yColumnType = this.datasetDetails.column_info[this.yAxisColumn]?.dtype || 'value';
+        const yAxisType = yColumnType === 'datetime' ? 'time' : 
+                         yColumnType === 'numeric' ? 'value' : 'category';
+        
+        // 准备系列数据
+        let seriesData;
+        if (xAxisType === 'category') {
+          seriesData = yAxisData;
+        } else {
+          // 对于数值型或时间型X轴，需要组合XY数据
+          seriesData = data.map((row, index) => [row[this.xAxisColumn], row[this.yAxisColumn]]);
+        }
+        
         const option = {
           title: {
-            text: '折线图'
+            text: '折线图',
+            left: 'center',
+            textStyle: {
+              color: '#666',
+              fontSize: 16
+            }
           },
           tooltip: {
-            trigger: 'axis'
+            trigger: 'axis',
+            axisPointer: {
+              type: 'cross',
+              crossStyle: {
+                color: '#999'
+              }
+            },
+            snap: true,
+            label: {
+              show: true,
+              backgroundColor: '#666'
+            },
+            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            textStyle: {
+              color: '#fff'
+            },
+            formatter: (params) => {
+              try {
+                let result = [];
+                params.forEach(param => {
+                  if (xAxisType === 'time' || xColumnType === 'datetime') {
+                    const date = new Date(param.axisValue);
+                    const timeStr = isNaN(date.getTime()) 
+                      ? param.axisValue 
+                      : `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+                    result.push(`<div style="font-weight:bold;">📅 ${timeStr}</div>`);
+                  } else {
+                    result.push(`<div style="font-weight:bold;">${param.axisValue}</div>`);
+                  }
+                  
+                  result.push(`<div>${param.seriesName}: <span style="color:${param.color}">${
+                    typeof param.data === 'object' && param.data !== null ? 
+                    (param.data.value ? param.data.value[1] : param.data[1]) : 
+                    param.data
+                  }</span></div>`);
+                });
+                return result.join('');
+              } catch (error) {
+                console.error('Error formatting tooltip:', error);
+                return '数据格式错误';
+              }
+            }
           },
           toolbox: {
             show: true,
@@ -223,22 +303,109 @@ export default {
               saveAsImage: {}
             }
           },
+          grid: {
+            top: '20%',
+            bottom: '15%',
+            left: '10%',
+            right: '10%',
+            containLabel: true
+          },
+          brush: {
+            xAxisIndex: 'all',
+            brushLink: 'all',
+            outOfBrush: {
+              colorAlpha: 0.1
+            }
+          },
           xAxis: {
-            type: 'category',
-            data: xAxisData
+            type: xAxisType,
+            name: this.xAxisColumn,
+            data: xAxisType === 'category' ? xAxisData : undefined,
+            axisLabel: {
+              color: '#666',
+              rotate: 0,
+              interval: 'auto'
+            },
+            axisLine: {
+              lineStyle: {
+                color: '#ccc'
+              }
+            },
+            boundaryGap: false,
+            min: 'dataMin',
+            max: 'dataMax'
           },
           yAxis: {
-            type: 'value'
+            type: yAxisType,
+            name: this.yAxisColumn,
+            axisLabel: {
+              color: '#666',
+              formatter: yAxisType === 'value' ? '{value}' : undefined
+            },
+            axisLine: {
+              lineStyle: {
+                color: '#ccc'
+              }
+            },
+            splitLine: {
+              lineStyle: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            }
           },
           series: [{
-            data: yAxisData,
+            name: this.yAxisColumn,
             type: 'line',
+            data: seriesData,
             smooth: this.chartStyles.smoothLine,
-            areaStyle: this.chartStyles.showArea ? {} : undefined,
+            areaStyle: this.chartStyles.showArea ? {
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [{
+                  offset: 0,
+                  color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line
+                }, {
+                  offset: 1,
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }]
+              }
+            } : undefined,
             itemStyle: {
               color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line
+            },
+            lineStyle: {
+              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line,
+              width: 2
+            },
+            symbolSize: 4,
+            emphasis: {
+              focus: 'series'
             }
-          }]
+          }],
+          dataZoom: [
+            {
+              type: 'inside',
+              xAxisIndex: [0],
+              yAxisIndex: false,
+              zoomOnMouseWheel: true,
+              moveOnMouseMove: true
+            },
+            {
+              type: 'slider',
+              xAxisIndex: [0],
+              yAxisIndex: false,
+              start: 0,
+              end: 100
+            }
+          ],
+          axisPointer: {
+            link: { xAxisIndex: 'all' },
+            triggerTooltip: true
+          }
         };
         
         // 如果不显示网格线
@@ -246,8 +413,19 @@ export default {
           option.xAxis.splitLine = { show: false };
           option.yAxis.splitLine = { show: false };
         }
-        
+
         this.chart.setOption(option, true);
+
+        // 添加窗口大小调整监听
+        const handleResize = () => {
+          if (this.chart) {
+            this.chart.resize();
+          }
+        };
+
+        // 移除之前的监听器，避免重复添加
+        window.removeEventListener('resize', handleResize);
+        window.addEventListener('resize', handleResize);
       } catch (error) {
         console.error('绘制图表失败:', error);
       }
@@ -280,12 +458,7 @@ export default {
       });
     }
   },
-  
-  beforeUnmount() {
-    if (this.chart) {
-      this.chart.dispose();
-    }
-  }
+
 };
 </script>
 
