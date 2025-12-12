@@ -140,7 +140,8 @@ export default {
         showGrid: true,
         smoothLine: true,
         showArea: false
-      }
+      },
+      resizeObserver: null
     };
   },
   computed: {
@@ -169,9 +170,7 @@ export default {
     datasetDetails: {
       handler(newVal) {
         if (newVal && newVal.data && newVal.data.length > 0) {
-          this.$nextTick(() => {
-            this.initChart();
-          });
+          this.initChart();
         }
       },
       deep: true,
@@ -186,26 +185,63 @@ export default {
   },
   methods: {
     initChart() {
-      if (!this.chart) {
+      // 确保DOM已经更新
+      this.$nextTick(() => {
+        if (!this.$refs.chart) {
+          console.warn('Chart container not found');
+          return;
+        }
+
+        // 如果已有图表实例，先销毁
+        if (this.chart) {
+          this.chart.dispose();
+          this.chart = null;
+        }
+
+        // 初始化ECharts实例
         this.chart = echarts.init(this.$refs.chart);
-      }
-      
-      // 只有当还没有选择字段时才设置默认的X轴和Y轴
-      if (!this.xAxisColumn && !this.yAxisColumn) {
-        // X轴可以选择任何支持的类型
-        if (this.availableColumns.length >= 1) {
-          this.xAxisColumn = this.availableColumns[0];
-        }
         
-        // Y轴优先选择数值型列
-        if (this.numericColumns.length >= 1) {
-          this.yAxisColumn = this.numericColumns[0];
-        } else if (this.availableColumns.length >= 2) {
-          this.yAxisColumn = this.availableColumns[1];
+        // 添加resize监听
+        this.setupResizeObserver();
+
+        // 设置默认字段
+        if (!this.xAxisColumn && !this.yAxisColumn) {
+          // X轴可以选择任何支持的类型
+          if (this.availableColumns.length >= 1) {
+            this.xAxisColumn = this.availableColumns[0];
+          }
+          
+          // Y轴优先选择数值型列
+          if (this.numericColumns.length >= 1) {
+            this.yAxisColumn = this.numericColumns[0];
+          } else if (this.availableColumns.length >= 2) {
+            this.yAxisColumn = this.availableColumns[1];
+          }
         }
+
+        this.$nextTick(() => {
+          this.drawChart();
+        });
+      });
+    },
+    
+    setupResizeObserver() {
+      // 清除之前的监听器
+      if (this.resizeObserver) {
+        this.resizeObserver.disconnect();
       }
       
-      this.drawChart();
+      // 创建新的ResizeObserver
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.chart) {
+          this.chart.resize();
+        }
+      });
+      
+      // 监听图表容器变化
+      if (this.$refs.chart) {
+        this.resizeObserver.observe(this.$refs.chart);
+      }
     },
     
     drawChart() {
@@ -214,7 +250,6 @@ export default {
           !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
         return;
       }
-      this.chart.clear();
       
       try {
         // 直接从传入的数据中提取数据
@@ -268,32 +303,6 @@ export default {
             textStyle: {
               color: '#fff'
             },
-            formatter: (params) => {
-              try {
-                let result = [];
-                params.forEach(param => {
-                  if (xAxisType === 'time' || xColumnType === 'datetime') {
-                    const date = new Date(param.axisValue);
-                    const timeStr = isNaN(date.getTime()) 
-                      ? param.axisValue 
-                      : `${date.getFullYear()}-${(date.getMonth()+1).toString().padStart(2,'0')}-${date.getDate().toString().padStart(2,'0')} ${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
-                    result.push(`<div style="font-weight:bold;">📅 ${timeStr}</div>`);
-                  } else {
-                    result.push(`<div style="font-weight:bold;">${param.axisValue}</div>`);
-                  }
-                  
-                  result.push(`<div>${param.seriesName}: <span style="color:${param.color}">${
-                    typeof param.data === 'object' && param.data !== null ? 
-                    (param.data.value ? param.data.value[1] : param.data[1]) : 
-                    param.data
-                  }</span></div>`);
-                });
-                return result.join('');
-              } catch (error) {
-                console.error('Error formatting tooltip:', error);
-                return '数据格式错误';
-              }
-            }
           },
           toolbox: {
             show: true,
@@ -309,13 +318,6 @@ export default {
             left: '10%',
             right: '10%',
             containLabel: true
-          },
-          brush: {
-            xAxisIndex: 'all',
-            brushLink: 'all',
-            outOfBrush: {
-              colorAlpha: 0.1
-            }
           },
           xAxis: {
             type: xAxisType,
@@ -414,18 +416,10 @@ export default {
           option.yAxis.splitLine = { show: false };
         }
 
+        // 先清空图表再重新设置选项，确保坐标系正确初始化
+        this.chart.clear();
         this.chart.setOption(option, true);
 
-        // 添加窗口大小调整监听
-        const handleResize = () => {
-          if (this.chart) {
-            this.chart.resize();
-          }
-        };
-
-        // 移除之前的监听器，避免重复添加
-        window.removeEventListener('resize', handleResize);
-        window.addEventListener('resize', handleResize);
       } catch (error) {
         console.error('绘制图表失败:', error);
       }
@@ -447,18 +441,30 @@ export default {
       // 使用自定义颜色更新配色方案
       this.colorSchemes[0][0] = this.customColors.line;
       this.currentColorScheme = 0; // 切换到自定义配色方案
-      this.$nextTick(() => {
-        this.drawChart();
-      });
+      this.drawChart();
     },
     
     applyStyleChanges() {
-      this.$nextTick(() => {
-        this.drawChart();
-      });
+      this.drawChart();
     }
   },
-
+  
+  mounted() {
+    this.initChart();
+  },
+  
+  beforeUnmount() {
+    // 组件销毁前清理资源
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    
+    if (this.chart) {
+      this.chart.dispose();
+      this.chart = null;
+    }
+  }
 };
 </script>
 
