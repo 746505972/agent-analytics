@@ -243,7 +243,6 @@ export default {
   color: #409eff;
   cursor: pointer;
   font-size: 14px;
-  text-decoration: underline;
   user-select: none
 }
 
@@ -252,7 +251,6 @@ export default {
   color: #67c23a;
   cursor: pointer;
   font-size: 14px;
-  text-decoration: underline;
   user-select: none
 }
 

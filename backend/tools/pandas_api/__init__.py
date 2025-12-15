@@ -152,6 +152,28 @@ def statistical_summary_tool(
     from utils.pandas_tool import statistical_summary
     return statistical_summary(file_path, columns, session_id)
 
+# 注册文本转换工具
+@tool
+def text_to_numeric_or_datetime_tool(
+    file_path: str,
+    columns: List[str],
+    convert_to: str = "numeric",
+    session_id: str = None,
+    datetime_format: str = None
+) -> dict:
+    """
+    文本转数值/时间 - 将包含千位分隔符、单位缩写（K,M等）的文本列转换为数值列，或将时间戳转换为时间列
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要处理的列名列表
+        convert_to (str): 转换目标类型 "numeric" 或 "datetime"
+        session_id (str): 会话ID
+        datetime_format (str): 时间格式(可选)，如转换为时间时可指定格式，例如 "%Y-%m-%d %H:%M:%S"
+    """
+    from utils.pandas_tool import text_to_numeric_or_datetime
+    return text_to_numeric_or_datetime(file_path, columns, convert_to, session_id, datetime_format)
+
 
 # 注册相关性分析工具
 @tool
@@ -257,3 +279,4 @@ def register_pandas_tools(agent):
     agent.tools.append(cluster_analysis)
     agent.tools.append(regression_analysis)
     agent.tools.append(hypothesis_test)
+    agent.tools.append(text_to_numeric_or_datetime_tool)

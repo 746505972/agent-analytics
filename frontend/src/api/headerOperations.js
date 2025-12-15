@@ -42,10 +42,6 @@ export async function applyHeaderNames(fileId, columnNames, mode = "add") {
     credentials: 'include'
   });
 
-  if (!response.ok) {
-    throw new Error(`添加标题行请求失败，状态码: ${response.status}`);
-  }
-
   const result = await response.json();
 
   if (!result.success) {

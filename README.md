@@ -26,6 +26,7 @@ Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据�
 
 #### 工具调用
 ![img_1.png](images/img_1.png)
+![img_3.png](images/img_3.png)
 
 #### 分析渲染
 ![img_2.png](images/img_2.png)

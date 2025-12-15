@@ -50,8 +50,19 @@ export async function executeDataTransformation(fileId, selectedColumns, config)
       };
       break;
       
+    case 'text_to_numeric_or_datetime':
+      endpoint = `/user/${fileId}/text_to_numeric_or_datetime`;
+      requestBody = {
+        columns: selectedColumns,
+        convert_to: config.text_to_numeric_or_datetime.convert_to,
+        ...(config.text_to_numeric_or_datetime.convert_to === 'datetime' && 
+          config.text_to_numeric_or_datetime.datetime_format && 
+          { datetime_format: config.text_to_numeric_or_datetime.datetime_format })
+      };
+      break;
+      
     default:
-      throw new Error('未知的转换类型');
+      throw new Error(`未知的转换类型: ${config.transformationType}。支持的类型包括: dimensionless, scientific, onehot, text_to_numeric_or_datetime`);
   }
 
   const response = await fetch(endpoint, {
@@ -62,10 +73,6 @@ export async function executeDataTransformation(fileId, selectedColumns, config)
     body: JSON.stringify(requestBody),
     credentials: 'include'
   });
-
-  if (!response.ok) {
-    throw new Error(`数据转换处理请求失败，状态码: ${response.status}`);
-  }
 
   const result = await response.json();
   

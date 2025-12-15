@@ -106,18 +106,13 @@
       </div>
 
       <!-- 右侧：聊天分析区域 -->
-      <div :class="['right-section', { collapsed: isRightSectionCollapsed }]">
-        <div class="collapse-toggle" @click="toggleRightSection">
-          {{ isRightSectionCollapsed ? '<' : '>' }}
-        </div>
-        <div v-show="!isRightSectionCollapsed">
-          <ChatAssistant 
-            :selected-file="selectedFile"
-            :files="files"
-            @refresh-files="loadUploadedFiles"
-          />
-        </div>
-      </div>
+      <RightSidebar
+        :selected-file="selectedFile"
+        :files="files"
+        :is-collapsed="isRightSectionCollapsed"
+        @toggle-collapse="toggleRightSection"
+        @refresh-files="loadUploadedFiles"
+      />
   </div>
 
     <!-- 预览模态框 -->
@@ -143,8 +138,9 @@ import DashboardHeader from "@/components/DashboardHeader.vue";
 import MethodParameterConfig from "@/components/Config/MethodParameterConfig.vue";
 import PreviewModal from "@/components/PreviewModal.vue";
 import { executeDataTransformation } from "@/api/dataTransformation.js";
-import { executeDeleteColumns, executeMissingValueInterpolation } from "@/api/columnOperations.js";
+import { executeDeleteColumns, executeMissingValueInterpolation, executeInvalidSamples } from "@/api/columnOperations.js";
 import { applyHeaderNames } from "@/api/headerOperations.js";
+import { fetchResult } from "@/api/results.js";
 import { 
   generateDataTransformationFeedback, 
   generateDeleteColumnsFeedback, 
@@ -152,10 +148,13 @@ import {
   generateInvalidSamplesFeedback
 } from "@/api/feedbackHandler.js";
 import { getMethodName } from "@/utils/methodUtils.js";
+import methodCategories from "@/utils/methodCategories.json";
+import RightSidebar from "@/components/RightSidebar.vue";
 
 export default {
   name: "Dashboard",
   components: {
+    RightSidebar,
     MethodParameterConfig, FileSelectionOverlay, MethodDescription, ResultContent,
     ChatAssistant, DashboardHeader, MethodSelection, PreviewModal
   },
@@ -207,71 +206,7 @@ export default {
       // 新增方法选择相关数据
       currentMethod: 'basic_info',
       expandedCategories: ['statistics', 'ml', 'visualization', 'nlp', 'data_processing'], // 默认全部展开
-      methodCategories: [
-        {
-          id: 'data_processing',
-          name: '数据处理',
-          methods: [
-            { id: 'invalid_samples', name: '无效样本' }, // 已实现
-            { id: 'delete_columns', name: '删除列' }, // 已实现
-            { id: 'data_transformation', name: '数据转换' }, // 已实现
-            { id: 'missing_value_interpolation', name: '插值法' }, // 已实现
-            { id: 'add_header', name: '添加/修改标题行' }, // 已实现
-            // TODO: 添加数据转换（去除，K,M,G等）
-          ]
-        },
-        {
-          id: 'statistics',
-          name: '统计方法',
-          methods: [
-            { id: 'basic_info', name: '基本信息' }, // 已实现
-            { id: 'statistical_summary', name: '统计摘要' }, // 已实现
-            { id: 'correlation_analysis', name: '相关性分析' }, // 已实现
-            { id: 't_test', name: 'T检验' },
-            { id: 'f_test', name: 'F检验' },
-            { id: 'chi_square_test', name: '卡方检验' },
-            { id: 'linear_regression', name: '线性回归' },
-            { id: 'normality_test', name: '正态性检验' },
-            { id: 'non_parametric_test', name: '非参数检验' }
-          ]
-        },
-        {
-          id: 'ml',
-          name: '机器学习',
-          methods: [
-            { id: 'clustering', name: '聚类分析' },
-            { id: 'classification', name: '分类分析' },
-            { id: 'logistic_regression', name: '逻辑回归' },
-            { id: 'decision_tree', name: '决策树' },
-            { id: 'random_forest', name: '随机森林' },
-            { id: 'knn', name: 'KNN' },
-            { id: 'naive_bayes', name: '朴素贝叶斯' },
-            { id: 'svm', name: '支持向量机' },
-            { id: 'neural_network', name: '神经网络' },
-            { id: 'xgboost', name: 'XGBoost' }
-          ]
-        },
-        {
-          id: 'visualization',
-          name: '可视化',
-          methods: [
-            { id: 'line_chart', name: '折线图' },
-            { id: 'scatter_plot', name: '散点图' },
-            { id: 'bar_chart', name: '柱状图' },
-            { id: 'histogram', name: '直方图' },
-            { id: 'pie_chart', name: '饼图' },
-            { id: 'box_plot', name: '箱线图' }
-          ]
-        },
-        {
-          id: 'nlp',
-          name: '文本分析',
-          methods: [
-            { id: 'text_analysis', name: '文本分析' },
-            { id: 'sentiment_analysis', name: '情感分析' }
-          ]
-        },
-      ],
+      methodCategories: methodCategories,
       // 数据预览弹窗相关数据
       showPreviewModal: false,
       previewData: {
@@ -440,23 +375,19 @@ export default {
         const response = await fetch('/user/files', {
           credentials: 'include' // 包含cookies，用于session管理
         });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            this.files = result.data;
-            this.session_id = result.session_id;
-            const storedSessionId = localStorage.getItem('session_id');
-            if (storedSessionId && this.session_id !== storedSessionId) {
-              // 如果session_id变化，清除localStorage中的数据
-              this.clearLocalStorage();
-              localStorage.setItem('session_id', this.session_id);
-            }
-          } else {
-            console.error("获取文件列表失败:", result.error);
+
+        const result = await response.json();
+        if (result.success) {
+          this.files = result.data;
+          this.session_id = result.session_id;
+          const storedSessionId = localStorage.getItem('session_id');
+          if (storedSessionId && this.session_id !== storedSessionId) {
+            // 如果session_id变化，清除localStorage中的数据
+            this.clearLocalStorage();
+            localStorage.setItem('session_id', this.session_id);
           }
         } else {
-          console.error("获取文件列表失败，状态码:", response.status);
+          console.error("获取文件列表失败:", result.error);
         }
       } catch (error) {
         console.error("加载文件列表失败:", error);
@@ -474,26 +405,20 @@ export default {
           credentials: 'include'
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            // 从文件列表中移除已删除的文件
-            this.files = this.files.filter(file => file.data_id !== fileId);
-            
-            // 如果删除的是当前选中的文件，清空选中状态和列名
-            if (this.selectedFile === fileId) {
-              this.selectedFile = null;
-              this.selectedFileColumns = [];
-              // 清除保存的选中文件状态
-              localStorage.removeItem('selectedFile');
-            }
-            
-            console.log('文件删除成功');
-          } else {
-            console.error('删除失败:', result.error);
+        const result = await response.json();
+        if (result.success) {
+          // 从文件列表中移除已删除的文件
+          this.files = this.files.filter(file => file.data_id !== fileId);
+          
+          // 如果删除的是当前选中的文件，清空选中状态和列名
+          if (this.selectedFile === fileId) {
+            this.selectedFile = null;
+            this.selectedFileColumns = [];
+            // 清除保存的选中文件状态
+            localStorage.removeItem('selectedFile');
           }
         } else {
-          console.error('删除请求失败，状态码:', response.status);
+          console.error('删除失败:', result.error);
         }
       } catch (error) {
         console.error('删除文件时发生错误:', error);
@@ -502,29 +427,22 @@ export default {
     
     async selectFile(fileId) {
       this.selectedFile = fileId;
-      // 保存选中的文件状态
       localStorage.setItem('selectedFile', fileId);
       
-      // 获取选中文件的列名
       try {
         const response = await fetch(`/data/${fileId}/info`, {
           credentials: 'include'
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            this.selectedFileColumns = result.data.column_names;
-            // 初始化新的列名数组
-            this.newColumnNames = [...result.data.column_names]; // 默认填入原列名
-            // 确保在选择文件后正确初始化列名（特别是对于add_header方法）
-            this.initializeColumnNames();
-          } else {
-            console.error("获取列名失败:", result.error);
-            this.selectedFileColumns = [];
-          }
+        const result = await response.json();
+        if (result.success) {
+          this.selectedFileColumns = result.data.column_names;
+          // 初始化新的列名数组
+          this.newColumnNames = [...result.data.column_names]; // 默认填入原列名
+          // 确保在选择文件后正确初始化列名（特别是对于add_header方法）
+          this.initializeColumnNames();
         } else {
-          console.error("获取列名失败，状态码:", response.status);
+          console.error("获取列名失败:", result.error);
           this.selectedFileColumns = [];
         }
       } catch (error) {
@@ -577,18 +495,32 @@ export default {
       
       // 直接调用API获取分析结果
       this.loadingDetails = true;
-      const result = await this.fetchAnalysisResult(this.selectedFile, this.currentMethod);
-      this.loadingDetails = false;
-      
-      if (result) {
-        // 将结果保存到历史记录中
-        this.addToHistory(this.selectedFile, this.currentMethod, result);
+      this.isWaitingForResponse = true;
+      try {
+        const result = await fetchResult(this.selectedFile, this.currentMethod, {
+          selectedColumns: this.selectedColumns,
+          correlationMethod: this.correlationMethod
+        });
         
-        // 设置分析结果数据
-        this.datasetDetails = result;
-        
-        // 切换到结果视图
-        this.switchToResultView();
+        if (result) {
+          // 将结果保存到历史记录中
+          if (['line_chart', 'data_visualization'].includes(this.currentMethod)){
+            this.addToHistory(this.selectedFile, this.currentMethod, null);
+          } else {
+            this.addToHistory(this.selectedFile, this.currentMethod, result);
+          }
+          
+          // 设置分析结果数据
+          this.datasetDetails = result;
+          
+          // 切换到结果视图
+          this.switchToResultView();
+        }
+      } catch (error) {
+        alert("获取分析结果失败: " + error.message);
+      } finally {
+        this.loadingDetails = false;
+        this.isWaitingForResponse = false;
       }
     },
     
@@ -601,39 +533,23 @@ export default {
 
       this.isWaitingForResponse = true;
       try {
-        const response = await fetch(`/user/${this.selectedFile}/remove_invalid_samples`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            remove_duplicates: this.removeDuplicates,
-            remove_duplicate_cols: this.removeDuplicatesCols,
-            remove_constant_cols: this.removeConstantCols,
-            row_missing_threshold: this.rowMissingThreshold,
-            col_missing_threshold: this.columnMissingThreshold
-          }),
-          credentials: 'include'
-        });
+        const invalidSamplesConfig = {
+          removeDuplicates: this.removeDuplicates,
+          removeDuplicateCols: this.removeDuplicatesCols,
+          removeConstantCols: this.removeConstantCols,
+          rowMissingThreshold: this.rowMissingThreshold,
+          columnMissingThreshold: this.columnMissingThreshold
+        };
 
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            // 刷新文件列表并选中处理后的新文件
-            await this.loadUploadedFiles();
-            await this.selectFile(result.data.data_id);
-            
-            // 显示处理统计信息
-            const feedbackMessage = generateInvalidSamplesFeedback(result);
-            alert(feedbackMessage);
-          } else {
-            console.error("处理无效样本失败:", result.error);
-            alert("处理无效样本失败: " + result.error);
-          }
-        } else {
-          console.error("处理无效样本请求失败，状态码:", response.status);
-          alert("处理无效样本失败，状态码: " + response.status);
-        }
+        const result = await executeInvalidSamples(this.selectedFile, invalidSamplesConfig);
+        
+        // 刷新文件列表并选中处理后的新文件
+        await this.loadUploadedFiles();
+        await this.selectFile(result.data.data_id);
+        
+        // 显示处理统计信息
+        const feedbackMessage = generateInvalidSamplesFeedback(result);
+        alert(feedbackMessage);
       } catch (error) {
         console.error("处理无效样本时发生错误:", error);
         alert("处理无效样本时发生错误: " + error.message);
@@ -805,80 +721,6 @@ export default {
       this.correlationMethod = 'pearson';
     },
     
-    // 调用API获取分析结果
-    async fetchAnalysisResult(dataId, method) {
-      try {
-        this.isWaitingForResponse = true;
-        if (method === 'basic_info') {
-          const response = await fetch(`/data/${dataId}/details`, {
-            credentials: 'include'
-          });
-
-          const result = await response.json();
-          if (result.success) {
-            return result.data;
-          } else {
-            console.error("获取分析结果失败:", result.error);
-            return null;
-          }
-        } else if (method === 'statistical_summary') {
-          // 准备请求体，包含选中的列
-          const requestBody = {};
-          if (this.selectedColumns && this.selectedColumns.length > 0) {
-            requestBody.columns = this.selectedColumns;
-          }
-          
-          const response = await fetch(`/data/${dataId}/statistical_summary`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody),
-            credentials: 'include'
-          });
-
-          const result = await response.json();
-          if (result.success) {
-            return result.data;
-          } else {
-            alert("获取统计摘要失败: " + result.error);
-          }
-        } else if (method === 'correlation_analysis') {
-          // 准备请求体，包含选中的列和方法
-          const requestBody = {
-            method: this.correlationMethod
-          };
-          
-          if (this.selectedColumns && this.selectedColumns.length > 0) {
-            requestBody.columns = this.selectedColumns;
-          }
-          
-          const response = await fetch(`/data/${dataId}/correlation_analysis`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(requestBody),
-            credentials: 'include'
-          });
-
-          const result = await response.json();
-          if (result.success) {
-            return result.data;
-          } else {
-            alert("获取相关性分析结果失败: " + result.error)
-          }
-        }
-        // 其他分析方法可以在这里添加
-        return null;
-      } catch (error) {
-        console.error("加载分析结果失败:", error);
-        return null;
-      } finally {
-        this.isWaitingForResponse = false;
-      }
-    },
-    
     // 修改添加到历史记录的方法，增加result参数
     addToHistory(dataId, method, result) {
       // 添加到历史记录
@@ -1014,26 +856,19 @@ export default {
         const response = await fetch(`/data/${this.selectedFile}?page=${this.previewData.currentPage}&page_size=${this.previewData.pageSize}`, {
           credentials: 'include'
         });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            this.previewData.columnHeaders = result.data.columns;
-            this.previewData.rowData = result.data.data;
-            this.previewData.displayedRows = result.data.data;
-            this.previewData.totalRows = result.data.rows;
-            this.previewData.totalPages = result.data.total_pages;
-            this.previewData.documentName = result.data.data_id;  // 使用data_id作为文档名
-          } else {
-            console.error("获取预览数据失败:", result.error);
-            this.useSampleDataInPreview();
-          }
+
+        const result = await response.json();
+        if (result.success) {
+          this.previewData.columnHeaders = result.data.columns;
+          this.previewData.rowData = result.data.data;
+          this.previewData.displayedRows = result.data.data;
+          this.previewData.totalRows = result.data.rows;
+          this.previewData.totalPages = result.data.total_pages;
+          this.previewData.documentName = result.data.data_id;  // 使用data_id作为文档名
         } else {
-          console.error("获取预览数据失败，状态码:", response.status);
           this.useSampleDataInPreview();
         }
       } catch (error) {
-        console.error('加载预览数据失败:', error);
         this.useSampleDataInPreview();
       } finally {
         this.previewData.loading = false;
@@ -1111,37 +946,6 @@ export default {
   max-height: 100%;
 }
 
-.right-section {
-  flex: 1;
-  padding-right: 10px;
-  overflow-y: auto;
-  max-height: 100%;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.right-section.collapsed {
-  flex: 0 0 20px;
-  padding: 0;
-}
-
-.collapse-toggle {
-  position: absolute;
-  top: 25px;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 40px;
-  background-color: #419fff;
-  color: white;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 10;
-  font-weight: bold;
-}
-
 .config-section,
 .result-section {
   display: flex;
@@ -1184,11 +988,5 @@ export default {
     height: auto;
   }
 
-  .left-section,
-  .middle-section,
-  .right-section {
-    padding: 0 10px;
-    max-height: none;
-  }
 }
 </style>

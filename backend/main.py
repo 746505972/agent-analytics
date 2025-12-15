@@ -1,8 +1,7 @@
 # main.py
-import sys
-import os
 import asyncio
-from datetime import datetime, timedelta
+import os
+import sys
 
 # 添加当前目录到sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -13,8 +12,6 @@ sys.path.insert(0, current_dir)
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import pandas as pd
-from typing import List, Dict
 import uuid
 import logging
 
@@ -34,7 +31,7 @@ logging.getLogger("uvicorn.error").setLevel(logging.INFO)
 logger.info(f"DASHSCOPE_API_KEY 环境变量设置情况: {bool(os.getenv('DASHSCOPE_API_KEY'))}")
 
 # 使用绝对导入代替相对导入
-from utils.file_manager import upload_file, read_any_file, delete_file, get_file_path
+from utils.file_manager import upload_file
 from utils.cleanup import clean_expired_sessions_and_files
 from routers.chat import router as chat_router
 from routers.data import router as data_router

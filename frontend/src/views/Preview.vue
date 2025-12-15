@@ -134,21 +134,16 @@ export default {
         const response = await fetch(`/data/${this.dataId}?page=${this.currentPage}&page_size=${this.pageSize}`, {
           credentials: 'include' // 包含cookies，用于session管理
         })
-        
-        if (response.ok) {
-          const result = await response.json()
-          if (result.success) {
-            this.columnHeaders = result.data.columns
-            this.rowData = result.data.data
-            this.totalRows = result.data.rows
-            this.totalPages = result.data.total_pages
-            this.documentName = result.data.data_id  // 使用data_id作为文档名
-          } else {
-            console.error("获取数据失败:", result.error)
-            this.useSampleData()
-          }
+
+        const result = await response.json()
+        if (result.success) {
+          this.columnHeaders = result.data.columns
+          this.rowData = result.data.data
+          this.totalRows = result.data.rows
+          this.totalPages = result.data.total_pages
+          this.documentName = result.data.data_id  // 使用data_id作为文档名
         } else {
-          console.error("获取数据失败，状态码:", response.status)
+          console.error("获取数据失败:", result.error)
           this.useSampleData()
         }
       } catch (error) {
@@ -225,22 +220,18 @@ export default {
           method: 'DELETE',
           credentials: 'include' // 包含cookies，用于session管理
         });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            console.log('数据删除成功');
-            // 关闭弹窗
-            this.showDeleteConfirm = false;
-            // 设置离开标志
-            this.isLeaving = true;
-            // 真正离开页面
-            this.$router.go(-1);
-          } else {
-            console.error('删除失败:', result.error);
-          }
+
+        const result = await response.json();
+        if (result.success) {
+          console.log('数据删除成功');
+          // 关闭弹窗
+          this.showDeleteConfirm = false;
+          // 设置离开标志
+          this.isLeaving = true;
+          // 真正离开页面
+          this.$router.go(-1);
         } else {
-          console.error('删除请求失败，状态码:', response.status);
+          console.error('删除失败:', result.error);
         }
       } catch (error) {
         console.error('删除数据时发生错误:', error);

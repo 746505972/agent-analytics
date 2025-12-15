@@ -38,29 +38,9 @@
           <h4>非参数检验</h4>
           <p>在不假设数据分布的情况下进行统计检验。</p>
         </div>
-        <div v-else-if="currentMethod === 'line_chart'">
-          <h4>折线图</h4>
-          <p>使用折线图展示数据随时间或其他连续变量的变化趋势。</p>
-        </div>
-        <div v-else-if="currentMethod === 'scatter_plot'">
-          <h4>散点图</h4>
-          <p>使用散点图展示两个变量之间的关系和相关性。</p>
-        </div>
-        <div v-else-if="currentMethod === 'bar_chart'">
-          <h4>柱状图</h4>
-          <p>使用柱状图比较不同类别之间的数值大小。</p>
-        </div>
-        <div v-else-if="currentMethod === 'histogram'">
-          <h4>直方图</h4>
-          <p>使用直方图展示数据的分布情况。</p>
-        </div>
-        <div v-else-if="currentMethod === 'pie_chart'">
-          <h4>饼图</h4>
-          <p>使用饼图展示各部分占整体的比例关系。</p>
-        </div>
-        <div v-else-if="currentMethod === 'box_plot'">
-          <h4>箱线图</h4>
-          <p>使用箱线图展示数据的分布、中位数、四分位数及异常值。</p>
+        <div v-else-if="currentMethod === 'data_visualization'">
+          <h4>数据可视化</h4>
+          <p>使用多种图表类型展示数据，包括折线图、柱状图、散点图等。</p>
         </div>
         <div v-else-if="currentMethod === 'clustering'">
           <h4>聚类分析</h4>
@@ -195,6 +175,13 @@
           class="execute-button"
         >
           执行转换
+        </button>
+        <button
+          v-else-if="currentMethod === 'data_visualization'"
+          @click="$emit('execute-method')"
+          class="execute-button"
+        >
+          跳转
         </button>
         <button 
           v-else

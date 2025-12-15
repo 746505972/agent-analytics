@@ -15,10 +15,9 @@
       <CorrelationAnalysisResult :dataset-details="datasetDetails" />
     </div>
     
-    <!-- 数据可视化分析结果 -->
-    <div v-else-if="currentMethod === 'visualization'" class="analysis-section">
-      <h3>数据可视化</h3>
-      <p>此功能正在开发中...</p>
+    <!-- 数据可视化结果 -->
+    <div v-else-if="(currentMethod === 'line_chart' || currentMethod === 'data_visualization') && datasetDetails" class="analysis-section">
+      <VisualizationPanel :dataset-details="datasetDetails" />
     </div>
     
     <!-- 机器学习分析结果 -->
@@ -43,13 +42,15 @@
 import BasicInfoResult from './AnalyseResult/BasicInfoResult.vue';
 import StatisticalSummaryResult from './AnalyseResult/StatisticalSummaryResult.vue';
 import CorrelationAnalysisResult from './AnalyseResult/CorrelationAnalysisResult.vue';
+import VisualizationPanel from './Charts/VisualizationPanel.vue';
 
 export default {
   name: "ResultContent",
   components: {
     BasicInfoResult,
     StatisticalSummaryResult,
-    CorrelationAnalysisResult
+    CorrelationAnalysisResult,
+    VisualizationPanel
   },
   props: {
     currentMethod: {

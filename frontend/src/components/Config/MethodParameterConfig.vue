@@ -81,6 +81,7 @@
       :selected-columns="selectedColumns"
       :data-transformation-config="dataTransformationConfig"
       @update:dataTransformationConfig="$emit('update:dataTransformationConfig', $event)"
+      @config-change="$emit('update:dataTransformationConfig', $event)"
     />
 
     <CorrelationAnalysisConfig

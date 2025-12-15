@@ -188,6 +188,46 @@
           <p>独热编码：将分类变量转换为二进制向量表示，每个类别对应一个新列。适用于机器学习算法处理分类数据。</p>
         </div>
       </div>
+
+      <!-- 文本转数值/时间配置 -->
+      <div v-else-if="selectedTransformationType === 'text_to_numeric_or_datetime'">
+        <h3>文本转数值/时间</h3>
+        <div class="form-group">
+          <label>转换目标类型:</label>
+          <select v-model="textConvertType" class="form-control">
+            <option value="numeric">数值型</option>
+            <option value="datetime">时间型</option>
+          </select>
+        </div>
+
+        <!-- 方法描述 -->
+        <div class="method-description" v-if="textConvertType === 'numeric'">
+          <p>文本转数值：将带有千位分隔符（如逗号）和单位缩写（K、M、B、T）的文本转换为数值。</p>
+          <p>支持的格式示例：</p>
+          <ul>
+            <li>"1,000" → 1000</li>
+            <li>"1.5K" → 1500</li>
+            <li>"2.3M" → 2300000</li>
+            <li>"1.2B" → 1200000000</li>
+          </ul>
+        </div>
+        <div class="method-description" v-else-if="textConvertType === 'datetime'">
+          <p>文本转时间：将时间戳或其他格式的时间文本转换为标准时间格式。</p>
+          <p>支持自动识别多种常见时间格式，也可手动指定格式。</p>
+        </div>
+
+        <!-- 时间格式输入框 -->
+        <div v-if="textConvertType === 'datetime'" class="form-group">
+          <label>时间格式 (可选):</label>
+          <input 
+            type="text" 
+            v-model="datetimeFormat" 
+            class="form-control"
+            placeholder="例如: %Y-%m-%d %H:%M:%S"
+          >
+          <p class="help-text">留空则自动识别时间格式，填写则按指定格式解析</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -207,7 +247,8 @@ export default {
       transformationTypes: [
         { value: 'dimensionless', label: '量纲处理' },
         { value: 'scientific', label: '科学计算' },
-        { value: 'onehot', label: '独热编码' }
+        { value: 'onehot', label: '独热编码' },
+        { value: 'text_to_numeric_or_datetime', label: '文本转数值/时间' }
       ],
       
       // 当前选中的转换类型
@@ -233,7 +274,11 @@ export default {
       // 独热编码参数
       onehotParams: {
         drop_first: false
-      }
+      },
+
+      // 文本转数值/时间参数
+      textConvertType: 'numeric',
+      datetimeFormat: ''
     };
   },
   methods: {
@@ -258,6 +303,10 @@ export default {
         },
         onehot: {
           drop_first: this.onehotParams.drop_first
+        },
+        text_to_numeric_or_datetime: {
+          convert_to: this.textConvertType,
+          ...(this.textConvertType === 'datetime' && this.datetimeFormat && { datetime_format: this.datetimeFormat })
         }
       };
     }
@@ -286,6 +335,12 @@ export default {
       this.$emit('config-change', this.getConfig());
     },
     'onehotParams.drop_first'() {
+      this.$emit('config-change', this.getConfig());
+    },
+    textConvertType() {
+      this.$emit('config-change', this.getConfig());
+    },
+    datetimeFormat() {
       this.$emit('config-change', this.getConfig());
     }
   },
@@ -378,6 +433,11 @@ export default {
   margin: 0 0 5px 0;
 }
 
+.method-description ul {
+  margin: 5px 0 5px 20px;
+  padding: 0;
+}
+
 .method-description .formula {
   font-family: 'Cambria Math', 'Arial Unicode MS', serif;
   margin: 5px 0;
@@ -387,5 +447,11 @@ export default {
   font-size: 12px;
   color: #888;
   margin: 0;
+}
+
+.help-text {
+  font-size: 12px;
+  color: #888;
+  margin-top: 5px;
 }
 </style>

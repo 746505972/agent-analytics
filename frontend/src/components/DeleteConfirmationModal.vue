@@ -9,7 +9,7 @@
         <h3 class="warning">是否确定删除？</h3>
         <p>数据删除后不能恢复，请确认！</p>
       </div>
-      <div>
+      <div class="button-group">
         <button class="red-button inputyes" @click="confirmDelete">删除</button>
         <button class="noborder-button inputno" @click="cancelDelete">取消</button>
       </div>
@@ -123,5 +123,10 @@ export default {
 
 .noborder-button:hover {
   color: #409eff;
+}
+
+.button-group {
+  display: flex;
+  justify-content: space-between;
 }
 </style>
