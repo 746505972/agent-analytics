@@ -1,15 +1,9 @@
 <template>
   <div class="controls">
     <div class="control-group">
-      <label>X轴字段:</label>
-      <select v-model="xAxisColumn" @change="drawChart">
-        <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
-      </select>
-    </div>
-    <div class="control-group">
-      <label>Y轴字段:</label>
-      <select v-model="yAxisColumn" @change="drawChart">
-        <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
+      <label>分类字段:</label>
+      <select v-model="categoryColumn" @change="drawChart">
+        <option v-for="col in availableColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
     <!-- 图表配置按钮 -->
@@ -63,38 +57,36 @@
         </div>
 
         <div class="config-section">
-          <h4>自定义颜色</h4>
-          <div class="custom-color-picker">
-            <label>散点颜色:</label>
-            <input
-              type="color"
-              v-model="customColors.scatter"
-              @change="applyCustomColors"
-            />
-          </div>
-        </div>
-
-        <div class="config-section">
           <h4>样式设置</h4>
           <div class="style-options">
             <div class="style-option">
               <label>
                 <input
                   type="checkbox"
-                  v-model="chartStyles.showGrid"
+                  v-model="chartStyles.showLabel"
                   @change="applyStyleChanges"
                 />
-                显示网格线
+                显示标签
               </label>
             </div>
             <div class="style-option">
               <label>
                 <input
                   type="checkbox"
-                  v-model="chartStyles.showRegressionLine"
+                  v-model="chartStyles.showLegend"
                   @change="applyStyleChanges"
                 />
-                显示回归线
+                显示图例
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.donutStyle"
+                  @change="applyStyleChanges"
+                />
+                环形图样式
               </label>
             </div>
           </div>
@@ -108,7 +100,7 @@
 import * as echarts from 'echarts';
 
 export default {
-  name: "ScatterPlotResult",
+  name: "PieChartResult",
   props: {
     datasetDetails: {
       type: Object,
@@ -118,24 +110,20 @@ export default {
   data() {
     return {
       chart: null,
-      xAxisColumn: '',
-      yAxisColumn: '',
-      loading: false,
+      categoryColumn: '',
       showConfigPopup: false,
       currentColorScheme: 0,
-      chartTitle: '散点图',
+      chartTitle: '饼图',
       colorSchemes: [
         ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
         ['#c23531', '#2f4554', '#61a0a8', '#d48265', '#91c7ae', '#749f83', '#ca8622', '#bda29a', '#6e7074'],
         ['#37A2DA', '#32C5E9', '#67E0E3', '#9FE6B8', '#FFDB5C', '#ff9f7f', '#fb7293', '#E062AE', '#E690D1'],
         ['#dd6b66', '#759aa0', '#e69d87', '#8dc1a9', '#ea7e53', '#eedd78', '#73a373', '#73b9bc', '#7289ab']
       ],
-      customColors: {
-        scatter: '#5470c6'
-      },
       chartStyles: {
-        showGrid: true,
-        showRegressionLine: false
+        showLabel: true,
+        showLegend: true,
+        donutStyle: false
       },
       resizeObserver: null
     };
@@ -146,6 +134,17 @@ export default {
       if (this.datasetDetails && this.datasetDetails.column_info) {
         return Object.keys(this.datasetDetails.column_info).filter(col => 
           this.datasetDetails.column_info[col].dtype === 'numeric'
+        );
+      }
+      return [];
+    },
+    availableColumns() {
+      // 获取所有可用列（包括数值型、分类型、日期时间型等）
+      if (this.datasetDetails && this.datasetDetails.column_info) {
+        return Object.keys(this.datasetDetails.column_info).filter(col => 
+          ['numeric', 'categorical', 'datetime', 'ordinal'].includes(
+            this.datasetDetails.column_info[col].dtype
+          )
         );
       }
       return [];
@@ -161,12 +160,10 @@ export default {
       deep: true,
       immediate: true
     },
-    xAxisColumn() {
+    categoryColumn() {
       this.drawChart();
     },
-    yAxisColumn() {
-      this.drawChart();
-    }
+
   },
   methods: {
     initChart() {
@@ -190,14 +187,15 @@ export default {
         this.setupResizeObserver();
 
         // 设置默认字段
-        if (!this.xAxisColumn && !this.yAxisColumn) {
-          // 散点图需要两个数值型字段
-          if (this.numericColumns.length >= 2) {
-            this.xAxisColumn = this.numericColumns[0];
-            this.yAxisColumn = this.numericColumns[1];
-          } else if (this.numericColumns.length >= 1) {
-            this.xAxisColumn = this.numericColumns[0];
-            this.yAxisColumn = this.numericColumns[0];
+        if (!this.categoryColumn) {
+          // 分类轴优先选择分类型列
+          const categoricalColumns = this.availableColumns.filter(col => 
+            this.datasetDetails.column_info[col].dtype === 'categorical');
+            
+          if (categoricalColumns.length >= 1) {
+            this.categoryColumn = categoricalColumns[0];
+          } else if (this.availableColumns.length >= 1) {
+            this.categoryColumn = this.availableColumns[0];
           }
         }
 
@@ -226,54 +224,52 @@ export default {
       }
     },
     
-    calculateLinearRegression(seriesData) {
-      if (!seriesData || seriesData.length < 2) {
-        return null;
+    processData() {
+      if (!this.categoryColumn || !this.datasetDetails || !this.datasetDetails.data) {
+        return [];
       }
       
-      // 计算回归线的系数
-      let n = seriesData.length;
-      let sumX = 0;
-      let sumY = 0;
-      let sumXY = 0;
-      let sumXX = 0;
+      // 按分类字段统计数量
+      const countedData = {};
       
-      for (let i = 0; i < n; i++) {
-        let x = seriesData[i][0];
-        let y = seriesData[i][1];
-        sumX += x;
-        sumY += y;
-        sumXY += x * y;
-        sumXX += x * x;
-      }
+      this.datasetDetails.data.forEach(row => {
+        const category = row[this.categoryColumn];
+        
+        // 跳过无效值
+        if (category === null || category === undefined) {
+          return;
+        }
+        
+        if (!countedData[category]) {
+          countedData[category] = 0;
+        }
+        
+        countedData[category] += 1;
+      });
       
-      // 计算斜率和截距
-      let slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-      let intercept = (sumY - slope * sumX) / n;
-      
-      // 返回回归函数
-      return function(x) {
-        return slope * x + intercept;
-      };
+      // 转换为数组格式
+      return Object.keys(countedData).map(category => ({
+        name: category,
+        value: countedData[category]
+      }));
     },
     
     drawChart() {
       // 检查必要条件是否满足
-      if (!this.chart || !this.xAxisColumn || !this.yAxisColumn || 
+      if (!this.chart || !this.categoryColumn || 
           !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
         return;
       }
       
       try {
-        // 直接从传入的数据中提取数据
-        const data = this.datasetDetails.data;
+        const pieData = this.processData();
         
-        // 提取X轴和Y轴数据
-        const xAxisData = data.map(row => row[this.xAxisColumn]);
-        const yAxisData = data.map(row => row[this.yAxisColumn]);
+        if (pieData.length === 0) {
+          return;
+        }
         
-        // 准备系列数据
-        const seriesData = data.map((row, index) => [row[this.xAxisColumn], row[this.yAxisColumn]]);
+        // 获取当前配色方案
+        const colorScheme = this.colorSchemes[this.currentColorScheme] || this.colorSchemes[0];
         
         const option = {
           title: {
@@ -286,15 +282,21 @@ export default {
           },
           tooltip: {
             trigger: 'item',
-            axisPointer: {
-              type: 'cross'
-            },
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
             textStyle: {
               color: '#fff'
             },
-            formatter: (params) => {
-              return `${this.xAxisColumn}: ${params.data[0]}<br/>${this.yAxisColumn}: ${params.data[1]}`;
+            formatter: '{a} <br/>{b}: {c} (占比 {d}%)'
+          },
+          legend: {
+            show: this.chartStyles.showLegend,
+            type: 'scroll',
+            orient: 'vertical',
+            right: 10,
+            top: '10%',
+            bottom: 20,
+            textStyle: {
+              color: '#666'
             }
           },
           toolbox: {
@@ -305,130 +307,31 @@ export default {
               saveAsImage: {}
             }
           },
-          grid: {
-            top: '20%',
-            bottom: '15%',
-            left: '10%',
-            right: '10%',
-            containLabel: true
-          },
-          xAxis: {
-            type: 'value',
-            name: this.xAxisColumn,
-            axisLabel: {
-              color: '#666'
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            splitLine: {
-              lineStyle: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            min: 'dataMin',
-            max: 'dataMax'
-          },
-          yAxis: {
-            type: 'value',
-            name: this.yAxisColumn,
-            axisLabel: {
-              color: '#666'
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            splitLine: {
-              lineStyle: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            min: 'dataMin',
-            max: 'dataMax'
-          },
-          series: [{
-            name: '散点',
-            type: 'scatter',
-            data: seriesData,
-            itemStyle: {
-              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.scatter
-            },
-            symbolSize: 8,
-            emphasis: {
-              focus: 'series'
-            }
-          }],
-          dataZoom: [
+          series: [
             {
-              type: 'inside',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
-            },
-            {
-              type: 'slider',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-            },
-            {
-              type: 'inside',
-              xAxisIndex: false,
-              yAxisIndex: [0],
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
-            },
-            {
-              type: 'slider',
-              xAxisIndex: false,
-              yAxisIndex: [0],
+              name: '数量',
+              type: 'pie',
+              radius: this.chartStyles.donutStyle ? ['40%', '70%'] : '70%',
+              center: ['50%', '50%'],
+              data: pieData,
+              label: {
+                show: this.chartStyles.showLabel,
+                formatter: '{b}: {c} (占比 {d}%)'
+              },
+              labelLine: {
+                show: this.chartStyles.showLabel
+              },
+              itemStyle: {
+                borderRadius: 2,
+                borderColor: '#fff',
+                borderWidth: 1
+              },
+              color: colorScheme
             }
           ]
         };
-        
-        // 如果需要显示回归线
-        if (this.chartStyles.showRegressionLine) {
-          // 计算回归线
-          const regressionFunc = this.calculateLinearRegression(seriesData);
-          
-          if (regressionFunc) {
-            // 生成回归线数据点
-            const minX = Math.min(...xAxisData);
-            const maxX = Math.max(...xAxisData);
-            const regressionPoints = [
-              [minX, regressionFunc(minX)],
-              [maxX, regressionFunc(maxX)]
-            ];
-            
-            option.series.push({
-              name: '回归线',
-              type: 'line',
-              data: regressionPoints,
-              smooth: false,
-              symbol: 'none',
-              lineStyle: {
-                color: this.colorSchemes[this.currentColorScheme][1] || '#ff7f0e',
-                width: 2,
-                type: 'solid'
-              },
-              emphasis: {
-                focus: 'series'
-              }
-            });
-          }
-        }
-        
-        // 如果不显示网格线
-        if (!this.chartStyles.showGrid) {
-          option.xAxis.splitLine = { show: false };
-          option.yAxis.splitLine = { show: false };
-        }
 
-        // 先清空图表再重新设置选项，确保坐标系正确初始化
+        // 先清空图表再重新设置选项
         this.chart.clear();
         this.chart.setOption(option, true);
 
@@ -447,13 +350,6 @@ export default {
     getColorSchemeName(index) {
       const names = ['默认', '深色', '明亮', '柔和'];
       return names[index] || `方案${index + 1}`;
-    },
-    
-    applyCustomColors() {
-      // 使用自定义颜色更新配色方案
-      this.colorSchemes[0][0] = this.customColors.scatter;
-      this.currentColorScheme = 0; // 切换到自定义配色方案
-      this.drawChart();
     },
     
     applyStyleChanges() {
@@ -485,10 +381,6 @@ export default {
 </script>
 
 <style scoped>
-.scatter-plot-result {
-  padding: 20px;
-}
-
 .chart-container {
   width: 100%;
   height: 500px;
@@ -636,17 +528,6 @@ export default {
 
 .color-item {
   flex: 1;
-}
-
-.custom-color-picker {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.custom-color-picker label {
-  font-size: 14px;
-  color: #606266;
 }
 
 .style-options {

@@ -32,6 +32,15 @@
       </div>
       <div class="popup-content">
         <div class="config-section">
+          <h4>图表标题</h4>
+          <div class="title-input">
+            <input
+              type="text"
+              v-model="chartTitle"
+              @input="onTitleChange"
+              placeholder="请输入图表标题"
+            />
+          </div>
           <h4>配色方案</h4>
           <div class="color-options">
             <div
@@ -114,6 +123,7 @@ export default {
       loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
+      chartTitle: '柱状图',
       colorSchemes: [
         ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
         ['#c23531', '#2f4554', '#61a0a8', '#d48265', '#91c7ae', '#749f83', '#ca8622', '#bda29a', '#6e7074'],
@@ -265,7 +275,7 @@ export default {
         
         const option = {
           title: {
-            text: '柱状图',
+            text: this.chartTitle,
             left: 'center',
             textStyle: {
               color: '#666',
@@ -399,6 +409,10 @@ export default {
     },
     
     applyStyleChanges() {
+      this.drawChart();
+    },
+
+    onTitleChange() {
       this.drawChart();
     }
   },
@@ -599,6 +613,19 @@ export default {
   cursor: pointer;
 }
 
+.title-input input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.title-input input:focus {
+  outline: none;
+  border-color: #409eff;
+}
 @media (max-width: 768px) {
   .controls {
     flex-direction: column;

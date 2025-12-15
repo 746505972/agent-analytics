@@ -1,16 +1,21 @@
 <template>
   <div class="controls">
     <div class="control-group">
-      <label>X轴字段:</label>
-      <select v-model="xAxisColumn" @change="drawChart">
+      <label>选择字段:</label>
+      <select v-model="selectedColumn" @change="drawChart">
         <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
     <div class="control-group">
-      <label>Y轴字段:</label>
-      <select v-model="yAxisColumn" @change="drawChart">
-        <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
-      </select>
+      <label>分箱数:</label>
+      <input 
+        type="range" 
+        min="5" 
+        max="50" 
+        v-model="binCount" 
+        @change="drawChart"
+      />
+      <span>{{ binCount }}</span>
     </div>
     <!-- 图表配置按钮 -->
     <div class="control-group">
@@ -65,10 +70,10 @@
         <div class="config-section">
           <h4>自定义颜色</h4>
           <div class="custom-color-picker">
-            <label>散点颜色:</label>
+            <label>柱体颜色:</label>
             <input
               type="color"
-              v-model="customColors.scatter"
+              v-model="customColors.histogram"
               @change="applyCustomColors"
             />
           </div>
@@ -88,14 +93,14 @@
               </label>
             </div>
             <div class="style-option">
-              <label>
-                <input
-                  type="checkbox"
-                  v-model="chartStyles.showRegressionLine"
-                  @change="applyStyleChanges"
-                />
-                显示回归线
-              </label>
+<!--              <label>-->
+<!--                <input-->
+<!--                  type="checkbox"-->
+<!--                  v-model="chartStyles.showDensity"-->
+<!--                  @change="applyStyleChanges"-->
+<!--                />-->
+<!--                显示密度曲线-->
+<!--              </label>-->
             </div>
           </div>
         </div>
@@ -108,7 +113,7 @@
 import * as echarts from 'echarts';
 
 export default {
-  name: "ScatterPlotResult",
+  name: "HistogramChartResult",
   props: {
     datasetDetails: {
       type: Object,
@@ -118,12 +123,12 @@ export default {
   data() {
     return {
       chart: null,
-      xAxisColumn: '',
-      yAxisColumn: '',
-      loading: false,
+      selectedColumn: '',
+      binCount: 20,
+      binCountWatcher: 0,
       showConfigPopup: false,
       currentColorScheme: 0,
-      chartTitle: '散点图',
+      chartTitle: '直方图',
       colorSchemes: [
         ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
         ['#c23531', '#2f4554', '#61a0a8', '#d48265', '#91c7ae', '#749f83', '#ca8622', '#bda29a', '#6e7074'],
@@ -131,11 +136,11 @@ export default {
         ['#dd6b66', '#759aa0', '#e69d87', '#8dc1a9', '#ea7e53', '#eedd78', '#73a373', '#73b9bc', '#7289ab']
       ],
       customColors: {
-        scatter: '#5470c6'
+        histogram: '#5470c6'
       },
       chartStyles: {
         showGrid: true,
-        showRegressionLine: false
+        showDensity: false
       },
       resizeObserver: null
     };
@@ -161,11 +166,13 @@ export default {
       deep: true,
       immediate: true
     },
-    xAxisColumn() {
+    selectedColumn() {
       this.drawChart();
     },
-    yAxisColumn() {
-      this.drawChart();
+    binCount: {
+      handler() {
+        this.drawChart();
+      }
     }
   },
   methods: {
@@ -190,15 +197,8 @@ export default {
         this.setupResizeObserver();
 
         // 设置默认字段
-        if (!this.xAxisColumn && !this.yAxisColumn) {
-          // 散点图需要两个数值型字段
-          if (this.numericColumns.length >= 2) {
-            this.xAxisColumn = this.numericColumns[0];
-            this.yAxisColumn = this.numericColumns[1];
-          } else if (this.numericColumns.length >= 1) {
-            this.xAxisColumn = this.numericColumns[0];
-            this.yAxisColumn = this.numericColumns[0];
-          }
+        if (!this.selectedColumn && this.numericColumns.length > 0) {
+          this.selectedColumn = this.numericColumns[0];
         }
 
         this.$nextTick(() => {
@@ -226,54 +226,119 @@ export default {
       }
     },
     
-    calculateLinearRegression(seriesData) {
-      if (!seriesData || seriesData.length < 2) {
-        return null;
+    calculateHistogramData() {
+      if (!this.selectedColumn || !this.datasetDetails || !this.datasetDetails.data) {
+        return { bins: [], counts: [] };
       }
       
-      // 计算回归线的系数
-      let n = seriesData.length;
-      let sumX = 0;
-      let sumY = 0;
-      let sumXY = 0;
-      let sumXX = 0;
+      // 提取选定列的数据
+      const rawData = this.datasetDetails.data
+        .map(row => row[this.selectedColumn]);
       
-      for (let i = 0; i < n; i++) {
-        let x = seriesData[i][0];
-        let y = seriesData[i][1];
-        sumX += x;
-        sumY += y;
-        sumXY += x * y;
-        sumXX += x * x;
+      // 过滤掉无效值并转换为数字
+      const data = rawData
+        .filter(val => val !== null && val !== undefined && val !== '' && !isNaN(parseFloat(val)))
+        .map(val => parseFloat(val));
+      
+      if (data.length === 0) {
+        return { bins: [], counts: [] };
       }
       
-      // 计算斜率和截距
-      let slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-      let intercept = (sumY - slope * sumX) / n;
+      // 计算最小值和最大值
+      const min = Math.min(...data);
+      const max = Math.max(...data);
       
-      // 返回回归函数
-      return function(x) {
-        return slope * x + intercept;
-      };
+      // 如果所有值都相同
+      if (min === max) {
+        return {
+          bins: [min, min],
+          counts: [data.length]
+        };
+      }
+      
+      // 确保分箱数不超过数据点数
+      const actualBinCount = Math.min(this.binCount, data.length);
+      
+      // 计算分箱
+      const binWidth = (max - min) / actualBinCount;
+      const bins = [];
+      const counts = new Array(actualBinCount).fill(0);
+      
+      // 创建分箱边界
+      for (let i = 0; i <= actualBinCount; i++) {
+        bins.push(min + i * binWidth);
+      }
+      
+      // 统计每个分箱中的数据数量
+      data.forEach(value => {
+        // 特殊处理最大值，确保它被分配到最后一个分箱
+        let binIndex;
+        if (value === max) {
+          binIndex = actualBinCount - 1;
+        } else {
+          binIndex = Math.min(Math.floor((value - min) / binWidth), actualBinCount - 1);
+        }
+        counts[binIndex]++;
+      });
+      
+      return { bins, counts };
     },
     
     drawChart() {
       // 检查必要条件是否满足
-      if (!this.chart || !this.xAxisColumn || !this.yAxisColumn || 
+      if (!this.chart || !this.selectedColumn || 
           !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
         return;
       }
       
       try {
-        // 直接从传入的数据中提取数据
-        const data = this.datasetDetails.data;
+        const histData = this.calculateHistogramData();
         
-        // 提取X轴和Y轴数据
-        const xAxisData = data.map(row => row[this.xAxisColumn]);
-        const yAxisData = data.map(row => row[this.yAxisColumn]);
+        if (histData.bins.length === 0) {
+          return;
+        }
         
-        // 准备系列数据
-        const seriesData = data.map((row, index) => [row[this.xAxisColumn], row[this.yAxisColumn]]);
+        // 准备直方图系列数据
+        const seriesData = histData.bins.slice(0, -1).map((binStart, index) => {
+          return {
+            name: binStart.toFixed(2) + ' - ' + histData.bins[index + 1].toFixed(2),
+            value: histData.counts[index] || 0
+          };
+        });
+        
+        // 准备密度曲线数据（如果启用）
+        let densitySeries = [];
+        if (this.chartStyles.showDensity) {
+          // 计算密度数据 - 简化的核密度估计
+          const totalCount = histData.counts.reduce((sum, count) => sum + count, 0);
+          const binWidth = histData.bins.length > 1 ? (histData.bins[1] - histData.bins[0]) : 1;
+          
+          const densityData = histData.bins.slice(0, -1).map((binStart, index) => {
+            // 计算概率密度 = 频率 / (总数量 * 分箱宽度)
+            const density = totalCount > 0 && binWidth > 0 ? 
+              histData.counts[index] / (totalCount * binWidth) : 0;
+            // 使用分箱中点作为X坐标
+            const xCoord = binStart + binWidth / 2;
+            return [xCoord, density];
+          });
+          
+          densitySeries = [{
+            name: '密度曲线',
+            type: 'line',
+            smooth: true,
+            data: densityData,
+            yAxisIndex: 1,
+            itemStyle: {
+              color: this.colorSchemes[this.currentColorScheme][1] || '#ff7f0e'
+            },
+            lineStyle: {
+              width: 2
+            },
+            emphasis: {
+              focus: 'series'
+            }
+          }];
+        }
         
         const option = {
           title: {
@@ -287,14 +352,28 @@ export default {
           tooltip: {
             trigger: 'item',
             axisPointer: {
-              type: 'cross'
+              type: 'shadow'
             },
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
             textStyle: {
               color: '#fff'
             },
             formatter: (params) => {
-              return `${this.xAxisColumn}: ${params.data[0]}<br/>${this.yAxisColumn}: ${params.data[1]}`;
+              // 如果是直方图系列
+              if (params.seriesName === '频率') {
+                if (!params.data || params.data.value === undefined) {
+                  return `${params.name}<br/>计数: 0`;
+                }
+                return `${params.name}<br/>计数: ${params.data.value}`;
+              } 
+              // 如果是密度曲线系列
+              else if (params.seriesName === '密度曲线') {
+                if (!params.data || params.data[1] === undefined) {
+                  return `${params.name}<br/>密度: 0`;
+                }
+                return `${params.axisValue !== undefined ? params.axisValue.toFixed(2) : params.name}<br/>密度: ${params.data[1].toExponential(2)}`;
+              }
+              return params.name;
             }
           },
           toolbox: {
@@ -313,119 +392,82 @@ export default {
             containLabel: true
           },
           xAxis: {
-            type: 'value',
-            name: this.xAxisColumn,
+            type: 'category',
+            data: histData.bins.slice(0, -1).map((bin, index) => 
+              bin.toFixed(2) + ' - ' + histData.bins[index + 1].toFixed(2)),
             axisLabel: {
-              color: '#666'
+              color: '#666',
+              rotate: 45
             },
             axisLine: {
               lineStyle: {
                 color: '#ccc'
               }
             },
-            splitLine: {
-              lineStyle: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            min: 'dataMin',
-            max: 'dataMax'
+            name: this.selectedColumn,
+            nameLocation: 'middle',
+            nameGap: 30
           },
-          yAxis: {
-            type: 'value',
-            name: this.yAxisColumn,
-            axisLabel: {
-              color: '#666'
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            splitLine: {
-              lineStyle: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            min: 'dataMin',
-            max: 'dataMax'
-          },
-          series: [{
-            name: '散点',
-            type: 'scatter',
-            data: seriesData,
-            itemStyle: {
-              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.scatter
-            },
-            symbolSize: 8,
-            emphasis: {
-              focus: 'series'
-            }
-          }],
-          dataZoom: [
+          yAxis: [
             {
-              type: 'inside',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
-            },
-            {
-              type: 'slider',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-            },
-            {
-              type: 'inside',
-              xAxisIndex: false,
-              yAxisIndex: [0],
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
-            },
-            {
-              type: 'slider',
-              xAxisIndex: false,
-              yAxisIndex: [0],
-            }
-          ]
-        };
-        
-        // 如果需要显示回归线
-        if (this.chartStyles.showRegressionLine) {
-          // 计算回归线
-          const regressionFunc = this.calculateLinearRegression(seriesData);
-          
-          if (regressionFunc) {
-            // 生成回归线数据点
-            const minX = Math.min(...xAxisData);
-            const maxX = Math.max(...xAxisData);
-            const regressionPoints = [
-              [minX, regressionFunc(minX)],
-              [maxX, regressionFunc(maxX)]
-            ];
-            
-            option.series.push({
-              name: '回归线',
-              type: 'line',
-              data: regressionPoints,
-              smooth: false,
-              symbol: 'none',
-              lineStyle: {
-                color: this.colorSchemes[this.currentColorScheme][1] || '#ff7f0e',
-                width: 2,
-                type: 'solid'
+              type: 'value',
+              name: '频率',
+              axisLabel: {
+                color: '#666'
               },
+              axisLine: {
+                lineStyle: {
+                  color: '#ccc'
+                }
+              },
+              splitLine: {
+                lineStyle: {
+                  color: 'rgba(0, 0, 0, 0.05)'
+                }
+              }
+            },
+            {
+              type: 'value',
+              name: '密度',
+              position: 'right',
+              axisLabel: {
+                color: '#666',
+                formatter: (value) => {
+                  // 格式化密度值，保留合适的位数
+                  return value.toExponential(2);
+                }
+              },
+              axisLine: {
+                lineStyle: {
+                  color: '#ccc'
+                }
+              },
+              splitLine: {
+                show: false
+              }
+            }
+          ],
+          series: [
+            {
+              name: '频率',
+              type: 'bar',
+              data: seriesData,
+              itemStyle: {
+                color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.histogram
+              },
+              barWidth: '90%',
               emphasis: {
                 focus: 'series'
               }
-            });
-          }
-        }
+            },
+            ...densitySeries
+          ]
+        };
         
         // 如果不显示网格线
         if (!this.chartStyles.showGrid) {
           option.xAxis.splitLine = { show: false };
-          option.yAxis.splitLine = { show: false };
+          option.yAxis[0].splitLine = { show: false };
         }
 
         // 先清空图表再重新设置选项，确保坐标系正确初始化
@@ -451,7 +493,7 @@ export default {
     
     applyCustomColors() {
       // 使用自定义颜色更新配色方案
-      this.colorSchemes[0][0] = this.customColors.scatter;
+      this.colorSchemes[0][0] = this.customColors.histogram;
       this.currentColorScheme = 0; // 切换到自定义配色方案
       this.drawChart();
     },
@@ -485,10 +527,6 @@ export default {
 </script>
 
 <style scoped>
-.scatter-plot-result {
-  padding: 20px;
-}
-
 .chart-container {
   width: 100%;
   height: 500px;
@@ -505,6 +543,7 @@ export default {
   gap: 20px;
   margin-bottom: 20px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .control-group {
@@ -521,6 +560,10 @@ export default {
   padding: 5px;
   border-radius: 4px;
   border: 1px solid #dcdfe6;
+}
+
+.control-group input[type="range"] {
+  width: 100px;
 }
 
 .config-button {

@@ -1,14 +1,14 @@
 <template>
   <div class="controls">
     <div class="control-group">
-      <label>X轴字段:</label>
-      <select v-model="xAxisColumn" @change="drawChart">
-        <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
+      <label>分类字段:</label>
+      <select v-model="categoryColumn" @change="drawChart">
+        <option v-for="col in categoricalColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
     <div class="control-group">
-      <label>Y轴字段:</label>
-      <select v-model="yAxisColumn" @change="drawChart">
+      <label>数值字段:</label>
+      <select v-model="valueColumn" @change="drawChart">
         <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
@@ -34,9 +34,9 @@
         <div class="config-section">
           <h4>图表标题</h4>
           <div class="title-input">
-            <input
-              type="text"
-              v-model="chartTitle"
+            <input 
+              type="text" 
+              v-model="chartTitle" 
               @input="onTitleChange"
               placeholder="请输入图表标题"
             />
@@ -63,18 +63,6 @@
         </div>
 
         <div class="config-section">
-          <h4>自定义颜色</h4>
-          <div class="custom-color-picker">
-            <label>散点颜色:</label>
-            <input
-              type="color"
-              v-model="customColors.scatter"
-              @change="applyCustomColors"
-            />
-          </div>
-        </div>
-
-        <div class="config-section">
           <h4>样式设置</h4>
           <div class="style-options">
             <div class="style-option">
@@ -85,16 +73,6 @@
                   @change="applyStyleChanges"
                 />
                 显示网格线
-              </label>
-            </div>
-            <div class="style-option">
-              <label>
-                <input
-                  type="checkbox"
-                  v-model="chartStyles.showRegressionLine"
-                  @change="applyStyleChanges"
-                />
-                显示回归线
               </label>
             </div>
           </div>
@@ -108,7 +86,7 @@
 import * as echarts from 'echarts';
 
 export default {
-  name: "ScatterPlotResult",
+  name: "BoxPlotResult",
   props: {
     datasetDetails: {
       type: Object,
@@ -118,24 +96,21 @@ export default {
   data() {
     return {
       chart: null,
-      xAxisColumn: '',
-      yAxisColumn: '',
+      categoryColumn: '',
+      valueColumn: '',
       loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
-      chartTitle: '散点图',
+      chartTitle: '箱线图',
       colorSchemes: [
-        ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
+        ['#ffffff', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
         ['#c23531', '#2f4554', '#61a0a8', '#d48265', '#91c7ae', '#749f83', '#ca8622', '#bda29a', '#6e7074'],
         ['#37A2DA', '#32C5E9', '#67E0E3', '#9FE6B8', '#FFDB5C', '#ff9f7f', '#fb7293', '#E062AE', '#E690D1'],
         ['#dd6b66', '#759aa0', '#e69d87', '#8dc1a9', '#ea7e53', '#eedd78', '#73a373', '#73b9bc', '#7289ab']
       ],
-      customColors: {
-        scatter: '#5470c6'
-      },
       chartStyles: {
         showGrid: true,
-        showRegressionLine: false
+        showOutliers: true
       },
       resizeObserver: null
     };
@@ -144,8 +119,19 @@ export default {
     numericColumns() {
       // 从数据集中提取数值型列
       if (this.datasetDetails && this.datasetDetails.column_info) {
-        return Object.keys(this.datasetDetails.column_info).filter(col => 
+        return Object.keys(this.datasetDetails.column_info).filter(col =>
           this.datasetDetails.column_info[col].dtype === 'numeric'
+        );
+      }
+      return [];
+    },
+    categoricalColumns() {
+      // 获取分类列（包括分类、有序等类型）
+      if (this.datasetDetails && this.datasetDetails.column_info) {
+        return Object.keys(this.datasetDetails.column_info).filter(col =>
+          ['categorical', 'ordinal'].includes(
+            this.datasetDetails.column_info[col].dtype
+          )
         );
       }
       return [];
@@ -161,10 +147,10 @@ export default {
       deep: true,
       immediate: true
     },
-    xAxisColumn() {
+    categoryColumn() {
       this.drawChart();
     },
-    yAxisColumn() {
+    valueColumn() {
       this.drawChart();
     }
   },
@@ -185,19 +171,22 @@ export default {
 
         // 初始化ECharts实例
         this.chart = echarts.init(this.$refs.chart);
-        
+
         // 添加resize监听
         this.setupResizeObserver();
 
         // 设置默认字段
-        if (!this.xAxisColumn && !this.yAxisColumn) {
-          // 散点图需要两个数值型字段
-          if (this.numericColumns.length >= 2) {
-            this.xAxisColumn = this.numericColumns[0];
-            this.yAxisColumn = this.numericColumns[1];
+        if (!this.categoryColumn && !this.valueColumn) {
+          // 分类字段选择分类列
+          if (this.categoricalColumns.length >= 1) {
+            this.categoryColumn = this.categoricalColumns[0];
+          }
+
+          // 数值字段选择数值列
+          if (this.numericColumns.length >= 1) {
+            this.valueColumn = this.numericColumns[0];
           } else if (this.numericColumns.length >= 1) {
-            this.xAxisColumn = this.numericColumns[0];
-            this.yAxisColumn = this.numericColumns[0];
+            this.valueColumn = this.numericColumns[0];
           }
         }
 
@@ -206,75 +195,69 @@ export default {
         });
       });
     },
-    
+
     setupResizeObserver() {
       // 清除之前的监听器
       if (this.resizeObserver) {
         this.resizeObserver.disconnect();
       }
-      
+
       // 创建新的ResizeObserver
       this.resizeObserver = new ResizeObserver(() => {
         if (this.chart) {
           this.chart.resize();
         }
       });
-      
+
       // 监听图表容器变化
       if (this.$refs.chart) {
         this.resizeObserver.observe(this.$refs.chart);
       }
     },
-    
-    calculateLinearRegression(seriesData) {
-      if (!seriesData || seriesData.length < 2) {
-        return null;
+
+    processDataForBoxplot() {
+      // 处理数据以适应箱线图
+      if (!this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
+        return [];
       }
-      
-      // 计算回归线的系数
-      let n = seriesData.length;
-      let sumX = 0;
-      let sumY = 0;
-      let sumXY = 0;
-      let sumXX = 0;
-      
-      for (let i = 0; i < n; i++) {
-        let x = seriesData[i][0];
-        let y = seriesData[i][1];
-        sumX += x;
-        sumY += y;
-        sumXY += x * y;
-        sumXX += x * x;
-      }
-      
-      // 计算斜率和截距
-      let slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-      let intercept = (sumY - slope * sumX) / n;
-      
-      // 返回回归函数
-      return function(x) {
-        return slope * x + intercept;
-      };
+
+      const data = this.datasetDetails.data;
+
+      // 按照分类字段分组数据
+      const groupedData = {};
+
+      data.forEach(row => {
+        const category = row[this.categoryColumn];
+        const value = row[this.valueColumn];
+
+        // 过滤掉无效值
+        if (category !== undefined && value !== undefined && value !== null && !isNaN(value)) {
+          if (!groupedData[category]) {
+            groupedData[category] = [];
+          }
+          groupedData[category].push(parseFloat(value));
+        }
+      });
+
+      // 转换为ECharts箱线图所需格式
+      const result = [];
+      Object.keys(groupedData).forEach(category => {
+        result.push(groupedData[category]);
+      });
+
+      return result;
     },
-    
     drawChart() {
       // 检查必要条件是否满足
-      if (!this.chart || !this.xAxisColumn || !this.yAxisColumn || 
+      if (!this.chart || !this.categoryColumn || !this.valueColumn ||
           !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
         return;
       }
-      
+
       try {
-        // 直接从传入的数据中提取数据
-        const data = this.datasetDetails.data;
-        
-        // 提取X轴和Y轴数据
-        const xAxisData = data.map(row => row[this.xAxisColumn]);
-        const yAxisData = data.map(row => row[this.yAxisColumn]);
-        
-        // 准备系列数据
-        const seriesData = data.map((row, index) => [row[this.xAxisColumn], row[this.yAxisColumn]]);
-        
+        // 处理数据以适应箱线图
+        const seriesData = this.processDataForBoxplot();
+
         const option = {
           title: {
             text: this.chartTitle,
@@ -287,14 +270,11 @@ export default {
           tooltip: {
             trigger: 'item',
             axisPointer: {
-              type: 'cross'
+              type: 'shadow'
             },
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
             textStyle: {
               color: '#fff'
-            },
-            formatter: (params) => {
-              return `${this.xAxisColumn}: ${params.data[0]}<br/>${this.yAxisColumn}: ${params.data[1]}`;
             }
           },
           toolbox: {
@@ -305,6 +285,9 @@ export default {
               saveAsImage: {}
             }
           },
+          legend: {
+            top: '10%'
+          },
           grid: {
             top: '20%',
             bottom: '15%',
@@ -313,10 +296,13 @@ export default {
             containLabel: true
           },
           xAxis: {
-            type: 'value',
-            name: this.xAxisColumn,
+            type: 'category',
+            name: this.categoryColumn,
+            boundaryGap: true,
             axisLabel: {
-              color: '#666'
+              color: '#666',
+              rotate: 0,
+              interval: 'auto'
             },
             axisLine: {
               lineStyle: {
@@ -324,16 +310,12 @@ export default {
               }
             },
             splitLine: {
-              lineStyle: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            min: 'dataMin',
-            max: 'dataMax'
+              show: false
+            }
           },
           yAxis: {
             type: 'value',
-            name: this.yAxisColumn,
+            name: this.valueColumn,
             axisLabel: {
               color: '#666'
             },
@@ -346,85 +328,46 @@ export default {
               lineStyle: {
                 color: 'rgba(0, 0, 0, 0.05)'
               }
-            },
-            min: 'dataMin',
-            max: 'dataMax'
+            }
           },
-          series: [{
-            name: '散点',
-            type: 'scatter',
-            data: seriesData,
-            itemStyle: {
-              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.scatter
+          series: [
+            {
+              name: 'boxplot',
+              type: 'boxplot',
+              datasetIndex: 1
             },
-            symbolSize: 8,
-            emphasis: {
-              focus: 'series'
+            {
+              name: 'outlier',
+              type: 'scatter',
+              datasetIndex: 2
             }
-          }],
-          dataZoom: [
+          ],
+          dataset: [
             {
-              type: 'inside',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
+              source: seriesData
             },
             {
-              type: 'slider',
-              xAxisIndex: [0],
-              yAxisIndex: false,
+              transform: {
+                type: 'boxplot',
+                config: { itemNameFormatter: '{value}'}
+              }
             },
             {
-              type: 'inside',
-              xAxisIndex: false,
-              yAxisIndex: [0],
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
-            },
-            {
-              type: 'slider',
-              xAxisIndex: false,
-              yAxisIndex: [0],
+              fromDatasetIndex: 1,
+              fromTransformResult: 1
             }
-          ]
+          ],
         };
         
-        // 如果需要显示回归线
-        if (this.chartStyles.showRegressionLine) {
-          // 计算回归线
-          const regressionFunc = this.calculateLinearRegression(seriesData);
-          
-          if (regressionFunc) {
-            // 生成回归线数据点
-            const minX = Math.min(...xAxisData);
-            const maxX = Math.max(...xAxisData);
-            const regressionPoints = [
-              [minX, regressionFunc(minX)],
-              [maxX, regressionFunc(maxX)]
-            ];
-            
-            option.series.push({
-              name: '回归线',
-              type: 'line',
-              data: regressionPoints,
-              smooth: false,
-              symbol: 'none',
-              lineStyle: {
-                color: this.colorSchemes[this.currentColorScheme][1] || '#ff7f0e',
-                width: 2,
-                type: 'solid'
-              },
-              emphasis: {
-                focus: 'series'
-              }
-            });
-          }
+        // 应用配色方案
+        const selectedColors = this.colorSchemes[this.currentColorScheme];
+        if (selectedColors && selectedColors.length >= 2) {
+          option.series[0].itemStyle = { color: selectedColors[0] };
+          option.series[1].itemStyle = { color: selectedColors[1] };
         }
-        
+
         // 如果不显示网格线
         if (!this.chartStyles.showGrid) {
-          option.xAxis.splitLine = { show: false };
           option.yAxis.splitLine = { show: false };
         }
 
@@ -449,17 +392,10 @@ export default {
       return names[index] || `方案${index + 1}`;
     },
     
-    applyCustomColors() {
-      // 使用自定义颜色更新配色方案
-      this.colorSchemes[0][0] = this.customColors.scatter;
-      this.currentColorScheme = 0; // 切换到自定义配色方案
-      this.drawChart();
-    },
-    
     applyStyleChanges() {
       this.drawChart();
     },
-
+    
     onTitleChange() {
       this.drawChart();
     }
@@ -485,9 +421,6 @@ export default {
 </script>
 
 <style scoped>
-.scatter-plot-result {
-  padding: 20px;
-}
 
 .chart-container {
   width: 100%;
@@ -638,17 +571,6 @@ export default {
   flex: 1;
 }
 
-.custom-color-picker {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.custom-color-picker label {
-  font-size: 14px;
-  color: #606266;
-}
-
 .style-options {
   display: flex;
   flex-direction: column;
@@ -663,6 +585,7 @@ export default {
   color: #606266;
   cursor: pointer;
 }
+
 .title-input input {
   width: 100%;
   padding: 8px 12px;
@@ -676,6 +599,7 @@ export default {
   outline: none;
   border-color: #409eff;
 }
+
 @media (max-width: 768px) {
   .controls {
     flex-direction: column;

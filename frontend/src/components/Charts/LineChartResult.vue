@@ -8,9 +8,15 @@
     </div>
     <div class="control-group">
       <label>Y轴字段:</label>
-      <select v-model="yAxisColumn" @change="drawChart">
-        <option v-for="col in availableColumns" :key="col" :value="col">{{ col }}</option>
-      </select>
+      <div class="y-axis-fields">
+        <div v-for="(field, index) in yAxisColumns" :key="index" class="y-axis-field">
+          <select v-model="yAxisColumns[index]" @change="drawChart">
+            <option v-for="col in availableColumns" :key="col" :value="col">{{ col }}</option>
+          </select>
+          <button v-if="yAxisColumns.length > 1" @click="removeYAxisField(index)" class="remove-field-btn">×</button>
+        </div>
+        <button @click="addYAxisField" class="add-field-btn">+ 添加Y轴字段</button>
+      </div>
     </div>
     <!-- 图表配置按钮 -->
     <div class="control-group">
@@ -32,6 +38,15 @@
       </div>
       <div class="popup-content">
         <div class="config-section">
+          <h4>图表标题</h4>
+          <div class="title-input">
+            <input
+              type="text"
+              v-model="chartTitle"
+              @input="onTitleChange"
+              placeholder="请输入图表标题"
+            />
+          </div>
           <h4>配色方案</h4>
           <div class="color-options">
             <div
@@ -120,10 +135,11 @@ export default {
     return {
       chart: null,
       xAxisColumn: '',
-      yAxisColumn: '',
+      yAxisColumns: [''],
       loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
+      chartTitle: '折线图',
       colorSchemes: [
         ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
         ['#c23531', '#2f4554', '#61a0a8', '#d48265', '#91c7ae', '#749f83', '#ca8622', '#bda29a', '#6e7074'],
@@ -176,8 +192,11 @@ export default {
     xAxisColumn() {
       this.drawChart();
     },
-    yAxisColumn() {
-      this.drawChart();
+    yAxisColumns: {
+      handler() {
+        this.drawChart();
+      },
+      deep: true
     }
   },
   methods: {
@@ -202,7 +221,8 @@ export default {
         this.setupResizeObserver();
 
         // 设置默认字段
-        if (!this.xAxisColumn && !this.yAxisColumn) {
+        if ((!this.xAxisColumn && this.yAxisColumns.length === 1 && !this.yAxisColumns[0]) || 
+            (this.xAxisColumn === '' && this.yAxisColumns.length === 1 && this.yAxisColumns[0] === '')) {
           // X轴可以选择任何支持的类型
           if (this.availableColumns.length >= 1) {
             this.xAxisColumn = this.availableColumns[0];
@@ -210,9 +230,9 @@ export default {
           
           // Y轴优先选择数值型列
           if (this.numericColumns.length >= 1) {
-            this.yAxisColumn = this.numericColumns[0];
+            this.yAxisColumns = [this.numericColumns[0]];
           } else if (this.availableColumns.length >= 2) {
-            this.yAxisColumn = this.availableColumns[1];
+            this.yAxisColumns = [this.availableColumns[1]];
           }
         }
 
@@ -241,9 +261,17 @@ export default {
       }
     },
     
+    addYAxisField() {
+      this.yAxisColumns.push('');
+    },
+    
+    removeYAxisField(index) {
+      this.yAxisColumns.splice(index, 1);
+    },
+    
     drawChart() {
       // 检查必要条件是否满足
-      if (!this.chart || !this.xAxisColumn || !this.yAxisColumn || 
+      if (!this.chart || !this.xAxisColumn || !this.yAxisColumns || this.yAxisColumns.length === 0 ||
           !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
         return;
       }
@@ -252,31 +280,98 @@ export default {
         // 直接从传入的数据中提取数据
         const data = this.datasetDetails.data;
         
-        // 提取X轴和Y轴数据
+        // 提取X轴数据
         const xAxisData = data.map(row => row[this.xAxisColumn]);
-        const yAxisData = data.map(row => row[this.yAxisColumn]);
         
         // 根据X轴数据类型确定X轴类型
         const xColumnType = this.datasetDetails.column_info[this.xAxisColumn]?.dtype || 'category';
         const xAxisType = ['numeric', 'datetime'].includes(xColumnType) ? 'value' : 'category';
         
-        // Y轴通常应该是数值型的
-        const yColumnType = this.datasetDetails.column_info[this.yAxisColumn]?.dtype || 'value';
-        const yAxisType = yColumnType === 'datetime' ? 'time' : 
-                         yColumnType === 'numeric' ? 'value' : 'category';
+        // 创建系列数据
+        const series = [];
+        const yAxes = [];
         
-        // 准备系列数据
-        let seriesData;
-        if (xAxisType === 'category') {
-          seriesData = yAxisData;
-        } else {
-          // 对于数值型或时间型X轴，需要组合XY数据
-          seriesData = data.map((row, index) => [row[this.xAxisColumn], row[this.yAxisColumn]]);
+        // 过滤掉空的Y轴字段
+        const validYAxisColumns = this.yAxisColumns.filter(col => col !== '');
+        
+        for (let i = 0; i < validYAxisColumns.length; i++) {
+          const yAxisColumn = validYAxisColumns[i];
+          
+          // Y轴通常应该是数值型的
+          const yColumnType = this.datasetDetails.column_info[yAxisColumn]?.dtype || 'value';
+          const yAxisType = yColumnType === 'datetime' ? 'time' : 
+                           yColumnType === 'numeric' ? 'value' : 'category';
+          
+          // 准备系列数据
+          let seriesData;
+          if (xAxisType === 'category') {
+            seriesData = data.map(row => row[yAxisColumn]);
+          } else {
+            // 对于数值型或时间型X轴，需要组合XY数据
+            seriesData = data.map((row, index) => [row[this.xAxisColumn], row[yAxisColumn]]);
+          }
+          
+          // 为每个系列创建Y轴（除了第一个）
+          if (i > 0) {
+            yAxes.push({
+              type: yAxisType,
+              name: yAxisColumn,
+              axisLabel: {
+                color: '#666',
+                formatter: yAxisType === 'value' ? '{value}' : undefined
+              },
+              axisLine: {
+                lineStyle: {
+                  color: this.colorSchemes[this.currentColorScheme][i % this.colorSchemes[this.currentColorScheme].length] || '#666'
+                }
+              },
+              splitLine: {
+                show: false
+              },
+              position: 'right',
+              offset: (i - 1) * 50
+            });
+          }
+          
+          series.push({
+            name: yAxisColumn,
+            type: 'line',
+            data: seriesData,
+            smooth: this.chartStyles.smoothLine,
+            areaStyle: this.chartStyles.showArea ? {
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [{
+                  offset: 0,
+                  color: this.colorSchemes[this.currentColorScheme][i % this.colorSchemes[this.currentColorScheme].length] || this.customColors.line
+                }, {
+                  offset: 1,
+                  color: 'rgba(255, 255, 255, 0.1)'
+                }]
+              }
+            } : undefined,
+            itemStyle: {
+              color: this.colorSchemes[this.currentColorScheme][i % this.colorSchemes[this.currentColorScheme].length] || this.customColors.line
+            },
+            lineStyle: {
+              color: this.colorSchemes[this.currentColorScheme][i % this.colorSchemes[this.currentColorScheme].length] || this.customColors.line,
+              width: 2
+            },
+            symbolSize: 4,
+            yAxisIndex: i > 0 ? i : 0,
+            emphasis: {
+              focus: 'series'
+            }
+          });
         }
         
         const option = {
           title: {
-            text: '折线图',
+            text: this.chartTitle,
             left: 'center',
             textStyle: {
               color: '#666',
@@ -313,8 +408,11 @@ export default {
             top: '20%',
             bottom: '15%',
             left: '10%',
-            right: '10%',
+            right: validYAxisColumns.length > 1 ? '15%' : '10%',
             containLabel: true
+          },
+          legend: {
+            top: '10%',
           },
           xAxis: {
             type: xAxisType,
@@ -334,16 +432,19 @@ export default {
             min: 'dataMin',
             max: 'dataMax'
           },
-          yAxis: {
-            type: yAxisType,
-            name: this.yAxisColumn,
+          yAxis: [{
+            type: validYAxisColumns.length > 0 ? 
+                 (this.datasetDetails.column_info[validYAxisColumns[0]]?.dtype === 'datetime' ? 'time' : 
+                  this.datasetDetails.column_info[validYAxisColumns[0]]?.dtype === 'numeric' ? 'value' : 'category') : 'value',
+            name: validYAxisColumns.length > 0 ? validYAxisColumns[0] : '',
             axisLabel: {
               color: '#666',
-              formatter: yAxisType === 'value' ? '{value}' : undefined
+              formatter: validYAxisColumns.length > 0 && 
+                        this.datasetDetails.column_info[validYAxisColumns[0]]?.dtype === 'numeric' ? '{value}' : undefined
             },
             axisLine: {
               lineStyle: {
-                color: '#ccc'
+                color: this.colorSchemes[this.currentColorScheme][0] || '#ccc'
               }
             },
             splitLine: {
@@ -351,40 +452,8 @@ export default {
                 color: 'rgba(0, 0, 0, 0.05)'
               }
             }
-          },
-          series: [{
-            name: this.yAxisColumn,
-            type: 'line',
-            data: seriesData,
-            smooth: this.chartStyles.smoothLine,
-            areaStyle: this.chartStyles.showArea ? {
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [{
-                  offset: 0,
-                  color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line
-                }, {
-                  offset: 1,
-                  color: 'rgba(255, 255, 255, 0.1)'
-                }]
-              }
-            } : undefined,
-            itemStyle: {
-              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line
-            },
-            lineStyle: {
-              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line,
-              width: 2
-            },
-            symbolSize: 4,
-            emphasis: {
-              focus: 'series'
-            }
-          }],
+          }, ...yAxes],
+          series: series,
           dataZoom: [
             {
               type: 'inside',
@@ -397,8 +466,18 @@ export default {
               type: 'slider',
               xAxisIndex: [0],
               yAxisIndex: false,
-              start: 0,
-              end: 100
+            },
+            {
+              type: 'inside',
+              xAxisIndex: false,
+              yAxisIndex: Array.from({length: validYAxisColumns.length}, (_, i) => i),
+              zoomOnMouseWheel: true,
+              moveOnMouseMove: true
+            },
+            {
+              type: 'slider',
+              xAxisIndex: false,
+              yAxisIndex: Array.from({length: validYAxisColumns.length}, (_, i) => i),
             }
           ],
           axisPointer: {
@@ -410,7 +489,9 @@ export default {
         // 如果不显示网格线
         if (!this.chartStyles.showGrid) {
           option.xAxis.splitLine = { show: false };
-          option.yAxis.splitLine = { show: false };
+          option.yAxis.forEach(axis => {
+            axis.splitLine = { show: false };
+          });
         }
 
         // 先清空图表再重新设置选项，确保坐标系正确初始化
@@ -442,6 +523,10 @@ export default {
     },
     
     applyStyleChanges() {
+      this.drawChart();
+    },
+
+    onTitleChange() {
       this.drawChart();
     }
   },
@@ -641,6 +726,56 @@ export default {
   cursor: pointer;
 }
 
+.y-axis-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.y-axis-field {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.remove-field-btn {
+  background-color: #f56565;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.add-field-btn {
+  margin-top: 5px;
+  padding: 4px 8px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.title-input input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.title-input input:focus {
+  outline: none;
+  border-color: #409eff;
+}
 @media (max-width: 768px) {
   .controls {
     flex-direction: column;
