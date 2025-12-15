@@ -45,12 +45,7 @@
     "id": "visualization",
     "name": "可视化",
     "methods": [
-      { "id": "line_chart", "name": "折线图" },
-      { "id": "scatter_plot", "name": "散点图" },
-      { "id": "bar_chart", "name": "柱状图" },
-      { "id": "histogram", "name": "直方图" },
-      { "id": "pie_chart", "name": "饼图" },
-      { "id": "box_plot", "name": "箱线图" }
+      { "id": "data_visualization", "name": "数据可视化" }
     ]
   },
   {

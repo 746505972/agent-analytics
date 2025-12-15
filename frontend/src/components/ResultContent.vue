@@ -15,9 +15,9 @@
       <CorrelationAnalysisResult :dataset-details="datasetDetails" />
     </div>
     
-    <!-- 折线图结果 -->
-    <div v-else-if="currentMethod === 'line_chart' && datasetDetails" class="analysis-section">
-      <LineChartResult :dataset-details="datasetDetails" />
+    <!-- 数据可视化结果 -->
+    <div v-else-if="(currentMethod === 'line_chart' || currentMethod === 'data_visualization') && datasetDetails" class="analysis-section">
+      <VisualizationPanel :dataset-details="datasetDetails" />
     </div>
     
     <!-- 机器学习分析结果 -->
@@ -42,7 +42,7 @@
 import BasicInfoResult from './AnalyseResult/BasicInfoResult.vue';
 import StatisticalSummaryResult from './AnalyseResult/StatisticalSummaryResult.vue';
 import CorrelationAnalysisResult from './AnalyseResult/CorrelationAnalysisResult.vue';
-import LineChartResult from './Charts/LineChartResult.vue';
+import VisualizationPanel from './Charts/VisualizationPanel.vue';
 
 export default {
   name: "ResultContent",
@@ -50,7 +50,7 @@ export default {
     BasicInfoResult,
     StatisticalSummaryResult,
     CorrelationAnalysisResult,
-    LineChartResult
+    VisualizationPanel
   },
   props: {
     currentMethod: {

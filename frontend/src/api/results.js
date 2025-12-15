@@ -3,7 +3,7 @@
  * 提供获取各种分析结果功能的封装
  */
 export async function fetchResult(dataId, method, options = {}){
-  if(method === 'line_chart'){
+  if(method === 'line_chart' || method === 'data_visualization'){
     return await fetchCompleteData(dataId);
   }else{
     return await fetchAnalysisResult(dataId, method, options);

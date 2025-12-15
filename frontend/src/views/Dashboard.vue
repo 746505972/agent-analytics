@@ -504,7 +504,7 @@ export default {
         
         if (result) {
           // 将结果保存到历史记录中
-          if (['line_chart'].includes(this.currentMethod)){
+          if (['line_chart', 'data_visualization'].includes(this.currentMethod)){
             this.addToHistory(this.selectedFile, this.currentMethod, null);
           } else {
             this.addToHistory(this.selectedFile, this.currentMethod, result);

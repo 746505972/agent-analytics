@@ -39,6 +39,7 @@ export function getMethodName(methodId) {
     'data_transformation': '数据转换',
     'add_header': '添加/修改标题行',
     'delete_columns': '删除列',
+    'data_visualization': '数据可视化',
   };
   return methods[methodId] || '未知分析';
 }

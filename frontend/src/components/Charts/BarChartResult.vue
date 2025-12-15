@@ -9,7 +9,7 @@
     <div class="control-group">
       <label>Y轴字段:</label>
       <select v-model="yAxisColumn" @change="drawChart">
-        <option v-for="col in availableColumns" :key="col" :value="col">{{ col }}</option>
+        <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
     <!-- 图表配置按钮 -->
@@ -56,10 +56,10 @@
         <div class="config-section">
           <h4>自定义颜色</h4>
           <div class="custom-color-picker">
-            <label>线条颜色:</label>
+            <label>柱体颜色:</label>
             <input
               type="color"
-              v-model="customColors.line"
+              v-model="customColors.bar"
               @change="applyCustomColors"
             />
           </div>
@@ -82,20 +82,10 @@
               <label>
                 <input
                   type="checkbox"
-                  v-model="chartStyles.smoothLine"
+                  v-model="chartStyles.horizontal"
                   @change="applyStyleChanges"
                 />
-                平滑曲线
-              </label>
-            </div>
-            <div class="style-option">
-              <label>
-                <input
-                  type="checkbox"
-                  v-model="chartStyles.showArea"
-                  @change="applyStyleChanges"
-                />
-                显示填充区域
+                横向柱状图
               </label>
             </div>
           </div>
@@ -109,7 +99,7 @@
 import * as echarts from 'echarts';
 
 export default {
-  name: "LineChartResult",
+  name: "BarChartResult",
   props: {
     datasetDetails: {
       type: Object,
@@ -131,12 +121,11 @@ export default {
         ['#dd6b66', '#759aa0', '#e69d87', '#8dc1a9', '#ea7e53', '#eedd78', '#73a373', '#73b9bc', '#7289ab']
       ],
       customColors: {
-        line: '#5470c6'
+        bar: '#5470c6'
       },
       chartStyles: {
         showGrid: true,
-        smoothLine: true,
-        showArea: false
+        horizontal: false
       },
       resizeObserver: null
     };
@@ -276,7 +265,7 @@ export default {
         
         const option = {
           title: {
-            text: '折线图',
+            text: '柱状图',
             left: 'center',
             textStyle: {
               color: '#666',
@@ -286,15 +275,7 @@ export default {
           tooltip: {
             trigger: 'axis',
             axisPointer: {
-              type: 'cross',
-              crossStyle: {
-                color: '#999'
-              }
-            },
-            snap: true,
-            label: {
-              show: true,
-              backgroundColor: '#666'
+              type: 'shadow'
             },
             backgroundColor: 'rgba(0, 0, 0, 0.7)',
             textStyle: {
@@ -317,9 +298,9 @@ export default {
             containLabel: true
           },
           xAxis: {
-            type: xAxisType,
-            name: this.xAxisColumn,
-            data: xAxisType === 'category' ? xAxisData : undefined,
+            type: this.chartStyles.horizontal ? yAxisType : xAxisType,
+            name: this.chartStyles.horizontal ? this.yAxisColumn : this.xAxisColumn,
+            data: (!this.chartStyles.horizontal && xAxisType === 'category') ? xAxisData : undefined,
             axisLabel: {
               color: '#666',
               rotate: 0,
@@ -330,13 +311,14 @@ export default {
                 color: '#ccc'
               }
             },
-            boundaryGap: false,
+            boundaryGap: true,
             min: 'dataMin',
             max: 'dataMax'
           },
           yAxis: {
-            type: yAxisType,
-            name: this.yAxisColumn,
+            type: this.chartStyles.horizontal ? xAxisType : yAxisType,
+            name: this.chartStyles.horizontal ? this.xAxisColumn : this.yAxisColumn,
+            data: (this.chartStyles.horizontal && xAxisType === 'category') ? xAxisData : undefined,
             axisLabel: {
               color: '#666',
               formatter: yAxisType === 'value' ? '{value}' : undefined
@@ -354,33 +336,12 @@ export default {
           },
           series: [{
             name: this.yAxisColumn,
-            type: 'line',
-            data: seriesData,
-            smooth: this.chartStyles.smoothLine,
-            areaStyle: this.chartStyles.showArea ? {
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [{
-                  offset: 0,
-                  color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line
-                }, {
-                  offset: 1,
-                  color: 'rgba(255, 255, 255, 0.1)'
-                }]
-              }
-            } : undefined,
+            type: 'bar',
+            data: this.chartStyles.horizontal ? seriesData.map(item => [item[1], item[0]]) : seriesData,
             itemStyle: {
-              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line
+              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.bar
             },
-            lineStyle: {
-              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.line,
-              width: 2
-            },
-            symbolSize: 4,
+            barWidth: '60%',
             emphasis: {
               focus: 'series'
             }
@@ -400,11 +361,7 @@ export default {
               start: 0,
               end: 100
             }
-          ],
-          axisPointer: {
-            link: { xAxisIndex: 'all' },
-            triggerTooltip: true
-          }
+          ]
         };
         
         // 如果不显示网格线
@@ -436,7 +393,7 @@ export default {
     
     applyCustomColors() {
       // 使用自定义颜色更新配色方案
-      this.colorSchemes[0][0] = this.customColors.line;
+      this.colorSchemes[0][0] = this.customColors.bar;
       this.currentColorScheme = 0; // 切换到自定义配色方案
       this.drawChart();
     },
@@ -466,6 +423,7 @@ export default {
 </script>
 
 <style scoped>
+
 .chart-container {
   width: 100%;
   height: 500px;
