@@ -132,8 +132,43 @@
     </div>
 
     <!-- 相关性热力图 -->
+    <div class="chart-header">
+      <div class="chart-title">
+      </div>
+      <div class="chart-controls">
+        <button class="config-button" @click="showConfigPopup = true">
+          图表配置
+        </button>
+      </div>
+    </div>
     <div class="chart-container">
       <div ref="correlationChart" class="correlation-chart"></div>
+    </div>
+
+    <!-- 图表配置浮窗 -->
+    <div v-if="showConfigPopup" class="config-popup-overlay" @click.self="showConfigPopup = false">
+      <div class="config-popup">
+        <div class="popup-header">
+          <span>图表配置</span>
+          <button class="close-btn" @click="showConfigPopup = false">×</button>
+        </div>
+        <div class="popup-content">
+          <div class="config-section">
+            <h4>图表标题</h4>
+            <div class="title-input">
+              <input
+                type="text"
+                v-model="chartTitle"
+                @input="onTitleChange"
+                placeholder="请输入图表标题"
+              />
+            </div>
+            <div class="tool-options">
+              <button class="tool-button" @click="openColorSchemeModal">切换配色</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     
     <!-- 相关性表格 -->
@@ -192,6 +227,8 @@ export default {
   data() {
     return {
       chart: null,
+      chartTitle: '相关性热力图',
+      showConfigPopup: false,
       colorScheme: 'default',
       showColorSchemeModal: false,
       showCustomColorModal: false,
@@ -238,8 +275,6 @@ export default {
       
       const columns = this.datasetDetails.correlation_matrix.columns;
       const correlations = this.datasetDetails.correlation_matrix.correlations;
-      const pValues = this.datasetDetails.correlation_matrix.p_values;
-      
       return columns.map((label, rowIndex) => {
         return {
           label,
@@ -301,6 +336,14 @@ export default {
       }
       
       const option = {
+        title: {
+          text: this.chartTitle,
+          left: 'center',
+          textStyle: {
+            color: '#666',
+            fontSize: 16
+          }
+        },
         tooltip: {
           position: 'top',
           formatter: (params) => {
@@ -312,6 +355,7 @@ export default {
         toolbox: {
           show: true,
           feature: {
+            dataView: { readOnly: false },
             saveAsImage: { 
               show: true, 
               title: '保存为图片',
@@ -321,14 +365,6 @@ export default {
               show: true, 
               title: '重置' 
             },
-            myColorScheme: {
-              show: true,
-              title: '切换配色',
-              icon: 'path://M26.6,12.9l-2.9-0.3c-0.2-0.7-0.5-1.4-0.8-2l1.8-2.3c0.2-0.2,0.1-0.5,0-0.7l-2.2-2.2c-0.2-0.2-0.5-0.2-0.7,0  l-2.3,1.8c-0.6-0.4-1.3-0.6-2-0.8l-0.3-2.9C17,3.2,16.8,3,16.6,3h-3.1c-0.3,0-0.5,0.2-0.5,0.4l-0.3,2.9c-0.7,0.2-1.4,0.5-2,0.8  L8.3,5.4c-0.2-0.2-0.5-0.1-0.7,0L5.4,7.6c-0.2,0.2-0.2,0.5,0,0.7l1.8,2.3c-0.4,0.6-0.6,1.3-0.8,2l-2.9,0.3C3.2,13,3,13.2,3,13.4v3.1  c0,0.3,0.2,0.5,0.4,0.5l2.9,0.3c0.2,0.7,0.5,1.4,0.8,2l-1.8,2.3c-0.2,0.2-0.1,0.5,0,0.7l2.2,2.2c0.2,0.2,0.5,0.2,0.7,0l2.3-1.8  c0.6,0.4,1.3,0.6,2,0.8l0.3,2.9c0,0.3,0.2,0.4,0.5,0.4h3.1c0.3,0,0.5-0.2,0.5-0.4l0.3-2.9c0.7-0.2,1.4-0.5,2-0.8l2.3,1.8  c0.2,0.2,0.5,0.1,0.7,0l2.2-2.2c0.2-0.2,0.2-0.5,0-0.7l-1.8-2.3c0.4-0.6,0.6-1.3,0.8-2l2.9-0.3c0.3,0,0.4-0.2,0.4-0.5v-3.1  C27,13.2,26.8,13,26.6,12.9z M15,19c-2.2,0-4-1.8-4-4c0-2.2,1.8-4,4-4s4,1.8,4,4C19,17.2,17.2,19,15,19z',
-              onclick: () => {
-                this.showColorSchemeModal = true;
-              }
-            }
           }
         },
         grid: {
@@ -516,6 +552,36 @@ export default {
       if (pValue < 0.01) return '**';
       if (pValue < 0.05) return '*';
       return '';
+    },
+    
+    onTitleChange() {
+      if (this.chart) {
+        const option = {
+          title: {
+            text: this.chartTitle
+          }
+        };
+        this.chart.setOption(option);
+      }
+    },
+    
+    saveAsImage() {
+      if (this.chart) {
+        const imageUrl = this.chart.getDataURL({
+          type: 'png',
+          pixelRatio: 2
+        });
+        
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = '相关性热力图.png';
+        link.click();
+      }
+      this.showConfigPopup = false;
+    },
+    openColorSchemeModal() {
+      this.showConfigPopup = false;
+      this.showColorSchemeModal = true;
     }
   }
 }
@@ -535,6 +601,49 @@ export default {
   margin: 20px 0 10px 0;
 }
 
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.title-input input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+  margin-bottom: 10px;
+}
+
+.title-input input:focus {
+  outline: none;
+  border-color: #409eff;
+}
+
+.chart-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.config-button {
+  padding: 6px 12px;
+  background-color: #f4f4f5;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #606266;
+}
+
+.config-button:hover {
+  background-color: #e9e9eb;
+}
+
 .chart-container {
   margin-bottom: 30px;
 }
@@ -542,6 +651,85 @@ export default {
 .correlation-chart {
   width: 100%;
   height: 400px;
+}
+
+/* 图表配置浮窗样式 */
+.config-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.config-popup {
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 300px;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.popup-header {
+  padding: 12px 15px;
+  background-color: #f5f7fa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+  color: #606266;
+  border-bottom: 1px solid #dcdfe6;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #909399;
+}
+
+.close-btn:hover {
+  color: #606266;
+}
+
+.popup-content {
+  padding: 15px;
+}
+
+.config-section h4 {
+  margin: 0 0 10px 0;
+  color: #606266;
+  font-size: 14px;
+}
+
+.tool-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tool-button {
+  padding: 8px 12px;
+  background-color: #f4f4f5;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+  color: #606266;
+  text-align: left;
+}
+
+.tool-button:hover {
+  background-color: #e9e9eb;
 }
 
 .table-header {
@@ -627,18 +815,6 @@ export default {
 .matrix-significance {
   color: #e74c3c;
   font-weight: bold;
-}
-
-.strong-correlation {
-  background-color: #fef0f0;
-}
-
-.moderate-correlation {
-  background-color: #fdf6ec;
-}
-
-.weak-correlation {
-  background-color: #f0f9eb;
 }
 
 .significance-note {

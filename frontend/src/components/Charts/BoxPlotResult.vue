@@ -32,6 +32,15 @@
       </div>
       <div class="popup-content">
         <div class="config-section">
+          <h4>图表标题</h4>
+          <div class="title-input">
+            <input 
+              type="text" 
+              v-model="chartTitle" 
+              @input="onTitleChange"
+              placeholder="请输入图表标题"
+            />
+          </div>
           <h4>配色方案</h4>
           <div class="color-options">
             <div
@@ -66,16 +75,6 @@
                 显示网格线
               </label>
             </div>
-            <div class="style-option">
-              <label>
-                <input
-                  type="checkbox"
-                  v-model="chartStyles.showOutliers"
-                  @change="applyStyleChanges"
-                />
-                显示异常值
-              </label>
-            </div>
           </div>
         </div>
       </div>
@@ -102,8 +101,9 @@ export default {
       loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
+      chartTitle: '箱线图',
       colorSchemes: [
-        ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
+        ['#ffffff', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
         ['#c23531', '#2f4554', '#61a0a8', '#d48265', '#91c7ae', '#749f83', '#ca8622', '#bda29a', '#6e7074'],
         ['#37A2DA', '#32C5E9', '#67E0E3', '#9FE6B8', '#FFDB5C', '#ff9f7f', '#fb7293', '#E062AE', '#E690D1'],
         ['#dd6b66', '#759aa0', '#e69d87', '#8dc1a9', '#ea7e53', '#eedd78', '#73a373', '#73b9bc', '#7289ab']
@@ -260,7 +260,7 @@ export default {
 
         const option = {
           title: {
-            text: '箱线图',
+            text: this.chartTitle,
             left: 'center',
             textStyle: {
               color: '#666',
@@ -359,6 +359,13 @@ export default {
           ],
         };
         
+        // 应用配色方案
+        const selectedColors = this.colorSchemes[this.currentColorScheme];
+        if (selectedColors && selectedColors.length >= 2) {
+          option.series[0].itemStyle = { color: selectedColors[0] };
+          option.series[1].itemStyle = { color: selectedColors[1] };
+        }
+
         // 如果不显示网格线
         if (!this.chartStyles.showGrid) {
           option.yAxis.splitLine = { show: false };
@@ -386,6 +393,10 @@ export default {
     },
     
     applyStyleChanges() {
+      this.drawChart();
+    },
+    
+    onTitleChange() {
       this.drawChart();
     }
   },
@@ -573,6 +584,20 @@ export default {
   font-size: 14px;
   color: #606266;
   cursor: pointer;
+}
+
+.title-input input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+  box-sizing: border-box;
+}
+
+.title-input input:focus {
+  outline: none;
+  border-color: #409eff;
 }
 
 @media (max-width: 768px) {
