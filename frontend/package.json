@@ -14,6 +14,7 @@
   "description": "",
   "dependencies": {
     "echarts": "^6.0.0",
+    "echarts-stat": "^1.2.0",
     "marked": "^17.0.0",
     "vue": "^3.5.24",
     "vue-router": "^4.6.3"

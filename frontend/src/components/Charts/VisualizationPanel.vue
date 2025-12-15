@@ -24,13 +24,19 @@
 import LineChartResult from './LineChartResult.vue';
 import BarChartResult from './BarChartResult.vue';
 import ScatterPlotResult from './ScatterPlotResult.vue';
+import HistogramChartResult from './HistogramChartResult.vue';
+import PieChartResult from './PieChartResult.vue';
+import BoxPlotResult from './BoxPlotResult.vue';
 
 export default {
   name: "VisualizationPanel",
   components: {
     LineChartResult,
     BarChartResult,
-    ScatterPlotResult
+    ScatterPlotResult,
+    HistogramChartResult,
+    PieChartResult,
+    BoxPlotResult
   },
   props: {
     datasetDetails: {
@@ -53,6 +59,12 @@ export default {
           return 'BarChartResult';
         case 'scatter':
           return 'ScatterPlotResult';
+        case 'histogram':
+          return 'HistogramChartResult';
+        case 'pie':
+          return 'PieChartResult';
+        case 'boxplot':
+          return 'BoxPlotResult';
         default:
           return 'LineChartResult'; // 默认使用折线图
       }
