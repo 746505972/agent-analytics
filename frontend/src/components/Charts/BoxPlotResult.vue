@@ -242,72 +242,11 @@ export default {
       // 转换为ECharts箱线图所需格式
       const result = [];
       Object.keys(groupedData).forEach(category => {
-        result.push({
-          name: category,
-          type: 'boxplot',
-          data: [groupedData[category]],
-          tooltip: {
-            formatter: (param) => {
-              const data = param.data;
-              return [
-                `类别: ${param.name}`,
-                `最大值: ${data[5].toFixed(2)}`,
-                `上四分位数: ${data[4].toFixed(2)}`,
-                `中位数: ${data[3].toFixed(2)}`,
-                `下四分位数: ${data[2].toFixed(2)}`,
-                `最小值: ${data[1].toFixed(2)}`
-              ].join('<br/>');
-            }
-          }
-        });
-
-        // 如果需要显示异常值
-        if (this.chartStyles.showOutliers) {
-          // 计算四分位数和四分位距
-          const sortedData = [...groupedData[category]].sort((a, b) => a - b);
-          const q1 = this.percentile(sortedData, 25);
-          const q3 = this.percentile(sortedData, 75);
-          const iqr = q3 - q1;
-          const lowerBound = q1 - 1.5 * iqr;
-          const upperBound = q3 + 1.5 * iqr;
-
-          // 找出异常值
-          const outliers = sortedData.filter(val => val < lowerBound || val > upperBound);
-          if (outliers.length > 0) {
-            result.push({
-              name: category + ' 异常值',
-              type: 'scatter',
-              data: outliers.map(val => [category, val]),
-              itemStyle: {
-                color: 'red'
-              },
-              tooltip: {
-                formatter: (param) => {
-                  return `类别: ${param.data[0]}<br/>异常值: ${param.data[1].toFixed(2)}`;
-                }
-              }
-            });
-          }
-        }
+        result.push(groupedData[category]);
       });
 
       return result;
     },
-
-    percentile(arr, p) {
-      if (arr.length === 0) return 0;
-      if (p <= 0) return arr[0];
-      if (p >= 100) return arr[arr.length - 1];
-
-      const index = (p / 100) * (arr.length - 1);
-      const lower = Math.floor(index);
-      const upper = lower + 1;
-      const weight = index % 1;
-
-      if (upper >= arr.length) return arr[lower];
-      return arr[lower] * (1 - weight) + arr[upper] * weight;
-    },
-
     drawChart() {
       // 检查必要条件是否满足
       if (!this.chart || !this.categoryColumn || !this.valueColumn ||
@@ -345,6 +284,9 @@ export default {
               restore: {},
               saveAsImage: {}
             }
+          },
+          legend: {
+            top: '10%'
           },
           grid: {
             top: '20%',
@@ -388,7 +330,33 @@ export default {
               }
             }
           },
-          series: seriesData
+          series: [
+            {
+              name: 'boxplot',
+              type: 'boxplot',
+              datasetIndex: 1
+            },
+            {
+              name: 'outlier',
+              type: 'scatter',
+              datasetIndex: 2
+            }
+          ],
+          dataset: [
+            {
+              source: seriesData
+            },
+            {
+              transform: {
+                type: 'boxplot',
+                config: { itemNameFormatter: '{value}'}
+              }
+            },
+            {
+              fromDatasetIndex: 1,
+              fromTransformResult: 1
+            }
+          ],
         };
         
         // 如果不显示网格线
