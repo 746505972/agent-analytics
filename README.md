@@ -26,52 +26,13 @@ Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据�
 
 #### 工具调用
 ![img_1.png](images/img_1.png)
+
+#### 工具链调用
 ![img_3.png](images/img_3.png)
 
 #### 分析渲染
 ![img_2.png](images/img_2.png)
 
-## 当前系统架构
-
-### 1. 前端展示层（Vue3 + ECharts）
-
-* 功能：
-
-  * 数据上传界面（支持 CSV、XLS、XLSX 文件）
-  * 数据预览和基本统计信息展示
-  * LLM 聊天式交互界面（支持自然语言分析请求）
-  * 分析结果可视化展示（图表、分析报告等）
-
-### 2. 后端服务层（FastAPI）
-
-* 功能：
-
-  * 提供统一的 RESTful 接口
-  * 管理文件上传、会话管理和API调用
-  * 实现定期清理过期会话和文件的功能
-  * 支持跨域请求，便于前后端分离开发
-
-### 3. 智能代理层（LangChain Agent核心）
-
-* 功能：
-
-  * 解析自然语言指令（例如"帮我分析这份数据"）
-  * 调用后端注册的各种分析工具（Tool/API）
-  * 对分析结果进行总结、报告生成
-
-### 4. 模型与计算层（Pandas + PyTorch + Scikit-learn）
-
-* 功能：
-
-  * 封装传统统计方法与机器学习方法为独立API模块。
-  * 每个API模块可独立调用（供LLM工具或用户直接使用）。
-
-### 5. 报告生成与解释层（LLM）
-
-* 功能：
-
-  * 将分析结果（如表格、指标、图表）输入LLM进行解读
-  * 输出自然语言报告、PDF报告
 
 ## 系统架构图
 
@@ -174,10 +135,10 @@ npm run server
 - [ ] 添加用户认证和权限管理
 
 ## Languages
-Total : 68 files,  9838 codes, 1296 comments, 1401 blanks, all 12535 lines
+Total : 78 files,  14038 codes, 1488 comments, 1887 blanks, all 17413 lines
 
 | language   | files |  code | comment | blank | total |
 |:-----------|------:|------:|--------:|------:|------:|
-| vue        |    26 | 7,101 |      54 |   770 | 7,925 |
-| Python     |    18 | 2,149 |   1,159 |   520 | 3,828 |
-| JavaScript |     8 |   302 |      75 |    51 |   428 |
+| vue | 34 | 10,992 | 78 | 1,207 | 12,277 |
+| Python | 18 | 2,296 | 1,300 | 558 | 4,154 |
+| JavaScript | 9 | 408 | 102 | 62 | 572 |
