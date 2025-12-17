@@ -4,13 +4,15 @@ Pandas 数据转换工具模块
 """
 
 import os
-import pandas as pd
-import numpy as np
-from typing import List, Dict, Any, Union
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, OneHotEncoder, QuantileTransformer, PowerTransformer, Normalizer
-
 # 添加项目根目录到sys.path
 import sys
+from typing import List, Dict, Any
+
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, OneHotEncoder, QuantileTransformer, \
+    PowerTransformer, Normalizer
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
@@ -568,6 +570,17 @@ def correlation_analysis(
         raise ValueError("没有有效的数值型列可供处理")
     
     from scipy.stats import pearsonr, spearmanr, kendalltau
+    import warnings
+    
+    # 检查是否有常量列（方差为0的列）
+    constant_columns = []
+    for col in numeric_columns:
+        col_data = df[col].dropna()
+        if len(col_data) > 0 and col_data.var() == 0:
+            constant_columns.append(col)
+    
+    if constant_columns:
+        raise ValueError(f"以下列为常量列（所有值相同），无法计算相关性: {constant_columns}")
     
     # 计算相关系数和p值
     correlation_data = []
@@ -597,20 +610,26 @@ def correlation_analysis(
                 x = clean_data[col1]
                 y = clean_data[col2]
                 
+                # 检查是否为常量列（在clean_data中）
+                if x.var() == 0 or y.var() == 0:
+                    # 常量列，相关性未定义
+                    raise ValueError(f"列 '{col1}' 或 '{col2}' 在有效数据中为常量，无法计算相关性")
+                
                 try:
-                    if method == "pearson":
-                        corr, p_value = pearsonr(x, y)
-                    elif method == "spearman":
-                        corr, p_value = spearmanr(x, y)
-                    elif method == "kendall":
-                        corr, p_value = kendalltau(x, y)
-                    else:
-                        raise ValueError(f"不支持的相关性计算方法: {method}")
+                    # 忽略ConstantInputWarning警告，我们已经进行了检查
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        if method == "pearson":
+                            corr, p_value = pearsonr(x, y)
+                        elif method == "spearman":
+                            corr, p_value = spearmanr(x, y)
+                        elif method == "kendall":
+                            corr, p_value = kendalltau(x, y)
+                        else:
+                            raise ValueError(f"不支持的相关性计算方法: {method}")
                 except Exception as e:
                     # 计算过程中出现异常，返回默认值
-                    print(f"计算 {col1} 和 {col2} 的相关性时出错: {e}")
-                    corr = 0.0
-                    p_value = 1.0
+                    raise ValueError(f"计算相关性时出现异常: {e}")
             
             # 保存到相关性数据列表
             correlation_data.append({

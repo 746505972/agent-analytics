@@ -27,7 +27,7 @@
               type="checkbox"
               :checked="removeConstantCols"
               @change="$emit('update:removeConstantCols', $event.target.checked)"
-            /> 去除唯一值列
+            /> 去除唯一值列（常量列）
           </label>
         </div>
         <h3>设置阈值，删除缺失超出阈值的行列</h3>

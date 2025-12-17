@@ -206,6 +206,6 @@ async def get_correlation_analysis(request: Request, data_id: str, body: Correla
             status_code=500,
             content={
                 "success": False,
-                "error": str(e)
+                "error": f"{str(e)}"
             }
         )

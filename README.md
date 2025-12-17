@@ -53,8 +53,7 @@ project/
 │   ├── tools/               # 工具API
 │   │   ├── ml_api/          # 机器学习API
 │   │   ├── nlp_api/         # 自然语言处理API
-│   │   ├── pandas_api/      # 数据处理API
-│   │   └── visualization/   # 可视化API
+│   │   └── pandas_api/      # 数据处理API
 │   ├── reports/             # 报告生成
 │   └── utils/               # 工具函数
 │       ├── cleanup.py       # 清理工具
@@ -62,7 +61,7 @@ project/
 ├── frontend/
 │   └── src/
 │       ├── views/
-│       │   ├── Dashboard.vue# 主界面
+│       │   ├── Dashboard.vue # 主界面
 │       │   ├── Preview.vue  # 预览界面
 │       │   └── Upload.vue   # 上传界面
 │       ├── router/          # 路由配置

@@ -1,6 +1,6 @@
 """
 自然语言处理 API 模块
-提供基于预训练模型的 NLP 功能，包括分词、词云、情感分析等
+提供基于预训练模型的 NLP 功能
 """
 
 from langchain_core.tools import tool
