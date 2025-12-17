@@ -13,6 +13,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "axios": "^1.13.2",
     "echarts": "^6.0.0",
     "echarts-stat": "^1.2.0",
     "marked": "^17.0.0",

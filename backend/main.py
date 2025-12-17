@@ -12,6 +12,7 @@ sys.path.insert(0, current_dir)
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 import uuid
 import logging
 
@@ -37,6 +38,7 @@ from routers.chat import router as chat_router
 from routers.data import router as data_router
 from routers.files import router as files_router
 from routers.analysis import router as analysis_router
+from routers.nlp import router as nlp_router
 
 app = FastAPI(title="Agent-Analytics API", description="数据分析系统的后端API")
 
@@ -54,6 +56,10 @@ app.include_router(chat_router)
 app.include_router(data_router)
 app.include_router(files_router)
 app.include_router(analysis_router)
+app.include_router(nlp_router)
+
+# 挂载静态文件目录，使生成的图片可以通过URL访问
+app.mount("/data", StaticFiles(directory="data"), name="data")
 
 # 存储定时任务的引用
 cleanup_task = None

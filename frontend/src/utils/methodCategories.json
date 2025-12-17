@@ -52,7 +52,7 @@
     "id": "nlp",
     "name": "文本分析",
     "methods": [
-      { "id": "text_analysis", "name": "文本分析" },
+      { "id": "text_analysis", "name": "词云" },
       { "id": "sentiment_analysis", "name": "情感分析" }
     ]
   }

@@ -88,6 +88,7 @@
             :last-selected-column-index="lastSelectedColumnIndex"
             :data-transformation-config="dataTransformationConfig"
             :correlation-method="correlationMethod"
+            :wordcloud-config="wordcloudConfig"
             :is-waiting-for-response="isWaitingForResponse"
             @update:removeDuplicates="removeDuplicates = $event"
             @update:removeDuplicatesCols="removeDuplicatesCols = $event"
@@ -100,6 +101,7 @@
             @update:newColumnNames="handleNewColumnNamesUpdate"
             @update:dataTransformationConfig="updateDataTransformationConfig"
             @update:correlationMethod="correlationMethod = $event"
+            @update:wordcloudConfig="wordcloudConfig = $event"
             @toggleColumnSelection="handleToggleColumnSelection"
           />
         </div>
@@ -245,6 +247,17 @@ export default {
       dataTransformationConfig: {},
       // 相关性分析参数
       correlationMethod: 'pearson',
+      wordcloudConfig: {
+        column: "",
+        maxWords: 200,
+        width: 1600,
+        height: 900,
+        backgroundColor: "#ffffff",
+        maxFontSize: 200,
+        minFontSize: 10,
+        stopwords: [],
+        maskShape: "default"
+      },
     }
   },
   async mounted() {
@@ -499,7 +512,8 @@ export default {
       try {
         const result = await fetchResult(this.selectedFile, this.currentMethod, {
           selectedColumns: this.selectedColumns,
-          correlationMethod: this.correlationMethod
+          correlationMethod: this.correlationMethod,
+          wordcloudConfig: this.wordcloudConfig,
         });
         
         if (result) {
@@ -709,16 +723,11 @@ export default {
       this.rowMissingThreshold= 1;
       this.columnMissingThreshold= 1;
       // 插值法参数
-      this.interpolationMethod= 'linear';
       this.fillValue= '';
       this.knnNeighbors= 5;
       this.lastSelectedColumnIndex= -1;
       this.newColumnNames= [];
       this.headerEditMode= 'add';  // 修改：统一使用字符串类型，默认为添加模式
-      // 数据转换配置重置
-      this.dataTransformationConfig = {};
-      // 相关性分析参数重置
-      this.correlationMethod = 'pearson';
     },
     
     // 修改添加到历史记录的方法，增加result参数
@@ -977,16 +986,13 @@ export default {
   font-size: 14px;
   transition: background-color 0.3s;
 }
-
 .back-button:hover {
   background-color: #66b1ff;
 }
-
 @media (max-width: 768px) {
   .dashboard-content {
     flex-direction: column;
     height: auto;
   }
-
 }
 </style>

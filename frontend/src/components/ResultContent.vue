@@ -15,6 +15,11 @@
       <CorrelationAnalysisResult :dataset-details="datasetDetails" />
     </div>
     
+    <!-- 词云分析结果 -->
+    <div v-else-if="currentMethod === 'text_analysis' && datasetDetails" class="analysis-section">
+      <WordCloudResult :data="datasetDetails" />
+    </div>
+    
     <!-- 数据可视化结果 -->
     <div v-else-if="(currentMethod === 'line_chart' || currentMethod === 'data_visualization') && datasetDetails" class="analysis-section">
       <VisualizationPanel :dataset-details="datasetDetails" />
@@ -43,6 +48,7 @@ import BasicInfoResult from './AnalyseResult/BasicInfoResult.vue';
 import StatisticalSummaryResult from './AnalyseResult/StatisticalSummaryResult.vue';
 import CorrelationAnalysisResult from './AnalyseResult/CorrelationAnalysisResult.vue';
 import VisualizationPanel from './Charts/VisualizationPanel.vue';
+import WordCloudResult from './AnalyseResult/WordCloudResult.vue';
 
 export default {
   name: "ResultContent",
@@ -50,7 +56,8 @@ export default {
     BasicInfoResult,
     StatisticalSummaryResult,
     CorrelationAnalysisResult,
-    VisualizationPanel
+    VisualizationPanel,
+    WordCloudResult
   },
   props: {
     currentMethod: {

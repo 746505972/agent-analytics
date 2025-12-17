@@ -25,25 +25,6 @@ def tokenize_text(text: str) -> dict:
         'status': 'placeholder'
     }
 
-# 词云生成功能
-@tool
-def generate_wordcloud(text: str) -> dict:
-    """
-    根据文本生成词云
-    
-    Args:
-        text (str): 输入文本
-        
-    Returns:
-        dict: 词云生成结果
-    """
-    # 占位函数，后续实现具体逻辑
-    # 可以使用wordcloud库
-    return {
-        'text': text,
-        'wordcloud': None,
-        'status': 'placeholder'
-    }
 
 # 情感分析功能
 @tool
@@ -76,5 +57,4 @@ def register_nlp_tools(agent):
     """
     # 已经使用装饰器注册为工具，这里只需要将它们添加到agent中
     agent.tools.append(tokenize_text)
-    agent.tools.append(generate_wordcloud)
     agent.tools.append(sentiment_analysis)

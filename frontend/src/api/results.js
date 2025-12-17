@@ -42,7 +42,18 @@ export async function fetchCompleteData(dataId) {
  * @returns {Promise<Object|null>} 分析结果或null（如果失败）
  */
 export async function fetchAnalysisResult(dataId, method, options = {}) {
-  const { selectedColumns = [], correlationMethod = 'pearson' } = options;
+  const { selectedColumns = [], correlationMethod = 'pearson' ,
+        wordcloudConfig= {
+        column: "",
+        maxWords: 200,
+        width: 1600,
+        height: 900,
+        backgroundColor: "#ffffff",
+        maxFontSize: 200,
+        minFontSize: 10,
+        stopwords: [],
+        maskShape: "default"
+      }} = options;
   
   try {
     if (method === 'basic_info') {
@@ -103,6 +114,35 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       } else {
         throw new Error(result.error || "获取相关性分析结果失败");
       }
+    } else if (method === 'text_analysis') {
+      const requestBody = {
+        column: wordcloudConfig.column,
+        stopwords: wordcloudConfig.stopwords || [],
+        max_words: wordcloudConfig.maxWords || 200,
+        width: wordcloudConfig.width || 1600,
+        height: wordcloudConfig.height || 900,
+        background_color: wordcloudConfig.backgroundColor || 'white',
+        max_font_size: wordcloudConfig.maxFontSize || 200,
+        min_font_size: wordcloudConfig.minFontSize || 10,
+        mask_shape: wordcloudConfig.maskShape || 'default'
+      };
+
+      const response = await fetch(`/nlp/${dataId}/wordcloud`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "获取词云分析结果失败");
+      }
+
     }
     // 其他分析方法可以在这里添加
     return null;

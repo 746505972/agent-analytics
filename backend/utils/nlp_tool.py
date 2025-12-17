@@ -87,7 +87,7 @@ def generate_wordcloud(file_path: str, column: str, session_id: str = None, **kw
     colormap = colors.ListedColormap(color_list)
 
     system = platform.system()
-
+    font_path = None
     if system == "Windows":
         font_path = r"C:\Windows\Fonts\STLITI.TTF"
     elif system == "Linux":
@@ -151,7 +151,7 @@ def generate_wordcloud(file_path: str, column: str, session_id: str = None, **kw
     
     # 返回结果信息
     return {
-        "image_path": wordcloud_path,
+        "image_path": wordcloud_path.replace("\\", "/"),  # 确保使用正斜杠，避免Windows路径问题
         "top_words": dict(result[:50]),  # 返回前50个高频词
         "total_words": len(report_words)
     }
