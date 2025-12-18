@@ -24,6 +24,11 @@
     <div v-else-if="(currentMethod === 'line_chart' || currentMethod === 'data_visualization') && datasetDetails" class="analysis-section">
       <VisualizationPanel :dataset-details="datasetDetails" />
     </div>
+
+    <!-- 情感分析结果 -->
+    <div v-else-if="currentMethod === 'sentiment_analysis' && datasetDetails" class="analysis-section">
+      <SentimentAnalysisResult :dataset-details="datasetDetails" />
+    </div>
     
     <!-- 机器学习分析结果 -->
     <div v-else-if="currentMethod === 'ml_analysis'" class="analysis-section">
@@ -49,10 +54,12 @@ import StatisticalSummaryResult from './AnalyseResult/StatisticalSummaryResult.v
 import CorrelationAnalysisResult from './AnalyseResult/CorrelationAnalysisResult.vue';
 import VisualizationPanel from './Charts/VisualizationPanel.vue';
 import WordCloudResult from './AnalyseResult/WordCloudResult.vue';
+import SentimentAnalysisResult from "@/components/AnalyseResult/SentimentAnalysisResult.vue";
 
 export default {
   name: "ResultContent",
   components: {
+    SentimentAnalysisResult,
     BasicInfoResult,
     StatisticalSummaryResult,
     CorrelationAnalysisResult,

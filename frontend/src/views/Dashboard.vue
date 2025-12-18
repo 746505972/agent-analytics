@@ -12,7 +12,6 @@
       @remove-from-history="removeFromHistory"
       @show-preview="showDataPreview"
     />
-    
     <!-- 文件选择悬浮区域 -->
     <FileSelectionOverlay 
       v-if="!isFileSectionCollapsed"
@@ -46,14 +45,12 @@
             <button @click="switchToConfigView" class="back-button">← 返回参数配置</button>
             <h2>{{ getMethodName(currentMethod) }}分析结果</h2>
           </div>
-          
           <ResultContent
             :current-method="currentMethod"
             :dataset-details="datasetDetails"
             :loading-details="loadingDetails"
           />
         </div>
-        
         <!-- 参数配置区 -->
         <div v-else class="config-section">
           <!-- 方法描述和执行按钮 -->
@@ -89,6 +86,7 @@
             :data-transformation-config="dataTransformationConfig"
             :correlation-method="correlationMethod"
             :wordcloud-config="wordcloudConfig"
+            :sentiment-config="sentimentConfig"
             :is-waiting-for-response="isWaitingForResponse"
             @update:removeDuplicates="removeDuplicates = $event"
             @update:removeDuplicatesCols="removeDuplicatesCols = $event"
@@ -102,6 +100,7 @@
             @update:dataTransformationConfig="updateDataTransformationConfig"
             @update:correlationMethod="correlationMethod = $event"
             @update:wordcloudConfig="wordcloudConfig = $event"
+            @update:sentimentConfig="sentimentConfig = $event"
             @toggleColumnSelection="handleToggleColumnSelection"
           />
         </div>
@@ -248,7 +247,6 @@ export default {
       // 相关性分析参数
       correlationMethod: 'pearson',
       wordcloudConfig: {
-        column: "",
         color:['#FF274B'],
         maxWords: 200,
         width: 1600,
@@ -258,6 +256,10 @@ export default {
         minFontSize: 10,
         stopwords: [],
         maskShape: "default"
+      },
+      sentimentConfig: {
+        stopwords: [],
+        internetSlang: {}
       },
     }
   },
@@ -324,7 +326,7 @@ export default {
       // 如果历史记录中有结果数据，则直接显示
       if (historyItem.result) {
         this.datasetDetails = historyItem.result;
-        this.switchToResultView();
+        this.middleSectionView = 'result';
       } else {
         // 否则执行方法获取结果
         await this.executeMethod();
@@ -497,15 +499,8 @@ export default {
       if (!this.selectedFile || !this.currentMethod) {
         return;
       }
-      
       // 保存聊天记录到localStorage
       localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
-      
-      // 保存文件选择区域的展开/收起状态
-      localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
-      
-      // 保存当前选中的方法
-      localStorage.setItem('selectedMethod', this.currentMethod);
       
       // 直接调用API获取分析结果
       this.loadingDetails = true;
@@ -515,6 +510,7 @@ export default {
           selectedColumns: this.selectedColumns,
           correlationMethod: this.correlationMethod,
           wordcloudConfig: this.wordcloudConfig,
+          sentimentConfig: this.sentimentConfig,
         });
         
         if (result) {
@@ -529,7 +525,7 @@ export default {
           this.datasetDetails = result;
           
           // 切换到结果视图
-          this.switchToResultView();
+          this.middleSectionView = 'result';
         }
       } catch (error) {
         alert("获取分析结果失败: " + error.message);
@@ -589,7 +585,7 @@ export default {
     
     handleToggleColumnSelection({ event, column, index }) {
       // 双重验证
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis'];
+      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis'];
 
       if (!interpolationMethods.includes(this.currentMethod)) {
         return;
@@ -709,10 +705,6 @@ export default {
       } finally {
         this.isWaitingForResponse = false;
       }
-    },
-
-    switchToResultView() {
-      this.middleSectionView = 'result';
     },
     // TODO:在这里添加清除参数
     switchToConfigView() {
@@ -853,12 +845,10 @@ export default {
       // 加载数据
       await this.loadPreviewData();
     },
-    
     // 关闭数据预览弹窗
     closePreviewModal() {
       this.showPreviewModal = false;
     },
-    
     // 加载预览数据
     async loadPreviewData() {
       this.previewData.loading = true;
@@ -902,19 +892,16 @@ export default {
       this.previewData.totalPages = Math.ceil(this.previewData.totalRows / this.previewData.pageSize);
       this.previewData.documentName = '示例数据文档';
     },
-    
     // 翻页相关方法
     changePage(page) {
       this.previewData.currentPage = page;
       this.loadPreviewData();
     },
-    
     prevPage() {
       if (this.previewData.currentPage > 1) {
         this.changePage(this.previewData.currentPage - 1);
       }
     },
-    
     nextPage() {
       if (this.previewData.currentPage < this.previewData.totalPages) {
         this.changePage(this.previewData.currentPage + 1);

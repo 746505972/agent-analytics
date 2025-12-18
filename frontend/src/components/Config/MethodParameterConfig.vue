@@ -24,6 +24,11 @@
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则分析所有数值型列</p>
       </div>
+      <div v-else-if="['text_analysis', 'sentiment_analysis'].includes(currentMethod)">
+        <h3>选择需要分析的文本列</h3>
+        <p>点击选择一列，用于分析文本数据</p>
+        <p>多选则默认分析第一列</p>
+      </div>
       <div v-else>
         <h3>列名列表</h3>
       </div>
@@ -34,7 +39,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -96,6 +101,13 @@
       :wordcloud-config="wordcloudConfig"
       @update:wordcloudConfig="$emit('update:wordcloudConfig', $event)"
     />
+
+    <SentimentAnalysisConfig
+      v-else-if="currentMethod === 'sentiment_analysis'"
+      :selected-file-columns="selectedFileColumns"
+      :sentiment-config="sentimentConfig"
+      @update:sentimentConfig="$emit('update:sentimentConfig', $event)"
+    />
   </div>
   </div>
 </template>
@@ -107,6 +119,7 @@ import MissingValueInterpolationConfig from "./MissingValueInterpolationConfig.v
 import DataTransformationConfig from "./DataTransformationConfig.vue";
 import CorrelationAnalysisConfig from "./CorrelationAnalysisConfig.vue";
 import WordCloudConfig from "./WordCloudConfig.vue";
+import SentimentAnalysisConfig from "./SentimentAnalysisConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
@@ -116,7 +129,8 @@ export default {
     MissingValueInterpolationConfig,
     DataTransformationConfig,
     CorrelationAnalysisConfig,
-    WordCloudConfig
+    WordCloudConfig,
+    SentimentAnalysisConfig
   },
   props: {
     currentMethod: {
@@ -190,7 +204,6 @@ export default {
     wordcloudConfig: {
       type: Object,
       default: () => ({
-        column: "",
         color:['#FF274B'],
         maxWords: 200,
         width: 1600,
@@ -200,6 +213,13 @@ export default {
         minFontSize: 10,
         stopwords: [],
         maskShape: "default"
+      })
+    },
+    sentimentConfig: {
+      type: Object,
+      default: () => ({
+        stopwords: [],
+        internetSlang: {}
       })
     },
     isWaitingForResponse: {
@@ -220,6 +240,7 @@ export default {
     'update:dataTransformationConfig',
     'update:correlationMethod',
     'update:wordcloudConfig',
+    'update:sentimentConfig',
     'toggleColumnSelection'
   ],
   methods: {
@@ -235,7 +256,8 @@ export default {
         'data_transformation', 
         'statistical_summary',
         'correlation_analysis',
-        'text_analysis'
+        'text_analysis',
+        'sentiment_analysis'
       ];
 
       if (!selectableMethods.includes(this.currentMethod)) {
