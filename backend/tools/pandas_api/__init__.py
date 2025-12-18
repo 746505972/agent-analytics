@@ -195,71 +195,6 @@ def correlation_analysis_tool(
     return correlation_analysis(file_path, columns, method, session_id)
 
 
-# 聚类分析工具
-@tool
-def cluster_analysis(df: dict, method: str = 'kmeans', n_clusters: int = 3) -> dict:
-    """
-    执行聚类分析
-    
-    Args:
-        df (dict): 输入数据（字典格式）
-        method (str): 聚类方法 ('kmeans', 'hierarchical')
-        n_clusters (int): 聚类数量
-        
-    Returns:
-        dict: 聚类结果
-    """
-    # 占位函数，后续实现具体逻辑
-    return {
-        'method': method,
-        'n_clusters': n_clusters,
-        'status': 'placeholder'
-    }
-
-# 回归分析工具
-@tool
-def regression_analysis(df: dict, target_column: str, method: str = 'linear') -> dict:
-    """
-    执行回归分析
-    
-    Args:
-        df (dict): 输入数据（字典格式）
-        target_column (str): 目标变量列名
-        method (str): 回归方法 ('linear', 'logistic', 'polynomial')
-        
-    Returns:
-        dict: 回归分析结果
-    """
-    # 占位函数，后续实现具体逻辑
-    return {
-        'target': target_column,
-        'method': method,
-        'status': 'placeholder'
-    }
-
-# 假设检验工具
-@tool
-def hypothesis_test(df: dict, column1: str, column2: str = None, test_type: str = 'ttest') -> dict:
-    """
-    执行假设检验
-    
-    Args:
-        df (dict): 输入数据（字典格式）
-        column1 (str): 第一列数据
-        column2 (str, optional): 第二列数据(两样本检验时需要)
-        test_type (str): 棓验类型 ('ttest', 'ztest', 'chisquare')
-        
-    Returns:
-        dict: 假设检验结果
-    """
-    # 占位函数，后续实现具体逻辑
-    return {
-        'column1': column1,
-        'column2': column2,
-        'test_type': test_type,
-        'status': 'placeholder'
-    }
-
 # 将模块中的函数注册为工具
 def register_pandas_tools(agent):
     """
@@ -276,7 +211,4 @@ def register_pandas_tools(agent):
     agent.tools.append(one_hot_encoding_tool)
     agent.tools.append(statistical_summary_tool)
     agent.tools.append(correlation_analysis_tool)
-    agent.tools.append(cluster_analysis)
-    agent.tools.append(regression_analysis)
-    agent.tools.append(hypothesis_test)
     agent.tools.append(text_to_numeric_or_datetime_tool)

@@ -83,8 +83,8 @@
           <p>使用XGBoost算法进行高效的梯度提升分析。</p>
         </div>
         <div v-else-if="currentMethod === 'text_analysis'">
-          <h4>文本分析</h4>
-          <p>对文本数据进行分析，提取关键信息和模式。</p>
+          <h4>词云</h4>
+          <p>生成词云图，可视化展示文本中词汇出现频率。</p>
         </div>
         <div v-else-if="currentMethod === 'sentiment_analysis'">
           <h4>情感分析</h4>

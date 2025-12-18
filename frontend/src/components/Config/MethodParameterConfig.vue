@@ -89,6 +89,13 @@
       :correlation-method="correlationMethod"
       @update:correlationMethod="$emit('update:correlationMethod', $event)"
     />
+
+    <WordCloudConfig
+      v-else-if="currentMethod === 'text_analysis'"
+      :selected-file-columns="selectedFileColumns"
+      :wordcloud-config="wordcloudConfig"
+      @update:wordcloudConfig="$emit('update:wordcloudConfig', $event)"
+    />
   </div>
   </div>
 </template>
@@ -99,6 +106,7 @@ import InvalidSamplesConfig from "./InvalidSamplesConfig.vue";
 import MissingValueInterpolationConfig from "./MissingValueInterpolationConfig.vue";
 import DataTransformationConfig from "./DataTransformationConfig.vue";
 import CorrelationAnalysisConfig from "./CorrelationAnalysisConfig.vue";
+import WordCloudConfig from "./WordCloudConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
@@ -107,7 +115,8 @@ export default {
     InvalidSamplesConfig,
     MissingValueInterpolationConfig,
     DataTransformationConfig,
-    CorrelationAnalysisConfig
+    CorrelationAnalysisConfig,
+    WordCloudConfig
   },
   props: {
     currentMethod: {
@@ -178,6 +187,21 @@ export default {
       type: String,
       default: 'pearson'
     },
+    wordcloudConfig: {
+      type: Object,
+      default: () => ({
+        column: "",
+        color:['#FF274B'],
+        maxWords: 200,
+        width: 1600,
+        height: 900,
+        backgroundColor: "#ffffff",
+        maxFontSize: 200,
+        minFontSize: 10,
+        stopwords: [],
+        maskShape: "default"
+      })
+    },
     isWaitingForResponse: {
       type: Boolean,
       default: false
@@ -195,6 +219,7 @@ export default {
     'update:newColumnNames',
     'update:dataTransformationConfig',
     'update:correlationMethod',
+    'update:wordcloudConfig',
     'toggleColumnSelection'
   ],
   methods: {
@@ -209,7 +234,8 @@ export default {
         'delete_columns', 
         'data_transformation', 
         'statistical_summary',
-        'correlation_analysis'
+        'correlation_analysis',
+        'text_analysis'
       ];
 
       if (!selectableMethods.includes(this.currentMethod)) {
