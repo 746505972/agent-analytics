@@ -36,6 +36,7 @@ class WordCloudRequest(BaseModel):
     max_font_size: Optional[int] = 200  # 最大字体大小
     min_font_size: Optional[int] = 10  # 最小字体大小
     mask_shape: Optional[str] = "default"  # 蒙版形状
+    color: Optional[List[str]] = ["#FF274B"]  # 词云颜色列表
 
 
 @router.post("/{data_id}/wordcloud")
@@ -112,7 +113,8 @@ async def generate_wordcloud_endpoint(request: Request, data_id: str, body: Word
             background_color=body.background_color,
             max_font_size=body.max_font_size,
             min_font_size=body.min_font_size,
-            mask_shape=body.mask_shape
+            mask_shape=body.mask_shape,
+            color_list=body.color
         )
 
         # 准备返回结果

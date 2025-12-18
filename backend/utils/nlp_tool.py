@@ -83,7 +83,7 @@ def generate_wordcloud(file_path: str, column: str, session_id: str = None, **kw
     min_font_size = kwargs.get("min_font_size", 10)
     
     # 设置颜色
-    color_list = ['#FF274B']
+    color_list = kwargs.get("color_list",['#FF274B'])
     colormap = colors.ListedColormap(color_list)
 
     system = platform.system()

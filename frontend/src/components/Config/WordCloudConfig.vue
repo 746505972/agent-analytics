@@ -69,6 +69,32 @@
     </div>
     
     <div class="config-item">
+      <label>词云颜色：</label>
+      <div class="color-list">
+        <div 
+          v-for="(colorItem, index) in color" 
+          :key="index" 
+          class="color-item"
+        >
+          <input 
+            type="color" 
+            v-model="color[index]" 
+            @change="onConfigChange"
+            class="color-picker"
+          />
+          <button 
+            v-if="color.length > 1" 
+            @click="removeColor(index)"
+            class="remove-color-btn"
+          >
+            &times;
+          </button>
+        </div>
+        <button @click="addColor" class="add-color-btn">+</button>
+      </div>
+    </div>
+    
+    <div class="config-item">
       <label>自定义停用词（每行一个）：</label>
       <textarea
         v-model="stopwordsText"
@@ -132,6 +158,7 @@ export default {
       type: Object,
       default: () => ({
         column: "",
+        color:['#FF274B'],
         maxWords: 200,
         width: 1600,
         height: 900,
@@ -147,6 +174,7 @@ export default {
   data() {
     return {
       selectedColumn: this.wordcloudConfig.column || "",
+      color: this.wordcloudConfig.color || ['#FF274B'],
       maxWords: this.wordcloudConfig.maxWords || 200,
       width: this.wordcloudConfig.width || 1600,
       height: this.wordcloudConfig.height || 900,
@@ -180,9 +208,22 @@ export default {
         maxFontSize: this.maxFontSize,
         minFontSize: this.minFontSize,
         stopwords: this.stopwordsText ? this.stopwordsText.split('\n').filter(w => w.trim() !== '') : [],
-        maskShape: this.maskShape
+        maskShape: this.maskShape,
+        color: [...this.color]
       };
       this.$emit("update:wordcloudConfig", config);
+    },
+    
+    addColor() {
+      this.color.push('#FF274B');
+      this.onConfigChange();
+    },
+    
+    removeColor(index) {
+      if (this.color.length > 1) {
+        this.color.splice(index, 1);
+        this.onConfigChange();
+      }
     }
   },
   watch: {
@@ -266,6 +307,51 @@ export default {
   height: 40px;
   border: 1px solid #dcdfe6;
   border-radius: 4px;
+}
+
+.color-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.color-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.add-color-btn,
+.remove-color-btn {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background: #f5f7fa;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.remove-color-btn {
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+  background: #fef0f0;
+  color: #f56c6c;
+  border-color: #fbc4c4;
+}
+
+.add-color-btn:hover {
+  background: #ecf5ff;
+  border-color: #b3d8ff;
+}
+
+.remove-color-btn:hover {
+  background: #fef0f0;
+  border-color: #fbc4c4;
 }
 
 .stopwords-textarea {

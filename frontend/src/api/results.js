@@ -44,7 +44,7 @@ export async function fetchCompleteData(dataId) {
 export async function fetchAnalysisResult(dataId, method, options = {}) {
   const { selectedColumns = [], correlationMethod = 'pearson' ,
         wordcloudConfig= {
-        column: "",
+        column: "", color:['#FF274B'],
         maxWords: 200,
         width: 1600,
         height: 900,
@@ -117,6 +117,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
     } else if (method === 'text_analysis') {
       const requestBody = {
         column: wordcloudConfig.column,
+        color: wordcloudConfig.color || ['#FF274B'],
         stopwords: wordcloudConfig.stopwords || [],
         max_words: wordcloudConfig.maxWords || 200,
         width: wordcloudConfig.width || 1600,

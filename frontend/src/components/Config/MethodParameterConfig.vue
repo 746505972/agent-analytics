@@ -191,8 +191,14 @@ export default {
       type: Object,
       default: () => ({
         column: "",
+        color:['#FF274B'],
         maxWords: 200,
+        width: 1600,
+        height: 900,
         backgroundColor: "#ffffff",
+        maxFontSize: 200,
+        minFontSize: 10,
+        stopwords: [],
         maskShape: "default"
       })
     },

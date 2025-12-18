@@ -33,7 +33,7 @@ export function getMethodName(methodId) {
     'svm': '支持向量机',
     'neural_network': '神经网络',
     'xgboost': 'XGBoost',
-    'text_analysis': '文本分析',
+    'text_analysis': '词云',
     'sentiment_analysis': '情感分析',
     'invalid_samples': '无效样本',
     'data_transformation': '数据转换',

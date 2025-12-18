@@ -249,6 +249,7 @@ export default {
       correlationMethod: 'pearson',
       wordcloudConfig: {
         column: "",
+        color:['#FF274B'],
         maxWords: 200,
         width: 1600,
         height: 900,
