@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, OneHotEncoder, QuantileTransformer, \
     PowerTransformer, Normalizer
+from scipy.stats import ttest_1samp, ttest_ind, ttest_rel, shapiro, normaltest, levene, bartlett
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -72,10 +73,6 @@ def dimensionless_processing(
         
     # 只选择数值型列进行处理
     numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
-    non_numeric_columns = [col for col in columns if not pd.api.types.is_numeric_dtype(df[col])]
-    
-    if non_numeric_columns:
-        print(f"警告: 以下列为非数值型，将跳过处理: {non_numeric_columns}")
         
     if not numeric_columns:
         raise ValueError("没有有效的数值型列可供处理")
@@ -200,10 +197,6 @@ def scientific_calculation(
         
     # 只选择数值型列进行处理
     numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
-    non_numeric_columns = [col for col in columns if not pd.api.types.is_numeric_dtype(df[col])]
-    
-    if non_numeric_columns:
-        print(f"警告: 以下列为非数值型，将跳过处理: {non_numeric_columns}")
         
     if not numeric_columns:
         raise ValueError("没有有效的数值型列可供处理")
@@ -359,10 +352,6 @@ def statistical_summary(
 
     # 只选择数值型列进行处理
     numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
-    non_numeric_columns = [col for col in columns if not pd.api.types.is_numeric_dtype(df[col])]
-    
-    if non_numeric_columns:
-        print(f"警告: 以下列为非数值型，将跳过处理: {non_numeric_columns}")
         
     if not numeric_columns:
         raise ValueError("没有有效的数值型列可供处理")
@@ -413,6 +402,344 @@ def statistical_summary(
     result = {
         "columns": numeric_columns,
         "summary": summary_data
+    }
+    
+    return result
+
+def normality_test(
+    file_path: str,
+    columns: List[str],
+    method: str = "shapiro",
+    alpha: float = 0.05
+) -> Dict[str, Any]:
+    """
+    正态性检验
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要检验的列名列表
+        method (str): 正态性检验方法 ("shapiro", "normaltest")
+        alpha (float): 显著性水平 (默认0.05)
+    """
+    ensure_data_dir()
+
+    if session_id:
+        ensure_session_dir(session_id)
+
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+
+    # 读取文件
+    df = read_any_file(file_path)
+
+    # 检查列是否存在
+    missing_columns = [col for col in columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
+
+    # 只选择数值型列进行处理
+    numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
+
+    if not numeric_columns:
+        raise ValueError("没有有效的数值型列可供处理")
+
+    return normality_test_with_constants(df, numeric_columns, method, alpha)
+
+
+def normality_test_with_constants(
+    df: pd.DataFrame,
+    columns: List[str],
+    method: str = "shapiro",
+    alpha: float = 0.05
+) -> Dict[str, Any]:
+    """
+    正态性检验（包括常量列检测）
+
+    Args:
+        df (pd.DataFrame): 数据框
+        columns (List[str]): 需要检验的列名列表
+        method (str): 正态性检验方法 ("shapiro", "normaltest")
+        alpha (float): 显著性水平 (默认0.05)
+
+    Returns:
+        Dict[str, Any]: 包含正态性检验结果和常量列信息的字典
+    """
+    # 检查是否有常量列（方差为0的列）
+    constant_columns = []
+    normality_results = {}
+
+    # 对选定的数值列进行正态性检验
+    for col in columns:
+        col_data = df[col].dropna()
+
+        # 数据量检查
+        if len(col_data) < 3:
+            raise ValueError(f"列 '{col}' 的有效数据少于3个，无法进行正态性检验")
+
+        # 检查是否为常量列（方差为0）
+        if col_data.var() == 0:
+            constant_columns.append(col)
+            normality_results[col] = {
+                "method": method,
+                "statistic": 0.0,
+                "p_value": 1.0,
+                "is_normal": True,  # 常量可以视为正态分布
+                "sample_size": len(col_data),
+                "is_constant": True
+            }
+            continue
+
+        # 根据数据量选择合适的正态性检验方法
+        try:
+            if method == "shapiro" and len(col_data) <= 5000:  # Shapiro-Wilk适用于小样本
+                stat, p_value = shapiro(col_data)
+            else:  # D'Agostino's normality test适用于大样本
+                stat, p_value = normaltest(col_data)
+                method = "normaltest"
+
+            normality_results[col] = {
+                "method": method,
+                "statistic": float(stat),
+                "p_value": float(p_value),
+                "is_normal": bool(p_value > alpha),
+                "sample_size": len(col_data)
+            }
+        except Exception as e:
+            normality_results[col] = {
+                "method": method,
+                "error": str(e),
+                "is_normal": False
+            }
+
+    return {
+        "normality_results": normality_results,
+        "constant_columns": constant_columns
+    }
+
+
+def t_test(
+    file_path: str,
+    columns: List[str],
+    test_type: str = "one_sample",
+    session_id: str = None,
+    **kwargs
+) -> Dict[str, Any]:
+    """
+    T检验 - 对数据执行不同类型的T检验，并先进行正态性检验
+    
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表
+        test_type (str): T检验类型
+            - "one_sample": 单样本T检验
+            - "independent": 独立样本T检验
+            - "paired": 配对样本T检验
+        session_id (str): 会话ID
+        **kwargs: 其他参数，用于特定检验的配置
+            - popmean: 单样本t检验中的总体均值 (用于"one_sample"类型)
+            - equal_var: 独立样本t检验中是否假设方差相等 (用于"independent"类型)
+            - group_col: 分组列名，用于独立样本t检验 (用于"independent"类型)
+            - normality_method: 正态性检验方法 ("shapiro", "normaltest")
+            - alpha: 显著性水平 (默认0.05)
+        
+    Returns:
+        Dict[str, Any]: 包含T检验结果和正态性检验结果的字典
+    """
+    # 确保数据目录存在
+    ensure_data_dir()
+    
+    if session_id:
+        ensure_session_dir(session_id)
+        
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+        
+    # 读取文件
+    df = read_any_file(file_path)
+    
+    # 检查列是否存在
+    missing_columns = [col for col in columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
+        
+    # 只选择数值型列进行处理
+    numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
+        
+    if not numeric_columns:
+        raise ValueError("没有有效的数值型列可供处理")
+    
+    # 获取参数
+    normality_method = kwargs.get("normality_method", "shapiro")
+    alpha = kwargs.get("alpha", 0.05)
+    
+    # 执行正态性检验（包括常量列检测）
+    normality_test_result = normality_test_with_constants(df, numeric_columns, normality_method, alpha)
+    normality_results = normality_test_result["normality_results"]
+    
+    # 执行T检验
+    t_test_results = {}
+    
+    if test_type == "one_sample":
+        # 单样本T检验
+        popmean = kwargs.get("popmean", 0)  # 默认总体均值为0
+        
+        for col in numeric_columns:
+            col_data = df[col].dropna()
+            
+            try:
+                # 执行单样本T检验
+                t_stat, p_value = ttest_1samp(col_data, popmean)
+                
+                t_test_results[col] = {
+                    "test_type": "one_sample",
+                    "statistic": float(t_stat),
+                    "p_value": float(p_value),
+                    "significant": bool(p_value < alpha),
+                    "popmean": popmean,
+                    "sample_mean": float(col_data.mean()),
+                    "sample_std": float(col_data.std()),
+                    "sample_size": len(col_data)
+                }
+            except Exception as e:
+                t_test_results[col] = {
+                    "test_type": "one_sample",
+                    "error": str(e)
+                }
+                
+    elif test_type == "independent":
+        # 独立样本T检验
+        group_col = kwargs.get("group_col")
+        equal_var = kwargs.get("equal_var", True)
+        
+        if not group_col:
+            raise ValueError("独立样本T检验需要指定分组列 (group_col)")
+            
+        if group_col not in df.columns:
+            raise ValueError(f"分组列 '{group_col}' 不存在于数据集中")
+            
+        # 检查分组列是否为分类变量
+        if pd.api.types.is_numeric_dtype(df[group_col]):
+            print(f"警告: 分组列 '{group_col}' 是数值型，建议确认是否为正确的分组变量")
+            
+        # 获取唯一分组
+        unique_groups = df[group_col].dropna().unique()
+        if len(unique_groups) != 2:
+            raise ValueError(f"独立样本T检验要求分组列恰好有2个不同的组，当前有 {len(unique_groups)} 个组")
+            
+        # 提取两组数据
+        group1_name, group2_name = unique_groups[0], unique_groups[1]
+        group1_data = df[df[group_col] == group1_name][numeric_columns].dropna()
+        group2_data = df[df[group_col] == group2_name][numeric_columns].dropna()
+        
+        # 方差齐性检验
+        variance_results = {}
+        for col in numeric_columns:
+            try:
+                # Levene检验对方差齐性进行检验
+                lev_stat, lev_p = levene(group1_data[col], group2_data[col])
+                
+                # Bartlett检验（要求数据正态分布）
+                try:
+                    bartlett_stat, bartlett_p = bartlett(group1_data[col], group2_data[col])
+                except:
+                    bartlett_stat, bartlett_p = None, None
+                    
+                variance_results[col] = {
+                    "levene": {
+                        "statistic": float(lev_stat),
+                        "p_value": float(lev_p),
+                        "equal_variance": bool(lev_p > alpha)
+                    },
+                    "bartlett": {
+                        "statistic": float(bartlett_stat) if bartlett_stat is not None else None,
+                        "p_value": float(bartlett_p) if bartlett_p is not None else None,
+                        "equal_variance": bool(bartlett_p > alpha) if bartlett_p is not None else None
+                    } if bartlett_stat is not None else None
+                }
+            except Exception as e:
+                variance_results[col] = {
+                    "error": str(e)
+                }
+        
+        # 对每个数值列执行独立样本T检验
+        for col in numeric_columns:
+            try:
+                # 执行独立样本T检验
+                t_stat, p_value = ttest_ind(group1_data[col], group2_data[col], equal_var=equal_var)
+                
+                t_test_results[col] = {
+                    "test_type": "independent",
+                    "statistic": float(t_stat),
+                    "p_value": float(p_value),
+                    "significant": bool(p_value < alpha),
+                    "equal_var": equal_var,
+                    "group1": {
+                        "name": str(group1_name),
+                        "mean": float(group1_data[col].mean()),
+                        "std": float(group1_data[col].std()),
+                        "size": len(group1_data[col])
+                    },
+                    "group2": {
+                        "name": str(group2_name),
+                        "mean": float(group2_data[col].mean()),
+                        "std": float(group2_data[col].std()),
+                        "size": len(group2_data[col])
+                    }
+                }
+            except Exception as e:
+                t_test_results[col] = {
+                    "test_type": "independent",
+                    "error": str(e)
+                }
+                
+        # 将方差齐性检验结果添加到返回结果中
+        t_test_results["variance_test"] = variance_results
+        
+    elif test_type == "paired":
+        # 配对样本T检验
+        if len(numeric_columns) != 2:
+            raise ValueError("配对样本T检验需要恰好2个数值列")
+            
+        col1, col2 = numeric_columns[0], numeric_columns[1]
+        
+        # 提取成对的数据（去除任一列的缺失值）
+        paired_data = df[[col1, col2]].dropna()
+        
+        if len(paired_data) < 2:
+            raise ValueError("配对样本T检验需要至少2对有效数据")
+            
+        try:
+            # 执行配对样本T检验
+            t_stat, p_value = ttest_rel(paired_data[col1], paired_data[col2])
+            
+            # 计算差异
+            differences = paired_data[col1] - paired_data[col2]
+            
+            t_test_results["paired_test"] = {
+                "test_type": "paired",
+                "statistic": float(t_stat),
+                "p_value": float(p_value),
+                "significant": bool(p_value < alpha),
+                "column1": col1,
+                "column2": col2,
+                "mean_difference": float(differences.mean()),
+                "std_difference": float(differences.std()),
+                "sample_size": len(differences)
+            }
+        except Exception as e:
+            t_test_results["paired_test"] = {
+                "test_type": "paired",
+                "error": str(e)
+            }
+    else:
+        raise ValueError(f"不支持的T检验类型: {test_type}")
+    
+    # 准备返回结果
+    result = {
+        "columns": numeric_columns,
+        "test_type": test_type,
+        "normality_test": normality_results,
+        "t_test": t_test_results
     }
     
     return result
@@ -561,10 +888,6 @@ def correlation_analysis(
 
     # 只选择数值型列进行处理
     numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
-    non_numeric_columns = [col for col in columns if not pd.api.types.is_numeric_dtype(df[col])]
-    
-    if non_numeric_columns:
-        print(f"警告: 以下列为非数值型，将跳过处理: {non_numeric_columns}")
         
     if not numeric_columns:
         raise ValueError("没有有效的数值型列可供处理")
@@ -658,3 +981,15 @@ def correlation_analysis(
     }
     
     return result
+
+if __name__ == "__main__":
+    # 测试代码
+    file_path = "data/100/independent_t_test_data.csv"
+    columns = ["Method_A", "Method_B", "Method_C"]
+    test_type = "one_sample"
+    session_id = "100"
+
+    import json
+
+    result = t_test(file_path, columns, test_type, session_id)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
