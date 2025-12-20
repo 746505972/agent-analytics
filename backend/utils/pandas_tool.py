@@ -18,16 +18,52 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-from utils.file_manager import read_any_file, ensure_data_dir, ensure_session_dir, generate_new_file_path
+from utils.file_manager import read_any_file, ensure_session_dir, generate_new_file_path
+
+def check_and_read(file_path: str, columns: List[str], session_id: str = None) -> tuple:
+    """
+    检查文件和列的有效性，并读取数据
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要处理的列名列表
+        session_id (str): 会话ID
+
+    Returns:
+        tuple: (df, numeric_columns) 数据框和有效的数值列列表
+
+    Raises:
+        FileNotFoundError: 文件不存在
+        ValueError: 列不存在或没有有效的数值型列
+    """
+    # 确保数据目录存在
+    os.makedirs("data", exist_ok=True)
+
+    if session_id:
+        ensure_session_dir(session_id)
+
+    if not os.path.isfile(file_path):
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+
+    # 读取文件
+    df = read_any_file(file_path)
+
+    # 检查列是否存在
+    missing_columns = [col for col in columns if col not in df.columns]
+    if missing_columns:
+        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
+
+    # 只选择数值型列进行处理
+    numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
+
+    if not numeric_columns:
+        raise ValueError("没有有效的数值型列可供处理")
+
+    return df, numeric_columns
 
 
-def dimensionless_processing(
-    file_path: str,
-    columns: List[str],
-    method: str = "standard",
-    session_id: str = None,
-    **kwargs
-) -> Dict[str, Any]:
+def dimensionless_processing(file_path: str,columns: List[str],method: str = "standard",
+    session_id: str = None,**kwargs) -> Dict[str, Any]:
     """
     量纲处理 - 对数据进行标准化、归一化等处理
     
@@ -54,28 +90,7 @@ def dimensionless_processing(
     Returns:
         Dict[str, Any]: 处理结果信息
     """
-    # 确保数据目录存在
-    ensure_data_dir()
-    
-    if session_id:
-        ensure_session_dir(session_id)
-        
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-        
-    # 读取文件
-    df = read_any_file(file_path)
-    
-    # 检查列是否存在
-    missing_columns = [col for col in columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
-        
-    # 只选择数值型列进行处理
-    numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
-        
-    if not numeric_columns:
-        raise ValueError("没有有效的数值型列可供处理")
+    df, numeric_columns = check_and_read(file_path, columns, session_id)
         
     # 根据方法选择对应的处理器
     if method == "standard":
@@ -151,13 +166,8 @@ def dimensionless_processing(
     }
 
 
-def scientific_calculation(
-    file_path: str,
-    columns: List[str],
-    operation: str,
-    params: Dict[str, Any] = None,
-    session_id: str = None
-) -> Dict[str, Any]:
+def scientific_calculation(file_path: str,columns: List[str],operation: str,
+    params: Dict[str, Any] = None,session_id: str = None) -> Dict[str, Any]:
     """
     科学计算 - 对数据执行数学运算
     
@@ -178,28 +188,7 @@ def scientific_calculation(
     Returns:
         Dict[str, Any]: 处理结果信息
     """
-    # 确保数据目录存在
-    ensure_data_dir()
-    
-    if session_id:
-        ensure_session_dir(session_id)
-        
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-        
-    # 读取文件
-    df = read_any_file(file_path)
-    
-    # 检查列是否存在
-    missing_columns = [col for col in columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
-        
-    # 只选择数值型列进行处理
-    numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
-        
-    if not numeric_columns:
-        raise ValueError("没有有效的数值型列可供处理")
+    df, numeric_columns = check_and_read(file_path, columns, session_id)
         
     # 根据操作类型执行相应计算
     if operation == "log":
@@ -251,12 +240,8 @@ def scientific_calculation(
     }
 
 
-def one_hot_encoding(
-    file_path: str,
-    columns: List[str],
-    session_id: str = None,
-    drop_first: bool = False
-) -> Dict[str, Any]:
+def one_hot_encoding(file_path: str,columns: List[str],session_id: str = None,
+    drop_first: bool = False) -> Dict[str, Any]:
     """
     独热编码 - 对分类变量进行独热编码处理
     
@@ -269,22 +254,7 @@ def one_hot_encoding(
     Returns:
         Dict[str, Any]: 处理结果信息
     """
-    # 确保数据目录存在
-    ensure_data_dir()
-    
-    if session_id:
-        ensure_session_dir(session_id)
-        
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-        
-    # 读取文件
-    df = read_any_file(file_path)
-    
-    # 检查列是否存在
-    missing_columns = [col for col in columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
+    df, _ = check_and_read(file_path, columns, session_id)
         
     # 对指定列进行独热编码
     processed_columns = []
@@ -317,11 +287,7 @@ def one_hot_encoding(
     }
 
 
-def statistical_summary(
-    file_path: str,
-    columns: List[str],
-    session_id: str = None
-) -> Dict[str, Any]:
+def statistical_summary(file_path: str,columns: List[str],session_id: str = None) -> Dict[str, Any]:
     """
     统计摘要 - 计算并返回指定列的统计摘要信息
     
@@ -333,28 +299,8 @@ def statistical_summary(
     Returns:
         Dict[str, Any]: 包含统计摘要信息的字典，格式适合 echarts 绘制表格
     """
-    # 确保数据目录存在
-    ensure_data_dir()
-    
-    if session_id:
-        ensure_session_dir(session_id)
-        
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-        
-    # 读取文件
-    df = read_any_file(file_path)
-    
-    # 检查列是否存在
-    missing_columns = [col for col in columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
 
-    # 只选择数值型列进行处理
-    numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
-        
-    if not numeric_columns:
-        raise ValueError("没有有效的数值型列可供处理")
+    df, numeric_columns = check_and_read(file_path, columns, session_id)
     
     # 计算统计摘要信息
     summary_data = []
@@ -406,12 +352,8 @@ def statistical_summary(
     
     return result
 
-def normality_test(
-    file_path: str,
-    columns: List[str],
-    method: str = "shapiro",
-    alpha: float = 0.05
-) -> Dict[str, Any]:
+def normality_test(file_path: str,columns: List[str],session_id: str = None,
+    method: str = "shapiro",alpha: float = 0.05) -> Dict[str, Any]:
     """
     正态性检验
 
@@ -421,37 +363,13 @@ def normality_test(
         method (str): 正态性检验方法 ("shapiro", "normaltest")
         alpha (float): 显著性水平 (默认0.05)
     """
-    ensure_data_dir()
+    df, numeric_columns = check_and_read(file_path, columns, session_id)
 
-    if session_id:
-        ensure_session_dir(session_id)
-
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-
-    # 读取文件
-    df = read_any_file(file_path)
-
-    # 检查列是否存在
-    missing_columns = [col for col in columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
-
-    # 只选择数值型列进行处理
-    numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
-
-    if not numeric_columns:
-        raise ValueError("没有有效的数值型列可供处理")
-
-    return normality_test_with_constants(df, numeric_columns, method, alpha)
+    return _normality_test_with_constants(df, numeric_columns, method, alpha)
 
 
-def normality_test_with_constants(
-    df: pd.DataFrame,
-    columns: List[str],
-    method: str = "shapiro",
-    alpha: float = 0.05
-) -> Dict[str, Any]:
+def _normality_test_with_constants(df: pd.DataFrame,columns: List[str],
+    method: str = "shapiro",alpha: float = 0.05) -> Dict[str, Any]:
     """
     正态性检验（包括常量列检测）
 
@@ -517,13 +435,8 @@ def normality_test_with_constants(
     }
 
 
-def t_test(
-    file_path: str,
-    columns: List[str],
-    test_type: str = "one_sample",
-    session_id: str = None,
-    **kwargs
-) -> Dict[str, Any]:
+def t_test(file_path: str,columns: List[str],test_type: str = "one_sample",
+    session_id: str = None,**kwargs) -> Dict[str, Any]:
     """
     T检验 - 对数据执行不同类型的T检验，并先进行正态性检验
     
@@ -545,35 +458,15 @@ def t_test(
     Returns:
         Dict[str, Any]: 包含T检验结果和正态性检验结果的字典
     """
-    # 确保数据目录存在
-    ensure_data_dir()
-    
-    if session_id:
-        ensure_session_dir(session_id)
-        
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-        
-    # 读取文件
-    df = read_any_file(file_path)
-    
-    # 检查列是否存在
-    missing_columns = [col for col in columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
-        
-    # 只选择数值型列进行处理
-    numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
-        
-    if not numeric_columns:
-        raise ValueError("没有有效的数值型列可供处理")
+
+    df, numeric_columns = check_and_read(file_path, columns, session_id)
     
     # 获取参数
     normality_method = kwargs.get("normality_method", "shapiro")
     alpha = kwargs.get("alpha", 0.05)
     
     # 执行正态性检验（包括常量列检测）
-    normality_test_result = normality_test_with_constants(df, numeric_columns, normality_method, alpha)
+    normality_test_result = _normality_test_with_constants(df, numeric_columns, normality_method, alpha)
     normality_results = normality_test_result["normality_results"]
     
     # 执行T检验
@@ -745,13 +638,8 @@ def t_test(
     return result
 
 
-def text_to_numeric_or_datetime(
-    file_path: str,
-    columns: List[str],
-    convert_to: str = "numeric",
-    session_id: str = None,
-    datetime_format: str = None
-) -> Dict[str, Any]:
+def text_to_numeric_or_datetime(file_path: str,columns: List[str],convert_to: str = "numeric",
+    session_id: str = None,datetime_format: str = None) -> Dict[str, Any]:
     """
     文本转数值/时间 - 将包含千位分隔符、单位缩写（K,M等）的文本列转换为数值列，或将时间戳转换为时间列
     
@@ -765,22 +653,7 @@ def text_to_numeric_or_datetime(
     Returns:
         Dict[str, Any]: 处理结果信息
     """
-    # 确保数据目录存在
-    ensure_data_dir()
-    
-    if session_id:
-        ensure_session_dir(session_id)
-        
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-        
-    # 读取文件
-    df = read_any_file(file_path)
-    
-    # 检查列是否存在
-    missing_columns = [col for col in columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
+    df, _ = check_and_read(file_path, columns, session_id)
         
     # 处理列
     processed_columns = []
@@ -851,12 +724,7 @@ def text_to_numeric_or_datetime(
     }
 
 
-def correlation_analysis(
-    file_path: str,
-    columns: List[str],
-    method: str = "pearson",
-    session_id: str = None
-) -> Dict[str, Any]:
+def correlation_analysis(file_path: str,columns: List[str],method: str = "pearson",session_id: str = None) -> Dict[str, Any]:
     """
     相关性分析 - 计算并返回指定列之间的相关系数和p值
     
@@ -869,28 +737,7 @@ def correlation_analysis(
     Returns:
         Dict[str, Any]: 包含相关性分析结果的字典
     """
-    # 确保数据目录存在
-    ensure_data_dir()
-    
-    if session_id:
-        ensure_session_dir(session_id)
-        
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-        
-    # 读取文件
-    df = read_any_file(file_path)
-    
-    # 检查列是否存在
-    missing_columns = [col for col in columns if col not in df.columns]
-    if missing_columns:
-        raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
-
-    # 只选择数值型列进行处理
-    numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
-        
-    if not numeric_columns:
-        raise ValueError("没有有效的数值型列可供处理")
+    df, numeric_columns = check_and_read(file_path, columns, session_id)
     
     from scipy.stats import pearsonr, spearmanr, kendalltau
     import warnings
@@ -991,5 +838,5 @@ if __name__ == "__main__":
 
     import json
 
-    result = t_test(file_path, columns, test_type, session_id)
+    result = normality_test(file_path, columns, session_id)
     print(json.dumps(result, indent=2, ensure_ascii=False))

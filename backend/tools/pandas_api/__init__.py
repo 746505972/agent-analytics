@@ -194,6 +194,50 @@ def correlation_analysis_tool(
     from utils.pandas_tool import correlation_analysis
     return correlation_analysis(file_path, columns, method, session_id)
 
+# 注册正态性检验工具
+@tool
+def normality_test_tool(file_path: str, columns: List[str], session_id: str = None,
+        method: str = "shapiro", alpha: float = 0.05) -> dict:
+    """
+    正态性检验（自带常值检验）
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要检验的列名列表
+        session_id (str): session_id
+        method (str): 正态性检验方法 ("shapiro", "normaltest")
+        alpha (float): 显著性水平 (默认0.05)
+    """
+    from utils.pandas_tool import normality_test
+    return normality_test(file_path, columns, session_id, method, alpha)
+
+# 注册T检验工具
+@tool
+def t_test_tool(file_path: str, columns: List[str], test_type: str = "one_sample",
+        session_id: str = None, **kwargs) -> dict:
+    """
+    T检验 - 对数据执行不同类型的T检验，自带正态性检验
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表
+        test_type (str): T检验类型
+            - "one_sample": 单样本T检验
+            - "independent": 独立样本T检验
+            - "paired": 配对样本T检验
+        session_id (str): 会话ID
+        **kwargs: 其他参数，用于特定检验的配置
+            - popmean: 单样本t检验中的总体均值 (用于"one_sample"类型)
+            - equal_var: 独立样本t检验中是否假设方差相等 (用于"independent"类型)
+            - group_col: 分组列名，用于独立样本t检验 (用于"independent"类型)
+            - normality_method: 正态性检验方法 ("shapiro", "normaltest")
+            - alpha: 显著性水平 (默认0.05)
+
+    Returns:
+        Dict[str, Any]: 包含T检验结果和正态性检验结果的字典
+    """
+    from utils.pandas_tool import t_test
+    return t_test(file_path, columns, test_type, session_id, **kwargs)
 
 # 将模块中的函数注册为工具
 def register_pandas_tools(agent):
@@ -203,7 +247,6 @@ def register_pandas_tools(agent):
     Args:
         agent: DataAnalysisAgent实例
     """
-    # 已经使用装饰器注册为工具，这里只需要将它们添加到agent中
     agent.tools.append(remove_invalid_samples_tool)
     agent.tools.append(handle_missing_values_tool)
     agent.tools.append(dimensionless_processing_tool)
@@ -212,3 +255,5 @@ def register_pandas_tools(agent):
     agent.tools.append(statistical_summary_tool)
     agent.tools.append(correlation_analysis_tool)
     agent.tools.append(text_to_numeric_or_datetime_tool)
+    agent.tools.append(normality_test_tool)
+    agent.tools.append(t_test_tool)

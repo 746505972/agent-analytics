@@ -547,63 +547,6 @@ def delete_columns(file_path: str, columns_to_delete: List[str], session_id: str
         "saved_path": new_file_path
     }
 
-
-def edit_file_data(file_path: str, edit_func, session_id: str = None, *args, **kwargs) -> dict:
-    """
-    通用文件编辑函数，在文件上应用自定义编辑操作
-    
-    Args:
-        file_path (str): 要编辑的文件路径
-        edit_func (callable): 执行实际数据编辑的函数，应该接受DataFrame作为第一个参数
-        session_id (str, optional): 用户会话ID
-        *args, **kwargs: 传递给edit_func的额外参数
-        
-    Returns:
-        dict: 包含新文件信息的字典
-    """
-    # 确保数据目录存在
-    ensure_data_dir()
-    
-    if session_id:
-        ensure_session_dir(session_id)
-
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-
-    # 读取文件
-    df = read_any_file(file_path)
-    # 应用编辑函数
-    df = edit_func(df, *args, **kwargs)
-    
-    new_filename,new_file_path = generate_new_file_path(file_path, session_id)
-    
-    # 保存编辑后的数据
-    df.to_csv(new_file_path, index=False, encoding="utf-8-sig")
-    
-    # 处理NaN值，将其替换为None以便JSON序列化
-    df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
-    
-    # 再次确保所有值都可以被JSON序列化
-    for col in df.columns:
-        def convert_value(x):
-            if pd.isna(x) or x is None:
-                return None
-            if hasattr(x, 'item'):
-                try:
-                    return x.item()
-                except (ValueError, OverflowError):
-                    return str(x)
-            return x
-        df[col] = df[col].apply(convert_value)
-    
-    return {
-        "data_id": new_filename,
-        "rows": df.shape[0],
-        "cols": df.shape[1],
-        "columns": list(df.columns),
-        "saved_path": new_file_path,
-    }
-
 def test():
     file_path = f"data/100/x.xlsx"
     result=handle_missing_values(file_path, "100","knn",888888888,

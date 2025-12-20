@@ -10,11 +10,12 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 import logging
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Tuple, Dict, Any
 
 from routers.data import load_csv_file
-from utils.pandas_tool import statistical_summary, correlation_analysis
+from utils.pandas_tool import statistical_summary, correlation_analysis, normality_test, t_test
 from utils.file_manager import get_file_path
+import pandas as pd
 
 router = APIRouter(prefix="/data", tags=["analysis"])
 
@@ -32,69 +33,102 @@ class CorrelationAnalysisRequest(BaseModel):
     method: str = "pearson"
 
 
+class NormalityTestRequest(BaseModel):
+    columns: Optional[List[str]] = None
+    method: str = "shapiro"
+    alpha: float = 0.05
+
+
+class TTestRequest(BaseModel):
+    columns: Optional[List[str]] = None
+    test_type: str = "one_sample"
+    params: Optional[Dict[str, Any]] = None
+
+
+def validate_request_data(request: Request, data_id: str, body_columns: Optional[List[str]] = None) -> Tuple[str, str, pd.DataFrame, List[str], JSONResponse]:
+    """
+    验证请求数据并准备处理参数
+    
+    Args:
+        request: FastAPI请求对象
+        data_id: 数据ID
+        body_columns: 请求体中的列列表
+        
+    Returns:
+        Tuple[session_id, file_path, df, columns_to_process, error_response]
+    """
+    # 获取session_id
+    session_id = request.state.session_id
+
+    # 获取文件路径
+    file_path = get_file_path(data_id, session_id)
+    
+    if not os.path.exists(file_path):
+        return "", "", None, [], JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "error": f"文件不存在: {file_path}"
+            }
+        )
+
+    # 加载CSV文件
+    success, result, status_code = load_csv_file(data_id, session_id)
+    if not success:
+        return "", "", None, [], JSONResponse(
+            status_code=status_code,
+            content={
+                "success": False,
+                "error": result
+            }
+        )
+
+    df = result
+
+    # 检查DataFrame是否为空
+    if df.empty:
+        return "", "", None, [], JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "error": "数据文件为空"
+            }
+        )
+
+    # 确定要处理的列
+    if body_columns:
+        # 使用请求中指定的列
+        columns_to_process = [col for col in body_columns if col in df.columns]
+        missing_columns = set(body_columns) - set(columns_to_process)
+        if missing_columns:
+            logger.warning(f"以下列在数据中不存在: {missing_columns}")
+    else:
+        # 默认处理所有数值型列
+        columns_to_process = df.select_dtypes(include=['number']).columns.tolist()
+    
+    if not columns_to_process:
+        return "", "", None, [], JSONResponse(
+            status_code=400,
+            content={
+                "success": False,
+                "error": "没有可处理的列"
+            }
+        )
+
+    return session_id, file_path, df, columns_to_process, None
+
+
 @router.post("/{data_id}/statistical_summary")
 async def get_statistical_summary(request: Request, data_id: str, body: StatisticalSummaryRequest):
     """
     获取数据文件的统计摘要信息接口，用于"统计摘要"方法
     """
     try:
-        # 获取session_id
-        session_id = request.state.session_id
-
-        # 获取文件路径
-        file_path = get_file_path(data_id, session_id)
-        
-        if not os.path.exists(file_path):
-            return JSONResponse(
-                status_code=404,
-                content={
-                    "success": False,
-                    "error": f"文件不存在: {file_path}"
-                }
-            )
-
-        # 加载CSV文件
-        success, result, status_code = load_csv_file(data_id, session_id)
-        if not success:
-            return JSONResponse(
-                status_code=status_code,
-                content={
-                    "success": False,
-                    "error": result
-                }
-            )
-
-        df = result
-
-        # 检查DataFrame是否为空
-        if df.empty:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "error": "数据文件为空"
-                }
-            )
-
-        # 确定要处理的列
-        if body.columns:
-            # 使用请求中指定的列
-            columns_to_process = [col for col in body.columns if col in df.columns]
-            missing_columns = set(body.columns) - set(columns_to_process)
-            if missing_columns:
-                logger.warning(f"以下列在数据中不存在: {missing_columns}")
-        else:
-            # 默认处理所有数值型列
-            columns_to_process = df.select_dtypes(include=['number']).columns.tolist()
-        
-        if not columns_to_process:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "error": "没有可处理的列"
-                }
-            )
+        # 验证请求数据
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.columns)
+        if error_response:
+            return error_response
 
         # 调用工具函数处理统计摘要
         summary_result = statistical_summary(file_path, columns_to_process, session_id)
@@ -127,63 +161,11 @@ async def get_correlation_analysis(request: Request, data_id: str, body: Correla
     获取数据文件的相关性分析结果接口，用于"相关性分析"方法
     """
     try:
-        # 获取session_id
-        session_id = request.state.session_id
-
-        # 获取文件路径
-        file_path = get_file_path(data_id, session_id)
-        
-        if not os.path.exists(file_path):
-            return JSONResponse(
-                status_code=404,
-                content={
-                    "success": False,
-                    "error": f"文件不存在: {file_path}"
-                }
-            )
-
-        # 加载CSV文件
-        success, result, status_code = load_csv_file(data_id, session_id)
-        if not success:
-            return JSONResponse(
-                status_code=status_code,
-                content={
-                    "success": False,
-                    "error": result
-                }
-            )
-
-        df = result
-
-        # 检查DataFrame是否为空
-        if df.empty:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "error": "数据文件为空"
-                }
-            )
-
-        # 确定要处理的列
-        if body.columns:
-            # 使用请求中指定的列
-            columns_to_process = [col for col in body.columns if col in df.columns]
-            missing_columns = set(body.columns) - set(columns_to_process)
-            if missing_columns:
-                logger.warning(f"以下列在数据中不存在: {missing_columns}")
-        else:
-            # 默认处理所有数值型列
-            columns_to_process = df.select_dtypes(include=['number']).columns.tolist()
-        
-        if not columns_to_process:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "success": False,
-                    "error": "没有可处理的列"
-                }
-            )
+        # 验证请求数据
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.columns)
+        if error_response:
+            return error_response
 
         # 调用工具函数处理相关性分析
         correlation_result = correlation_analysis(file_path, columns_to_process, body.method, session_id)
@@ -202,6 +184,86 @@ async def get_correlation_analysis(request: Request, data_id: str, body: Correla
         })
     except Exception as e:
         logger.error(f"获取相关性分析结果时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )
+
+
+@router.post("/{data_id}/normality_test")
+async def get_normality_test(request: Request, data_id: str, body: NormalityTestRequest):
+    """
+    获取数据文件的正态性检验结果接口，用于"正态性检验"方法
+    """
+    try:
+        # 验证请求数据
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.columns)
+        if error_response:
+            return error_response
+
+        # 调用工具函数处理正态性检验
+        normality_result = normality_test(file_path, columns_to_process, session_id, body.method, body.alpha)
+        
+        # 准备返回结果
+        result_data = {
+            "data_id": data_id,
+            "columns": columns_to_process,
+            "normality_results": normality_result["normality_results"],
+            "constant_columns": normality_result.get("constant_columns", [])
+        }
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取正态性检验结果时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )
+
+
+@router.post("/{data_id}/t_test")
+async def get_t_test(request: Request, data_id: str, body: TTestRequest):
+    """
+    获取数据文件的T检验结果接口，用于"T检验"方法
+    """
+    try:
+        # 验证请求数据
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.columns)
+        if error_response:
+            return error_response
+
+        # 准备参数
+        kwargs = body.params if body.params else {}
+
+        # 调用工具函数处理T检验
+        t_test_result = t_test(file_path, columns_to_process, body.test_type, session_id, **kwargs)
+
+        # 准备返回结果
+        result_data = {
+            "data_id": data_id,
+            "columns": t_test_result["columns"],
+            "test_type": t_test_result["test_type"],
+            "normality_test": t_test_result["normality_test"],
+            "t_test": t_test_result["t_test"]
+        }
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取T检验结果时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={
