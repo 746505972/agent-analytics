@@ -116,7 +116,7 @@
               :key="cellIndex"
               :class="getCellClass(cell)"
             >
-              {{ cell.toFixed(3) }}
+              {{ cell?.toFixed(3) || 'N/A' }}
               <span v-if="shouldShowSignificance(rowIndex, cellIndex)" class="matrix-significance">
                 {{ getSignificanceSymbol(rowIndex, cellIndex) }}
               </span>
@@ -194,8 +194,8 @@
           <tr v-for="(item, index) in formattedCorrelationData" :key="index">
             <td>{{ item.column_x }}</td>
             <td>{{ item.column_y }}</td>
-            <td>{{ item.correlation.toFixed(4) }}</td>
-            <td>{{ item.p_value.toFixed(4) }}</td>
+            <td>{{ item.correlation?.toFixed(4) || 'N/A' }}</td>
+            <td>{{ item.p_value?.toFixed(4) || 'N/A' }}</td>
             <td>
               <span v-if="item.p_value < 0.001" class="significance strong">***</span>
               <span v-else-if="item.p_value < 0.01" class="significance strong">**</span>
@@ -491,45 +491,152 @@ export default {
     
     copyTable() {
       if (!this.formattedCorrelationData.length) {
-        alert('没有数据可复制');
+        this.showCopyNotification('没有数据可复制', true);
         return;
       }
       
       let csvContent = "变量1,变量2,相关系数,p值,显著性\n";
       this.formattedCorrelationData.forEach(item => {
+        // 处理特殊字符
+        let columnX = item.column_x.replace(/"/g, '""');
+        if (columnX.includes(',') || columnX.includes('\n')) {
+          columnX = `"${columnX}"`;
+        }
+        
+        let columnY = item.column_y.replace(/"/g, '""');
+        if (columnY.includes(',') || columnY.includes('\n')) {
+          columnY = `"${columnY}"`;
+        }
+        
+        const correlation = item.correlation !== null ? item.correlation.toFixed(4) : 'N/A';
+        const pValue = item.p_value !== null ? item.p_value.toFixed(4) : 'N/A';
         const significance = item.p_value < 0.001 ? '***' : (item.p_value < 0.01 ? '**' : (item.p_value < 0.05 ? '*' : '-'));
-        csvContent += `${item.column_x},${item.column_y},${item.correlation.toFixed(4)},${item.p_value.toFixed(4)},${significance}\n`;
+        csvContent += `${columnX},${columnY},${correlation},${pValue},${significance}\n`;
       });
       
-      this.copyToClipboard(csvContent);
+      // 尝试使用 Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(csvContent).then(() => {
+          this.showCopyNotification('表格数据已复制到剪贴板');
+        }).catch(err => {
+          console.error('复制失败:', err);
+          this.fallbackCopyTextToClipboard(csvContent);
+        });
+      } else {
+        // 回退方案
+        this.fallbackCopyTextToClipboard(csvContent);
+      }
+    },
+    
+    // 已废弃的方法，保留以确保向后兼容性
+    copyToClipboard(text) {
+      this.fallbackCopyTextToClipboard(text);
     },
     
     copyMatrix() {
       if (!this.matrixColumns.length || !this.matrixRows.length) {
-        alert('没有数据可复制');
+        this.showCopyNotification('没有数据可复制', true);
         return;
       }
       
-      let csvContent = "," + this.matrixColumns.join(",") + "\n";
+      // 处理标题行
+      let headerRow = "";
+      this.matrixColumns.forEach(col => {
+        let processedCol = col.replace(/"/g, '""');
+        if (processedCol.includes(',') || processedCol.includes('\n')) {
+          processedCol = `"${processedCol}"`;
+        }
+        headerRow += `,${processedCol}`;
+      });
+      let csvContent = headerRow + "\n";
+      
       this.matrixRows.forEach((row, index) => {
-        let rowContent = row.label;
+        // 处理行标签
+        let rowLabel = row.label.replace(/"/g, '""');
+        if (rowLabel.includes(',') || rowLabel.includes('\n')) {
+          rowLabel = `"${rowLabel}"`;
+        }
+        let rowContent = rowLabel;
         row.values.forEach((value, cellIndex) => {
           const significance = this.getSignificanceSymbol(index, cellIndex);
-          rowContent += `,${value.toFixed(3)}${significance}`;
+          const formattedValue = value !== null ? value.toFixed(3) : 'N/A';
+          rowContent += `,${formattedValue}${significance}`;
         });
         csvContent += rowContent + "\n";
       });
       
-      this.copyToClipboard(csvContent);
+      // 尝试使用 Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(csvContent).then(() => {
+          this.showCopyNotification('表格数据已复制到剪贴板');
+        }).catch(err => {
+          console.error('复制失败:', err);
+          this.fallbackCopyTextToClipboard(csvContent);
+        });
+      } else {
+        // 回退方案
+        this.fallbackCopyTextToClipboard(csvContent);
+      }
     },
     
-    copyToClipboard(text) {
-      const textarea = document.createElement('textarea');
-      textarea.value = text;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textarea);
+    // 回退的复制方法
+    fallbackCopyTextToClipboard(text) {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      
+      // 避免滚动到底部
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          this.showCopyNotification('表格数据已复制到剪贴板');
+        } else {
+          console.error('复制命令失败');
+          this.showCopyNotification('复制命令失败', true);
+        }
+      } catch (err) {
+        console.error('回退复制失败:', err);
+        this.showCopyNotification('回退复制失败: ' + err.message, true);
+      }
+
+      document.body.removeChild(textArea);
+    },
+    
+    // 显示复制通知
+    showCopyNotification(message, isError = false) {
+      // 创建通知元素
+      const notification = document.createElement('div');
+      notification.textContent = message;
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 12px 20px;
+        background-color: ${isError ? '#f56c6c' : '#67c23a'};
+        color: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+        z-index: 2000;
+        font-size: 14px;
+      `;
+      
+      // 添加到页面
+      document.body.appendChild(notification);
+      
+      // 3秒后移除
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 3000);
     },
     
     getCellClass(value) {

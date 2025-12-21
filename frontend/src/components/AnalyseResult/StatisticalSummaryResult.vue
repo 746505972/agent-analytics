@@ -23,7 +23,7 @@
         <tbody>
           <tr v-for="item in datasetDetails.summary" :key="item.column">
             <td>{{ item.column }}</td>
-            <td>{{ item.count }}</td>
+            <td>{{ item.count?.toLocaleString() || 'N/A' }}</td>
             <td>{{ item.min !== null ? item.min : 'N/A' }}</td>
             <td>{{ item.max !== null ? item.max : 'N/A' }}</td>
             <td>{{ item.mean !== null ? item.mean : 'N/A' }}</td>
@@ -461,7 +461,7 @@ export default {
         },
         xAxis: {
           type: 'category',
-          data: this.datasetDetails.summary.map(item => item.column),
+          data: this.datasetDetails.summary?.map(item => item.column),
           axisLabel: {
             rotate: 45
           }
@@ -474,7 +474,7 @@ export default {
           {
             name: '平均值',
             type: 'line',
-            data: this.datasetDetails.summary.map(item => item.mean),
+            data: this.datasetDetails.summary?.map(item => item.mean),
             smooth: this.chartStyles.smoothLine,
             emphasis: {
               focus: 'series'

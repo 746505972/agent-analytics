@@ -336,9 +336,11 @@ export default {
       await this.selectFile(this.selectedFile);
       
       // 如果历史记录中有结果数据，则直接显示
-      if (historyItem.datasetDetails) {
-        this.datasetDetails = historyItem.datasetDetails;
+      if (historyItem.result) {
+        this.datasetDetails = JSON.parse(JSON.stringify(historyItem.result));
+        await this.$nextTick();
         this.middleSectionView = 'result';
+        await this.$nextTick();
       } else {
         // 否则执行方法获取结果
         await this.executeMethod();

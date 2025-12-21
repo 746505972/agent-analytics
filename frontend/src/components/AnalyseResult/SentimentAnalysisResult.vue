@@ -49,15 +49,15 @@
           </div>
           <div class="info-item">
             <span class="info-label">总评论数:</span>
-            <span class="info-value">{{ sentimentData.statistics.total_count }}</span>
+            <span class="info-value">{{ sentimentData.statistics?.total_count || 'N/A' }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">平均情感得分:</span>
-            <span class="info-value">{{ sentimentData.statistics.average_score.toFixed(3) }}</span>
+            <span class="info-value">{{ sentimentData.statistics?.average_score?.toFixed(3) || 'N/A' }}</span>
           </div>
           <div class="info-item">
             <span class="info-label">得分标准差:</span>
-            <span class="info-value">{{ sentimentData.statistics.std_score.toFixed(3) }}</span>
+            <span class="info-value">{{ sentimentData.statistics?.std_score?.toFixed(3) || 'N/A' }}</span>
           </div>
         </div>
         
@@ -66,31 +66,31 @@
           <h4>情感比例</h4>
           <div class="ratio-item positive">
             <span class="ratio-label">正面:</span>
-            <span class="ratio-value">{{ (sentimentData.sentiment_ratios.positive * 100).toFixed(1) }}%</span>
+            <span class="ratio-value">{{ sentimentData.sentiment_ratios?.positive ? (sentimentData.sentiment_ratios.positive * 100).toFixed(1) : 'N/A' }}%</span>
             <div class="ratio-bar">
               <div 
                 class="ratio-fill positive" 
-                :style="{ width: (sentimentData.sentiment_ratios.positive * 100) + '%' }"
+                :style="{ width: (sentimentData.sentiment_ratios?.positive ? (sentimentData.sentiment_ratios.positive * 100) : 0) + '%' }"
               ></div>
             </div>
           </div>
           <div class="ratio-item neutral">
             <span class="ratio-label">中性:</span>
-            <span class="ratio-value">{{ (sentimentData.sentiment_ratios.neutral * 100).toFixed(1) }}%</span>
+            <span class="ratio-value">{{ sentimentData.sentiment_ratios?.neutral ? (sentimentData.sentiment_ratios.neutral * 100).toFixed(1) : 'N/A' }}%</span>
             <div class="ratio-bar">
               <div 
                 class="ratio-fill neutral" 
-                :style="{ width: (sentimentData.sentiment_ratios.neutral * 100) + '%' }"
+                :style="{ width: (sentimentData.sentiment_ratios?.neutral ? (sentimentData.sentiment_ratios.neutral * 100) : 0) + '%' }"
               ></div>
             </div>
           </div>
           <div class="ratio-item negative">
             <span class="ratio-label">负面:</span>
-            <span class="ratio-value">{{ (sentimentData.sentiment_ratios.negative * 100).toFixed(1) }}%</span>
+            <span class="ratio-value">{{ sentimentData.sentiment_ratios?.negative ? (sentimentData.sentiment_ratios.negative * 100).toFixed(1) : 'N/A' }}%</span>
             <div class="ratio-bar">
               <div 
                 class="ratio-fill negative" 
-                :style="{ width: (sentimentData.sentiment_ratios.negative * 100) + '%' }"
+                :style="{ width: (sentimentData.sentiment_ratios?.negative ? (sentimentData.sentiment_ratios.negative * 100) : 0) + '%' }"
               ></div>
             </div>
           </div>
