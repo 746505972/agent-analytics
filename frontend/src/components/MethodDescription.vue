@@ -32,7 +32,7 @@
         </div>
         <div v-else-if="currentMethod === 'normality_test'">
           <h4>正态性检验</h4>
-          <p>检验数据是否符合正态分布。</p>
+          <p>检验数据是否符合正态分布。支持按分组列分别检验各组数据的正态性。</p>
         </div>
         <div v-else-if="currentMethod === 'non_parametric_test'">
           <h4>非参数检验</h4>

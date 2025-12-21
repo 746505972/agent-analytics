@@ -37,6 +37,7 @@ class NormalityTestRequest(BaseModel):
     columns: Optional[List[str]] = None
     method: str = "shapiro"
     alpha: float = 0.05
+    group_by: Optional[str] = None
 
 
 class TTestRequest(BaseModel):
@@ -206,15 +207,23 @@ async def get_normality_test(request: Request, data_id: str, body: NormalityTest
             return error_response
 
         # 调用工具函数处理正态性检验
-        normality_result = normality_test(file_path, columns_to_process, session_id, body.method, body.alpha)
+        normality_result = normality_test(file_path, columns_to_process, session_id, body.method, body.alpha, body.group_by)
         
         # 准备返回结果
         result_data = {
             "data_id": data_id,
             "columns": columns_to_process,
-            "normality_results": normality_result["normality_results"],
-            "constant_columns": normality_result.get("constant_columns", [])
+            "alpha": body.alpha,
+            "method": body.method,
         }
+        
+        # 根据是否分组返回不同的结果格式
+        if "grouped_results" in normality_result:
+            result_data["grouped_results"] = normality_result["grouped_results"]
+            result_data["group_by"] = normality_result["group_by"]
+        else:
+            result_data["normality_results"] = normality_result["normality_results"]
+            result_data["constant_columns"] = normality_result.get("constant_columns", [])
 
         return JSONResponse(content={
             "success": True,

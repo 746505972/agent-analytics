@@ -86,6 +86,7 @@
             :data-transformation-config="dataTransformationConfig"
             :correlation-method="correlationMethod"
             :t-test-config="tTestConfig"
+            :normality-test-config="normalityTestConfig"
             :wordcloud-config="wordcloudConfig"
             :sentiment-config="sentimentConfig"
             :is-waiting-for-response="isWaitingForResponse"
@@ -101,6 +102,7 @@
             @update:dataTransformationConfig="updateDataTransformationConfig"
             @update:correlationMethod="correlationMethod = $event"
             @update:tTestConfig="tTestConfig = $event"
+            @update:normalityTestConfig="normalityTestConfig = $event"
             @update:wordcloudConfig="wordcloudConfig = $event"
             @update:sentimentConfig="sentimentConfig = $event"
             @toggleColumnSelection="handleToggleColumnSelection"
@@ -273,6 +275,12 @@ export default {
         equalVar: true,
         normalityMethod: 'shapiro'
       },
+      // 正态性检验相关状态
+      normalityTestConfig: {
+        method: 'shapiro',
+        alpha: 0.05,
+        groupBy: ''
+      },
     }
   },
   async mounted() {
@@ -386,16 +394,13 @@ export default {
       if (event) {
         event.stopPropagation();
       }
-      
       this.isFileSectionCollapsed = !this.isFileSectionCollapsed;
-      // 保存文件选择区域的展开/收起状态到localStorage
       localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
     },
     
     // 关闭文件选择区域
     closeFileSelection() {
       this.isFileSectionCollapsed = true;
-      // 保存文件选择区域的展开/收起状态到localStorage
       localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
     },
 
@@ -525,7 +530,8 @@ export default {
           correlationMethod: this.correlationMethod,
           wordcloudConfig: this.wordcloudConfig,
           sentimentConfig: this.sentimentConfig,
-          tTestConfig: this.tTestConfig
+          tTestConfig: this.tTestConfig,
+          normalityTestConfig: this.normalityTestConfig
         });
         
         if (result) {

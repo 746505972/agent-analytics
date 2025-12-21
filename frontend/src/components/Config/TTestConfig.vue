@@ -110,7 +110,7 @@
       <!-- 正态性检验说明 -->
       <div class="method-description">
         <div v-if="localConfig.normalityMethod === 'shapiro'">
-          <p>Shapiro-Wilk检验：适用于小样本数据（通常n&lt;50），是检验正态性最常用的方法之一。该方法对各种偏离正态性的敏感度较高。</p>
+          <p>Shapiro-Wilk检验：适用于小样本数据（通常n&lt;5000,n&lt;50最佳），是检验正态性最常用的方法之一。该方法对各种偏离正态性的敏感度较高。</p>
         </div>
         <div v-else>
           <p>D'Agostino检验：基于数据的偏度和峰度进行检验，适用于中等或大样本数据。对于大样本数据更为稳健。</p>

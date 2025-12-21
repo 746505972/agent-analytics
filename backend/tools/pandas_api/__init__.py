@@ -197,7 +197,7 @@ def correlation_analysis_tool(
 # 注册正态性检验工具
 @tool
 def normality_test_tool(file_path: str, columns: List[str], session_id: str = None,
-        method: str = "shapiro", alpha: float = 0.05) -> dict:
+        method: str = "shapiro", alpha: float = 0.05, group_by: str = None) -> dict:
     """
     正态性检验（自带常值检验）
 
@@ -207,9 +207,10 @@ def normality_test_tool(file_path: str, columns: List[str], session_id: str = No
         session_id (str): session_id
         method (str): 正态性检验方法 ("shapiro", "normaltest")
         alpha (float): 显著性水平 (默认0.05)
+        group_by (str): 分组列名，如果提供则按组进行正态性检验
     """
     from utils.pandas_tool import normality_test
-    return normality_test(file_path, columns, session_id, method, alpha)
+    return normality_test(file_path, columns, session_id, method, alpha, group_by)
 
 # 注册T检验工具
 @tool

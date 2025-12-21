@@ -353,7 +353,7 @@ def statistical_summary(file_path: str,columns: List[str],session_id: str = None
     return result
 
 def normality_test(file_path: str,columns: List[str],session_id: str = None,
-    method: str = "shapiro",alpha: float = 0.05) -> Dict[str, Any]:
+    method: str = "shapiro",alpha: float = 0.05, group_by: str = None) -> Dict[str, Any]:
     """
     正态性检验
 
@@ -362,10 +362,31 @@ def normality_test(file_path: str,columns: List[str],session_id: str = None,
         columns (List[str]): 需要检验的列名列表
         method (str): 正态性检验方法 ("shapiro", "normaltest")
         alpha (float): 显著性水平 (默认0.05)
+        group_by (str): 分组列名，如果提供则按组进行正态性检验
     """
     df, numeric_columns = check_and_read(file_path, columns, session_id)
-
-    return _normality_test_with_constants(df, numeric_columns, method, alpha)
+    
+    if group_by:
+        # 按分组列进行正态性检验
+        if group_by not in df.columns:
+            raise ValueError(f"分组列 '{group_by}' 不存在于数据集中")
+        
+        # 获取唯一分组
+        unique_groups = df[group_by].dropna().unique()
+        grouped_results = {}
+        
+        for group in unique_groups:
+            # 筛选当前组的数据
+            group_data = df[df[group_by] == group]
+            grouped_results[group] = _normality_test_with_constants(group_data, numeric_columns, method, alpha)
+        
+        return {
+            "grouped_results": grouped_results,
+            "group_by": group_by,
+        }
+    else:
+        # 原始的正态性检验逻辑
+        return _normality_test_with_constants(df, numeric_columns, method, alpha)
 
 def _safe_float(value):
     """安全地将值转换为float，处理inf和nan值"""

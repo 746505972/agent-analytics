@@ -19,7 +19,7 @@
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
       </div>
-      <div v-else-if="['statistical_summary','correlation_analysis', 't_test'].includes(currentMethod)">
+      <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test'].includes(currentMethod)">
         <h3>选择需要分析的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则分析所有数值型列</p>
@@ -39,7 +39,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -102,6 +102,13 @@
       @update:config="updateTTestConfig"
     />
 
+    <NormalityTestConfig
+      v-else-if="currentMethod === 'normality_test'"
+      :config="normalityTestConfig"
+      :categorical-columns="getCategoricalColumns()"
+      @update:config="updateNormalityTestConfig"
+    />
+
     <WordCloudConfig
       v-else-if="currentMethod === 'text_analysis'"
       :selected-file-columns="selectedFileColumns"
@@ -126,6 +133,7 @@ import MissingValueInterpolationConfig from "./MissingValueInterpolationConfig.v
 import DataTransformationConfig from "./DataTransformationConfig.vue";
 import CorrelationAnalysisConfig from "./CorrelationAnalysisConfig.vue";
 import TTestConfig from "./TTestConfig.vue";
+import NormalityTestConfig from "./NormalityTestConfig.vue";
 import WordCloudConfig from "./WordCloudConfig.vue";
 import SentimentAnalysisConfig from "./SentimentAnalysisConfig.vue";
 
@@ -138,6 +146,7 @@ export default {
     DataTransformationConfig,
     CorrelationAnalysisConfig,
     TTestConfig,
+    NormalityTestConfig,
     WordCloudConfig,
     SentimentAnalysisConfig
   },
@@ -221,6 +230,14 @@ export default {
         normalityMethod: 'shapiro'
       })
     },
+    normalityTestConfig: {
+      type: Object,
+      default: () => ({
+        method: 'shapiro',
+        alpha: 0.05,
+        groupBy: ''
+      })
+    },
     wordcloudConfig: {
       type: Object,
       default: () => ({
@@ -260,6 +277,7 @@ export default {
     'update:dataTransformationConfig',
     'update:correlationMethod',
     'update:tTestConfig',
+    'update:normalityTestConfig',
     'update:wordcloudConfig',
     'update:sentimentConfig',
     'toggleColumnSelection'
@@ -279,7 +297,8 @@ export default {
         'correlation_analysis',
         'text_analysis',
         'sentiment_analysis',
-        't_test'
+        't_test',
+        'normality_test'
       ];
 
       if (!selectableMethods.includes(this.currentMethod)) {
@@ -304,6 +323,10 @@ export default {
     
     updateTTestConfig(config) {
       this.$emit('update:tTestConfig', config);
+    },
+    
+    updateNormalityTestConfig(config) {
+      this.$emit('update:normalityTestConfig', config);
     }
   }
 }

@@ -65,6 +65,11 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         groupCol: '',
         equalVar: true,
         normalityMethod: 'shapiro'
+      },
+      normalityTestConfig = {
+        method: 'shapiro',
+        alpha: 0.05,
+        groupBy: ''
       }} = options;
   
   try {
@@ -221,6 +226,38 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         return result.data;
       } else {
         throw new Error(result.error || "获取T检验结果失败");
+      }
+    } else if (method === 'normality_test') {
+      // 准备正态性检验请求体
+      const requestBody = {
+        method: normalityTestConfig.method,
+        alpha: normalityTestConfig.alpha
+      };
+      
+      // 添加分组列（如果有）
+      if (normalityTestConfig.groupBy) {
+        requestBody.group_by = normalityTestConfig.groupBy;
+      }
+      
+      // 添加选中的列
+      if (selectedColumns && selectedColumns.length > 0) {
+        requestBody.columns = selectedColumns;
+      }
+      
+      const response = await fetch(`/data/${dataId}/normality_test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "获取正态性检验结果失败");
       }
     }
     // 其他分析方法可以在这里添加
