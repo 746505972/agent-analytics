@@ -411,7 +411,7 @@ export default {
           this.files = result.data;
           this.session_id = result.session_id;
           const storedSessionId = localStorage.getItem('session_id');
-          if (storedSessionId && this.session_id !== storedSessionId) {
+          if (this.session_id !== storedSessionId) {
             // 如果session_id变化，清除localStorage中的数据
             this.clearLocalStorage();
             localStorage.setItem('session_id', this.session_id);

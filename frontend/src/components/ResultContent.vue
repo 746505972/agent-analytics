@@ -17,12 +17,12 @@
     
     <!-- T检验结果 -->
     <div v-else-if="currentMethod === 't_test' && datasetDetails" class="analysis-section">
-      <TTestResult :datasetDetails="datasetDetails" />
+      <TTestResult :dataset-details="datasetDetails" />
     </div>
     
     <!-- 词云分析结果 -->
     <div v-else-if="currentMethod === 'text_analysis' && datasetDetails" class="analysis-section">
-      <WordCloudResult :data="datasetDetails" />
+      <WordCloudResult :dataset-details="datasetDetails" />
     </div>
     
     <!-- 数据可视化结果 -->

@@ -51,7 +51,7 @@
 export default {
   name: "WordCloudResult",
   props: {
-    data: {
+    datasetDetails: {
       type: Object,
       default: () => null
     },
@@ -93,7 +93,7 @@ export default {
   },
   computed: {
     wordcloudData() {
-      return this.data || null;
+      return this.datasetDetails || null;
     },
     
     topWords() {
