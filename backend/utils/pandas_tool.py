@@ -367,6 +367,17 @@ def normality_test(file_path: str,columns: List[str],session_id: str = None,
 
     return _normality_test_with_constants(df, numeric_columns, method, alpha)
 
+def _safe_float(value):
+    """安全地将值转换为float，处理inf和nan值"""
+    if value is None:
+        return None
+    try:
+        f = float(value)
+        if np.isinf(f) or np.isnan(f):
+            return None
+        return f
+    except (ValueError, OverflowError):
+        return None
 
 def _normality_test_with_constants(df: pd.DataFrame,columns: List[str],
     method: str = "shapiro",alpha: float = 0.05) -> Dict[str, Any]:
@@ -417,9 +428,9 @@ def _normality_test_with_constants(df: pd.DataFrame,columns: List[str],
 
             normality_results[col] = {
                 "method": method,
-                "statistic": float(stat),
-                "p_value": float(p_value),
-                "is_normal": bool(p_value > alpha),
+                "statistic": _safe_float(stat),
+                "p_value": _safe_float(p_value),
+                "is_normal": bool(p_value > alpha) if _safe_float(p_value) is not None else True,
                 "sample_size": len(col_data)
             }
         except Exception as e:
@@ -485,12 +496,12 @@ def t_test(file_path: str,columns: List[str],test_type: str = "one_sample",
                 
                 t_test_results[col] = {
                     "test_type": "one_sample",
-                    "statistic": float(t_stat),
-                    "p_value": float(p_value),
-                    "significant": bool(p_value < alpha),
-                    "popmean": popmean,
-                    "sample_mean": float(col_data.mean()),
-                    "sample_std": float(col_data.std()),
+                    "statistic": _safe_float(t_stat),
+                    "p_value": _safe_float(p_value),
+                    "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
+                    "popmean": _safe_float(popmean),
+                    "sample_mean": _safe_float(col_data.mean()),
+                    "sample_std": _safe_float(col_data.std()),
                     "sample_size": len(col_data)
                 }
             except Exception as e:
@@ -539,14 +550,14 @@ def t_test(file_path: str,columns: List[str],test_type: str = "one_sample",
                     
                 variance_results[col] = {
                     "levene": {
-                        "statistic": float(lev_stat),
-                        "p_value": float(lev_p),
-                        "equal_variance": bool(lev_p > alpha)
+                        "statistic": _safe_float(lev_stat),
+                        "p_value": _safe_float(lev_p),
+                        "equal_variance": bool(lev_p > alpha) if _safe_float(lev_p) is not None else False
                     },
                     "bartlett": {
-                        "statistic": float(bartlett_stat) if bartlett_stat is not None else None,
-                        "p_value": float(bartlett_p) if bartlett_p is not None else None,
-                        "equal_variance": bool(bartlett_p > alpha) if bartlett_p is not None else None
+                        "statistic": _safe_float(bartlett_stat) if bartlett_stat is not None else None,
+                        "p_value": _safe_float(bartlett_p) if bartlett_p is not None else None,
+                        "equal_variance": bool(bartlett_p > alpha) if bartlett_p is not None and _safe_float(bartlett_p) is not None else None
                     } if bartlett_stat is not None else None
                 }
             except Exception as e:
@@ -562,20 +573,20 @@ def t_test(file_path: str,columns: List[str],test_type: str = "one_sample",
                 
                 t_test_results[col] = {
                     "test_type": "independent",
-                    "statistic": float(t_stat),
-                    "p_value": float(p_value),
-                    "significant": bool(p_value < alpha),
+                    "statistic": _safe_float(t_stat),
+                    "p_value": _safe_float(p_value),
+                    "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
                     "equal_var": equal_var,
                     "group1": {
                         "name": str(group1_name),
-                        "mean": float(group1_data[col].mean()),
-                        "std": float(group1_data[col].std()),
+                        "mean": _safe_float(group1_data[col].mean()),
+                        "std": _safe_float(group1_data[col].std()),
                         "size": len(group1_data[col])
                     },
                     "group2": {
                         "name": str(group2_name),
-                        "mean": float(group2_data[col].mean()),
-                        "std": float(group2_data[col].std()),
+                        "mean": _safe_float(group2_data[col].mean()),
+                        "std": _safe_float(group2_data[col].std()),
                         "size": len(group2_data[col])
                     }
                 }
@@ -610,13 +621,13 @@ def t_test(file_path: str,columns: List[str],test_type: str = "one_sample",
             
             t_test_results["paired_test"] = {
                 "test_type": "paired",
-                "statistic": float(t_stat),
-                "p_value": float(p_value),
-                "significant": bool(p_value < alpha),
+                "statistic": _safe_float(t_stat),
+                "p_value": _safe_float(p_value),
+                "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
                 "column1": col1,
                 "column2": col2,
-                "mean_difference": float(differences.mean()),
-                "std_difference": float(differences.std()),
+                "mean_difference": _safe_float(differences.mean()),
+                "std_difference": _safe_float(differences.std()),
                 "sample_size": len(differences)
             }
         except Exception as e:

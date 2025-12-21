@@ -15,6 +15,11 @@
       <CorrelationAnalysisResult :dataset-details="datasetDetails" />
     </div>
     
+    <!-- T检验结果 -->
+    <div v-else-if="currentMethod === 't_test' && datasetDetails" class="analysis-section">
+      <TTestResult :datasetDetails="datasetDetails" />
+    </div>
+    
     <!-- 词云分析结果 -->
     <div v-else-if="currentMethod === 'text_analysis' && datasetDetails" class="analysis-section">
       <WordCloudResult :data="datasetDetails" />
@@ -52,6 +57,7 @@
 import BasicInfoResult from './AnalyseResult/BasicInfoResult.vue';
 import StatisticalSummaryResult from './AnalyseResult/StatisticalSummaryResult.vue';
 import CorrelationAnalysisResult from './AnalyseResult/CorrelationAnalysisResult.vue';
+import TTestResult from './AnalyseResult/TTestResult.vue';
 import VisualizationPanel from './Charts/VisualizationPanel.vue';
 import WordCloudResult from './AnalyseResult/WordCloudResult.vue';
 import SentimentAnalysisResult from "@/components/AnalyseResult/SentimentAnalysisResult.vue";
@@ -63,6 +69,7 @@ export default {
     BasicInfoResult,
     StatisticalSummaryResult,
     CorrelationAnalysisResult,
+    TTestResult,
     VisualizationPanel,
     WordCloudResult
   },

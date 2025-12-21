@@ -57,6 +57,14 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       sentimentConfig = {
         stopwords: [],
         internetSlang: {}
+      },
+      tTestConfig = {
+        testType: 'one_sample',
+        alpha: 0.05,
+        popmean: 0,
+        groupCol: '',
+        equalVar: true,
+        normalityMethod: 'shapiro'
       }} = options;
   
   try {
@@ -174,6 +182,45 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         return result.data;
       } else {
         throw new Error(result.error || "获取情感分析结果失败");
+      }
+    } else if (method === 't_test') {
+      // 准备T检验请求体
+      const requestBody = {
+        test_type: tTestConfig.testType,
+        alpha: tTestConfig.alpha,
+        params: {}
+      };
+      
+      // 根据检验类型添加参数
+      if (tTestConfig.testType === 'one_sample') {
+        requestBody.params.popmean = tTestConfig.popmean;
+      } else if (tTestConfig.testType === 'independent') {
+        requestBody.params.group_col = tTestConfig.groupCol;
+        requestBody.params.equal_var = tTestConfig.equalVar;
+      }
+      
+      // 添加正态性检验方法
+      requestBody.params.normality_method = tTestConfig.normalityMethod;
+      
+      // 添加选中的列
+      if (selectedColumns && selectedColumns.length > 0) {
+        requestBody.columns = selectedColumns;
+      }
+      
+      const response = await fetch(`/data/${dataId}/t_test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "获取T检验结果失败");
       }
     }
     // 其他分析方法可以在这里添加

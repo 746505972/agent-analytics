@@ -8,7 +8,7 @@
     </div>
     <!-- 上部分表格：样本量 最小值 最大值 平均值 标准差 中位数 -->
     <div class="stats-summary-container">
-      <table class="stats-summary-table upper-table">
+      <table class="stats-summary-table" ref="upperTable">
         <thead>
           <tr>
             <th>列名</th>
@@ -151,7 +151,7 @@
     </div>
     <!-- 下部分表格：剩余统计数据 -->
     <div class="stats-summary-container">
-      <table class="stats-summary-table lower-table">
+      <table class="stats-summary-table" ref="lowerTable">
         <thead>
           <tr>
             <th>列名</th>
@@ -246,9 +246,9 @@ export default {
     copyTable(tableType) {
       let table;
       if (tableType === 'upper') {
-        table = document.querySelector('.upper-table');
+        table = this.$refs.upperTable;
       } else {
-        table = document.querySelector('.lower-table');
+        table = this.$refs.lowerTable;
       }
 
       if (!table) {
@@ -279,7 +279,7 @@ export default {
       // 尝试使用 Clipboard API
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(csvContent).then(() => {
-          this.$message && this.$message.success('表格数据已复制到剪贴板');
+          this.showCopyNotification('表格数据已复制到剪贴板');
           console.log('表格数据已复制到剪贴板');
         }).catch(err => {
           console.error('复制失败:', err);
@@ -313,9 +313,11 @@ export default {
           console.log('表格数据已复制到剪贴板');
         } else {
           console.error('复制命令失败');
+          this.showCopyNotification('复制命令失败', true);
         }
       } catch (err) {
         console.error('回退复制失败:', err);
+        this.showCopyNotification('回退复制失败: ' + err.message, true);
       }
 
       document.body.removeChild(textArea);

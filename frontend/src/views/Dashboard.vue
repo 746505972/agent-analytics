@@ -85,6 +85,7 @@
             :last-selected-column-index="lastSelectedColumnIndex"
             :data-transformation-config="dataTransformationConfig"
             :correlation-method="correlationMethod"
+            :t-test-config="tTestConfig"
             :wordcloud-config="wordcloudConfig"
             :sentiment-config="sentimentConfig"
             :is-waiting-for-response="isWaitingForResponse"
@@ -99,6 +100,7 @@
             @update:newColumnNames="handleNewColumnNamesUpdate"
             @update:dataTransformationConfig="updateDataTransformationConfig"
             @update:correlationMethod="correlationMethod = $event"
+            @update:tTestConfig="tTestConfig = $event"
             @update:wordcloudConfig="wordcloudConfig = $event"
             @update:sentimentConfig="sentimentConfig = $event"
             @toggleColumnSelection="handleToggleColumnSelection"
@@ -257,9 +259,19 @@ export default {
         stopwords: [],
         maskShape: "default"
       },
+      // 情感分析相关状态
       sentimentConfig: {
         stopwords: [],
         internetSlang: {}
+      },
+      // T检验相关状态
+      tTestConfig: {
+        testType: 'one_sample',
+        alpha: 0.05,
+        popmean: 0,
+        groupCol: '',
+        equalVar: true,
+        normalityMethod: 'shapiro'
       },
     }
   },
@@ -324,8 +336,8 @@ export default {
       await this.selectFile(this.selectedFile);
       
       // 如果历史记录中有结果数据，则直接显示
-      if (historyItem.result) {
-        this.datasetDetails = historyItem.result;
+      if (historyItem.datasetDetails) {
+        this.datasetDetails = historyItem.datasetDetails;
         this.middleSectionView = 'result';
       } else {
         // 否则执行方法获取结果
@@ -511,6 +523,7 @@ export default {
           correlationMethod: this.correlationMethod,
           wordcloudConfig: this.wordcloudConfig,
           sentimentConfig: this.sentimentConfig,
+          tTestConfig: this.tTestConfig
         });
         
         if (result) {
@@ -520,10 +533,8 @@ export default {
           } else {
             this.addToHistory(this.selectedFile, this.currentMethod, result);
           }
-          
           // 设置分析结果数据
           this.datasetDetails = result;
-          
           // 切换到结果视图
           this.middleSectionView = 'result';
         }
@@ -584,12 +595,6 @@ export default {
     },
     
     handleToggleColumnSelection({ event, column, index }) {
-      // 双重验证
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis'];
-
-      if (!interpolationMethods.includes(this.currentMethod)) {
-        return;
-      }
       const lastIndex = this.lastSelectedColumnIndex;
 
       if (event.ctrlKey || event.metaKey) {

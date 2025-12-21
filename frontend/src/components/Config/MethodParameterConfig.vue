@@ -19,7 +19,7 @@
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
       </div>
-      <div v-else-if="['statistical_summary','correlation_analysis'].includes(currentMethod)">
+      <div v-else-if="['statistical_summary','correlation_analysis', 't_test'].includes(currentMethod)">
         <h3>选择需要分析的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则分析所有数值型列</p>
@@ -39,7 +39,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -95,6 +95,13 @@
       @update:correlationMethod="$emit('update:correlationMethod', $event)"
     />
 
+    <TTestConfig
+      v-else-if="currentMethod === 't_test'"
+      :config="tTestConfig"
+      :categorical-columns="getCategoricalColumns()"
+      @update:config="updateTTestConfig"
+    />
+
     <WordCloudConfig
       v-else-if="currentMethod === 'text_analysis'"
       :selected-file-columns="selectedFileColumns"
@@ -118,6 +125,7 @@ import InvalidSamplesConfig from "./InvalidSamplesConfig.vue";
 import MissingValueInterpolationConfig from "./MissingValueInterpolationConfig.vue";
 import DataTransformationConfig from "./DataTransformationConfig.vue";
 import CorrelationAnalysisConfig from "./CorrelationAnalysisConfig.vue";
+import TTestConfig from "./TTestConfig.vue";
 import WordCloudConfig from "./WordCloudConfig.vue";
 import SentimentAnalysisConfig from "./SentimentAnalysisConfig.vue";
 
@@ -129,6 +137,7 @@ export default {
     MissingValueInterpolationConfig,
     DataTransformationConfig,
     CorrelationAnalysisConfig,
+    TTestConfig,
     WordCloudConfig,
     SentimentAnalysisConfig
   },
@@ -201,6 +210,17 @@ export default {
       type: String,
       default: 'pearson'
     },
+    tTestConfig: {
+      type: Object,
+      default: () => ({
+        testType: 'one_sample',
+        alpha: 0.05,
+        popmean: 0,
+        groupCol: '',
+        equalVar: true,
+        normalityMethod: 'shapiro'
+      })
+    },
     wordcloudConfig: {
       type: Object,
       default: () => ({
@@ -239,6 +259,7 @@ export default {
     'update:newColumnNames',
     'update:dataTransformationConfig',
     'update:correlationMethod',
+    'update:tTestConfig',
     'update:wordcloudConfig',
     'update:sentimentConfig',
     'toggleColumnSelection'
@@ -257,7 +278,8 @@ export default {
         'statistical_summary',
         'correlation_analysis',
         'text_analysis',
-        'sentiment_analysis'
+        'sentiment_analysis',
+        't_test'
       ];
 
       if (!selectableMethods.includes(this.currentMethod)) {
@@ -269,6 +291,19 @@ export default {
     
     handleNewColumnNamesUpdate({ index, value }) {
       this.$emit('update:newColumnNames', { index, value });
+    },
+    
+    getCategoricalColumns() {
+      // 简单地认为非数值型的列是分类列
+      // 在实际应用中，可能需要更复杂的逻辑来判断
+      return this.selectedFileColumns.filter(column => {
+        // 这里只是一个简单的示例，实际应用中可能需要根据数据类型来判断
+        return true;
+      });
+    },
+    
+    updateTTestConfig(config) {
+      this.$emit('update:tTestConfig', config);
     }
   }
 }
@@ -337,24 +372,6 @@ export default {
 .column-item.selected {
   background-color: #409eff;
   color: white;
-}
-
-.param-config-section {
-  background: white;
-  padding: 20px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid #ededed;
-  border-top: 1px solid #ededed;
-}
-
-.default-config-placeholder {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  color: #909399;
 }
 
 .loading-overlay {
