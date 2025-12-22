@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Tuple, Dict, Any
 
 from routers.data import load_csv_file
-from utils.pandas_tool import statistical_summary, correlation_analysis, normality_test, t_test
+from utils.pandas_tool import statistical_summary, correlation_analysis, normality_test, t_test, f_test
 from utils.file_manager import get_file_path
 import pandas as pd
 
@@ -44,6 +44,12 @@ class TTestRequest(BaseModel):
     columns: Optional[List[str]] = None
     test_type: str = "one_sample"
     params: Optional[Dict[str, Any]] = None
+
+
+class FTestRequest(BaseModel):
+    columns: Optional[List[str]] = None
+    group_by: Optional[str] = None
+    alpha: float = 0.05
 
 
 def validate_request_data(request: Request, data_id: str, body_columns: Optional[List[str]] = None) -> Tuple[str, str, pd.DataFrame, List[str], JSONResponse]:
@@ -273,6 +279,48 @@ async def get_t_test(request: Request, data_id: str, body: TTestRequest):
         })
     except Exception as e:
         logger.error(f"获取T检验结果时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )
+
+
+@router.post("/{data_id}/f_test")
+async def get_f_test(request: Request, data_id: str, body: FTestRequest):
+    """
+    获取数据文件的F检验结果接口，用于"F检验"方法
+    """
+    try:
+        # 验证请求数据
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.columns)
+        if error_response:
+            return error_response
+
+        # 调用工具函数处理F检验
+        f_test_result = f_test(file_path, columns_to_process, session_id, body.group_by, body.alpha)
+
+        # 准备返回结果
+        result_data = {
+            "data_id": data_id,
+            "columns": f_test_result["columns"],
+            "f_test": f_test_result["f_test"],
+            "alpha": f_test_result["alpha"]
+        }
+
+        # 如果有分组信息，也返回
+        if "group_by" in f_test_result:
+            result_data["group_by"] = f_test_result["group_by"]
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取F检验结果时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={

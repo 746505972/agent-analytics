@@ -20,6 +20,11 @@
       <TTestResult :dataset-details="datasetDetails" />
     </div>
     
+    <!-- F检验结果 -->
+    <div v-else-if="currentMethod === 'f_test' && datasetDetails" class="analysis-section">
+      <FTestResult :dataset-details="datasetDetails" />
+    </div>
+    
     <!-- 正态性检验结果 -->
     <div v-else-if="currentMethod === 'normality_test' && datasetDetails" class="analysis-section">
       <NormalityTestResult :dataset-details="datasetDetails" />
@@ -67,10 +72,12 @@ import NormalityTestResult from './AnalyseResult/NormalityTestResult.vue';
 import VisualizationPanel from './Charts/VisualizationPanel.vue';
 import WordCloudResult from './AnalyseResult/WordCloudResult.vue';
 import SentimentAnalysisResult from "@/components/AnalyseResult/SentimentAnalysisResult.vue";
+import FTestResult from "@/components/AnalyseResult/FTestResult.vue";
 
 export default {
   name: "ResultContent",
   components: {
+    FTestResult,
     SentimentAnalysisResult,
     BasicInfoResult,
     StatisticalSummaryResult,

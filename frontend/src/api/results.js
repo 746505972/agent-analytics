@@ -1,6 +1,6 @@
 /**
- * 分析结果 API 模块
- * 提供获取各种分析结果功能的封装
+ * 获取分析结果的API函数
+ * 根据不同的分析方法调用相应的后端接口
  */
 export async function fetchResult(dataId, method, options = {}){
   if(method === 'line_chart' || method === 'data_visualization'){
@@ -37,9 +37,7 @@ export async function fetchCompleteData(dataId) {
  * @param {string} dataId - 数据文件ID
  * @param {string} method - 分析方法
  * @param {Object} options - 选项参数
- * @param {Array} options.selectedColumns - 选中的列
- * @param {string} options.correlationMethod - 相关性分析方法
- * @returns {Promise<Object|null>} 分析结果或null（如果失败）
+ * @returns {Promise<Object>} 分析结果
  */
 export async function fetchAnalysisResult(dataId, method, options = {}) {
   const { selectedColumns = [], correlationMethod = 'pearson' ,
@@ -70,6 +68,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         method: 'shapiro',
         alpha: 0.05,
         groupBy: ''
+      },
+      fTestConfig = {
+        groupBy: '',
+        alpha: 0.05
       }} = options;
   
   try {
@@ -131,6 +133,108 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       } else {
         throw new Error(result.error || "获取相关性分析结果失败");
       }
+    } else if (method === 't_test') {
+      // 准备T检验请求体
+      const requestBody = {
+        test_type: tTestConfig.testType,
+        alpha: tTestConfig.alpha,
+        params: {}
+      };
+      
+      // 根据检验类型添加参数
+      if (tTestConfig.testType === 'one_sample') {
+        requestBody.params.popmean = tTestConfig.popmean;
+      } else if (tTestConfig.testType === 'independent') {
+        requestBody.params.group_col = tTestConfig.groupCol;
+        requestBody.params.equal_var = tTestConfig.equalVar;
+      }
+      
+      // 添加正态性检验方法
+      requestBody.params.normality_method = tTestConfig.normalityMethod;
+      
+      // 添加选中的列
+      if (selectedColumns && selectedColumns.length > 0) {
+        requestBody.columns = selectedColumns;
+      }
+      
+      const response = await fetch(`/data/${dataId}/t_test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "获取T检验结果失败");
+      }
+    } else if (method === 'f_test') {
+      // 准备F检验请求体
+      const requestBody = {
+        alpha: fTestConfig.alpha
+      };
+      
+      // 添加分组列（如果有）
+      if (fTestConfig.groupBy) {
+        requestBody.group_by = fTestConfig.groupBy;
+      }
+      
+      // 添加选中的列
+      if (selectedColumns && selectedColumns.length > 0) {
+        requestBody.columns = selectedColumns;
+      }
+
+      const response = await fetch(`/data/${dataId}/f_test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "获取F检验结果失败");
+      }
+    } else if (method === 'normality_test') {
+      // 准备正态性检验请求体
+      const requestBody = {
+        method: normalityTestConfig.method,
+        alpha: normalityTestConfig.alpha
+      };
+      
+      // 添加分组列（如果有）
+      if (normalityTestConfig.groupBy) {
+        requestBody.group_by = normalityTestConfig.groupBy;
+      }
+      
+      // 添加选中的列
+      if (selectedColumns && selectedColumns.length > 0) {
+        requestBody.columns = selectedColumns;
+      }
+      
+      const response = await fetch(`/data/${dataId}/normality_test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "获取正态性检验结果失败");
+      }
     } else if (method === 'text_analysis') {
       if (selectedColumns.length === 0){
         throw new Error("请选择要处理的列");
@@ -138,14 +242,14 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       const requestBody = {
         column: selectedColumns[0],
         color: wordcloudConfig.color || ['#FF274B'],
-        stopwords: wordcloudConfig.stopwords || [],
         max_words: wordcloudConfig.maxWords || 200,
         width: wordcloudConfig.width || 1600,
         height: wordcloudConfig.height || 900,
-        background_color: wordcloudConfig.backgroundColor || 'white',
+        background_color: wordcloudConfig.backgroundColor || "#ffffff",
         max_font_size: wordcloudConfig.maxFontSize || 200,
         min_font_size: wordcloudConfig.minFontSize || 10,
-        mask_shape: wordcloudConfig.maskShape || 'default'
+        stopwords: wordcloudConfig.stopwords || [],
+        mask_shape: wordcloudConfig.maskShape || "default"
       };
 
       const response = await fetch(`/nlp/${dataId}/wordcloud`, {
@@ -187,77 +291,6 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         return result.data;
       } else {
         throw new Error(result.error || "获取情感分析结果失败");
-      }
-    } else if (method === 't_test') {
-      // 准备T检验请求体
-      const requestBody = {
-        test_type: tTestConfig.testType,
-        alpha: tTestConfig.alpha,
-        params: {}
-      };
-      
-      // 根据检验类型添加参数
-      if (tTestConfig.testType === 'one_sample') {
-        requestBody.params.popmean = tTestConfig.popmean;
-      } else if (tTestConfig.testType === 'independent') {
-        requestBody.params.group_col = tTestConfig.groupCol;
-        requestBody.params.equal_var = tTestConfig.equalVar;
-      }
-      
-      // 添加正态性检验方法
-      requestBody.params.normality_method = tTestConfig.normalityMethod;
-      
-      // 添加选中的列
-      if (selectedColumns && selectedColumns.length > 0) {
-        requestBody.columns = selectedColumns;
-      }
-      
-      const response = await fetch(`/data/${dataId}/t_test`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody),
-        credentials: 'include'
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.error || "获取T检验结果失败");
-      }
-    } else if (method === 'normality_test') {
-      // 准备正态性检验请求体
-      const requestBody = {
-        method: normalityTestConfig.method,
-        alpha: normalityTestConfig.alpha
-      };
-      
-      // 添加分组列（如果有）
-      if (normalityTestConfig.groupBy) {
-        requestBody.group_by = normalityTestConfig.groupBy;
-      }
-      
-      // 添加选中的列
-      if (selectedColumns && selectedColumns.length > 0) {
-        requestBody.columns = selectedColumns;
-      }
-      
-      const response = await fetch(`/data/${dataId}/normality_test`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody),
-        credentials: 'include'
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        return result.data;
-      } else {
-        throw new Error(result.error || "获取正态性检验结果失败");
       }
     }
     // 其他分析方法可以在这里添加

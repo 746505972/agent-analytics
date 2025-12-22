@@ -19,7 +19,7 @@
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
       </div>
-      <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test'].includes(currentMethod)">
+      <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test'].includes(currentMethod)">
         <h3>选择需要分析的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则分析所有数值型列</p>
@@ -39,7 +39,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -102,6 +102,13 @@
       @update:config="updateTTestConfig"
     />
 
+    <FTestConfig
+      v-else-if="currentMethod === 'f_test'"
+      :config="fTestConfig"
+      :categorical-columns="getCategoricalColumns()"
+      @update:config="$emit('update:fTestConfig', $event)"
+    />
+
     <NormalityTestConfig
       v-else-if="currentMethod === 'normality_test'"
       :config="normalityTestConfig"
@@ -136,10 +143,12 @@ import TTestConfig from "./TTestConfig.vue";
 import NormalityTestConfig from "./NormalityTestConfig.vue";
 import WordCloudConfig from "./WordCloudConfig.vue";
 import SentimentAnalysisConfig from "./SentimentAnalysisConfig.vue";
+import FTestConfig from "@/components/Config/FTestConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
   components: {
+    FTestConfig,
     AddHeaderConfig,
     InvalidSamplesConfig,
     MissingValueInterpolationConfig,
@@ -230,6 +239,13 @@ export default {
         normalityMethod: 'shapiro'
       })
     },
+    fTestConfig: {
+      type: Object,
+      default: () => ({
+        groupBy: '',
+        alpha: 0.05
+      })
+    },
     normalityTestConfig: {
       type: Object,
       default: () => ({
@@ -298,7 +314,8 @@ export default {
         'text_analysis',
         'sentiment_analysis',
         't_test',
-        'normality_test'
+        'normality_test',
+        'f_test'
       ];
 
       if (!selectableMethods.includes(this.currentMethod)) {

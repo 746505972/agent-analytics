@@ -14,6 +14,9 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, On
     PowerTransformer, Normalizer
 from scipy.stats import ttest_1samp, ttest_ind, ttest_rel, shapiro, normaltest, levene, bartlett
 
+# 添加导入f_oneway用于F检验
+from scipy.stats import f_oneway
+
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
@@ -861,14 +864,132 @@ def correlation_analysis(file_path: str,columns: List[str],method: str = "pearso
     
     return result
 
+
+def f_test(file_path: str, columns: List[str], session_id: str = None, group_by: str = None, alpha: float = 0.05) -> Dict[str, Any]:
+    """
+    F检验 - 用于检验多个样本的方差是否相等或进行方差分析(ANOVA)
+    
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表
+        session_id (str): 会话ID
+        group_by (str): 分组列名，用于进行组间方差分析
+        alpha (float): 显著性水平 (默认0.05)
+
+    Returns:
+        Dict[str, Any]: 包含F检验结果的字典
+
+    """
+    df, numeric_columns = check_and_read(file_path, columns, session_id)
+    
+    # 检查是否有足够的数值列进行F检验
+    if len(numeric_columns) < 2 and group_by is None:
+        raise ValueError("F检验至少需要2个数值列")
+    
+    f_test_results = {}
+    
+    if group_by:
+        # 按组进行方差分析(ANOVA)
+        if group_by not in df.columns:
+            raise ValueError(f"分组列 '{group_by}' 不存在于数据集中")
+        
+        # 获取唯一分组
+        unique_groups = df[group_by].dropna().unique()
+        
+        if len(unique_groups) < 2:
+            raise ValueError("分组数必须大于等于2才能进行方差分析")
+        
+        # 对每个数值列进行组间方差分析
+        for col in numeric_columns:
+            # 按组提取数据
+            groups_data = []
+            group_names = []
+            group_stats = []  # 存储每组的统计信息
+            
+            for group in unique_groups:
+                group_data = df[df[group_by] == group][col].dropna()
+                if len(group_data) > 0:  # 只有当组内有数据时才添加
+                    groups_data.append(group_data)
+                    group_names.append(str(group))
+                    # 计算每组的平均值和标准差
+                    group_stats.append({
+                        "name": str(group),
+                        "mean": _safe_float(group_data.mean()),
+                        "std": _safe_float(group_data.std()),
+                        "size": len(group_data)
+                    })
+            
+            if len(groups_data) < 2:
+                f_test_results[col] = {
+                    "error": "有效分组数少于2组，无法进行方差分析"
+                }
+                continue
+            
+            try:
+                # 执行单因素方差分析
+                f_stat, p_value = f_oneway(*groups_data)
+                
+                f_test_results[col] = {
+                    "test_type": "anova",
+                    "statistic": _safe_float(f_stat),
+                    "p_value": _safe_float(p_value),
+                    "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
+                    "groups": len(groups_data),
+                    "group_names": group_names,
+                    "sample_sizes": [len(group) for group in groups_data],
+                    "group_stats": group_stats  # 添加组统计信息
+                }
+            except Exception as e:
+                f_test_results[col] = {
+                    "test_type": "anova",
+                    "error": str(e)
+                }
+    else:
+        # 方差齐性检验（Levene检验）
+        # 对所有数值列进行方差齐性检验
+        try:
+            # 准备数据，确保每列都有相同数量的非空值
+            cleaned_data = [df[col].dropna() for col in numeric_columns]
+            
+            # 使用Levene检验进行方差齐性检验
+            f_stat, p_value = levene(*cleaned_data)
+            
+            f_test_results["variance_homogeneity"] = {
+                "test_type": "levene",
+                "statistic": _safe_float(f_stat),
+                "p_value": _safe_float(p_value),
+                "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
+                "equal_variance": bool(p_value > alpha) if _safe_float(p_value) is not None else True,
+                "columns": numeric_columns,
+                "sample_sizes": [len(data) for data in cleaned_data]
+            }
+        except Exception as e:
+            f_test_results["variance_homogeneity"] = {
+                "test_type": "levene",
+                "error": str(e)
+            }
+    
+    # 准备返回结果
+    result = {
+        "columns": numeric_columns,
+        "f_test": f_test_results,
+        "alpha": alpha
+    }
+    
+    if group_by:
+        result["group_by"] = group_by
+    
+    return result
+
+
 if __name__ == "__main__":
     # 测试代码
-    file_path = "data/100/independent_t_test_data.csv"
-    columns = ["Method_A", "Method_B", "Method_C"]
+    file_path = "data/100/anova_data_with_groups.csv"
+    columns = ["Soil_pH"]
     test_type = "one_sample"
     session_id = "100"
 
     import json
 
-    result = normality_test(file_path, columns, session_id)
+    result = f_test(file_path, columns, session_id, group_by="Fertilizer_Type", alpha=0.05)
     print(json.dumps(result, indent=2, ensure_ascii=False))

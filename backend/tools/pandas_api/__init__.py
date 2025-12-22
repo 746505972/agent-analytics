@@ -240,6 +240,28 @@ def t_test_tool(file_path: str, columns: List[str], test_type: str = "one_sample
     from utils.pandas_tool import t_test
     return t_test(file_path, columns, test_type, session_id, **kwargs)
 
+
+# 注册F检验工具
+@tool
+def f_test_tool(file_path: str, columns: List[str], session_id: str = None, 
+                group_by: str = None, alpha: float = 0.05) -> dict:
+    """
+    F检验 - 对数据执行F检验，用于检验多个样本的方差是否相等或进行方差分析(ANOVA)
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表
+        session_id (str): 会话ID
+        group_by (str): 分组列名，用于进行组间方差分析
+        alpha (float): 显著性水平 (默认0.05)
+
+    Returns:
+        Dict[str, Any]: 包含F检验结果的字典
+    """
+    from utils.pandas_tool import f_test
+    return f_test(file_path, columns, session_id, group_by, alpha)
+
+
 # 将模块中的函数注册为工具
 def register_pandas_tools(agent):
     """
@@ -258,3 +280,4 @@ def register_pandas_tools(agent):
     agent.tools.append(text_to_numeric_or_datetime_tool)
     agent.tools.append(normality_test_tool)
     agent.tools.append(t_test_tool)
+    agent.tools.append(f_test_tool)

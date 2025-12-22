@@ -139,10 +139,10 @@ npm run server
 - [ ] 添加用户认证和权限管理
 
 ## Languages
-Total : 78 files,  14038 codes, 1488 comments, 1887 blanks, all 17413 lines
+Total : 89 files, 18316 codes, 1683 comments, 2403 blanks, all 22402 lines
 
 | language   | files |   code | comment | blank |  total |
 |:-----------|------:|-------:|--------:|------:|-------:|
-| vue        |    34 | 10,992 |      78 | 1,207 | 12,277 |
-| Python     |    18 |  2,296 |   1,300 |   558 |  4,154 |
-| JavaScript |     9 |    408 |     102 |    62 |    572 |
+| vue        |    44 | 14,556 |     112 | 1,571 | 16,239 |
+| Python     |    19 |  2,862 |   1,453 |   706 |  5,021 |
+| JavaScript |     9 |    577 |     110 |    79 |    766 |

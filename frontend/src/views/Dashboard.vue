@@ -86,6 +86,7 @@
             :data-transformation-config="dataTransformationConfig"
             :correlation-method="correlationMethod"
             :t-test-config="tTestConfig"
+            :f-test-config="fTestConfig"
             :normality-test-config="normalityTestConfig"
             :wordcloud-config="wordcloudConfig"
             :sentiment-config="sentimentConfig"
@@ -102,6 +103,7 @@
             @update:dataTransformationConfig="updateDataTransformationConfig"
             @update:correlationMethod="correlationMethod = $event"
             @update:tTestConfig="tTestConfig = $event"
+            @update:fTestConfig="fTestConfig = $event"
             @update:normalityTestConfig="normalityTestConfig = $event"
             @update:wordcloudConfig="wordcloudConfig = $event"
             @update:sentimentConfig="sentimentConfig = $event"
@@ -262,10 +264,7 @@ export default {
         maskShape: "default"
       },
       // 情感分析相关状态
-      sentimentConfig: {
-        stopwords: [],
-        internetSlang: {}
-      },
+      sentimentConfig: {stopwords: [], internetSlang: {}},
       // T检验相关状态
       tTestConfig: {
         testType: 'one_sample',
@@ -276,13 +275,12 @@ export default {
         normalityMethod: 'shapiro'
       },
       // 正态性检验相关状态
-      normalityTestConfig: {
-        method: 'shapiro',
-        alpha: 0.05,
-        groupBy: ''
-      },
+      normalityTestConfig: {method: 'shapiro', alpha: 0.05, groupBy: ''},
+      // F检验相关状态
+      fTestConfig: {groupBy: '', alpha: 0.05},
     }
   },
+    
   async mounted() {
     await this.loadUploadedFiles();
     // 恢复保存的状态
@@ -531,7 +529,8 @@ export default {
           wordcloudConfig: this.wordcloudConfig,
           sentimentConfig: this.sentimentConfig,
           tTestConfig: this.tTestConfig,
-          normalityTestConfig: this.normalityTestConfig
+          normalityTestConfig: this.normalityTestConfig,
+          fTestConfig: this.fTestConfig
         });
         
         if (result) {
