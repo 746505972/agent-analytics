@@ -84,13 +84,7 @@
             v-model:knn-neighbors="knnNeighbors"
             :last-selected-column-index="lastSelectedColumnIndex"
             :data-transformation-config="dataTransformationConfig"
-            v-model:correlation-method="configs.correlationMethod"
-            v-model:t-test-config="configs.tTestConfig"
-            v-model:f-test-config="configs.fTestConfig"
-            v-model:chi-square-test-config="configs.chiSquareTestConfig"
-            v-model:normality-test-config="configs.normalityTestConfig"
-            v-model:wordcloud-config="configs.wordcloudConfig"
-            v-model:sentiment-config="configs.sentimentConfig"
+            v-model:configs="configs"
             :is-waiting-for-response="isWaitingForResponse"
             @update:newColumnNames="handleNewColumnNamesUpdate"
             @update:dataTransformationConfig="updateDataTransformationConfig"
@@ -131,6 +125,7 @@ import FileSelectionOverlay from "@/components/FileSelectionOverlay.vue";
 import DashboardHeader from "@/components/DashboardHeader.vue";
 import MethodParameterConfig from "@/components/Config/MethodParameterConfig.vue";
 import PreviewModal from "@/components/PreviewModal.vue";
+import RightSidebar from "@/components/RightSidebar.vue";
 import { executeDataTransformation } from "@/api/dataTransformation.js";
 import { executeDeleteColumns, executeMissingValueInterpolation, executeInvalidSamples } from "@/api/columnOperations.js";
 import { applyHeaderNames } from "@/api/headerOperations.js";
@@ -142,8 +137,8 @@ import {
   generateInvalidSamplesFeedback
 } from "@/api/feedbackHandler.js";
 import { getMethodName } from "@/utils/methodUtils.js";
+import { getDefaultConfigs } from '@/utils/configDefaults.js'
 import methodCategories from "@/utils/methodCategories.json";
-import RightSidebar from "@/components/RightSidebar.vue";
 
 export default {
   name: "Dashboard",
@@ -185,7 +180,7 @@ export default {
       files: [],
       selectedFile: null,
       selectedFileColumns: [], // 用于显示选择的文件的列名
-      selectedColumns: [], // 用于插值法选中的列
+      selectedColumns: [], // 选中的列
       userInput: "",
       chatMessages: [
         {
@@ -237,36 +232,7 @@ export default {
       lastSelectedColumnIndex: -1,
       // 数据转换相关配置
       dataTransformationConfig: {},
-      configs:{
-        correlationMethod: 'pearson',// 相关性分析参数
-        wordcloudConfig: {
-          color:['#FF274B'],
-          maxWords: 200,
-          width: 1600,
-          height: 900,
-          backgroundColor: "#ffffff",
-          maxFontSize: 200,
-          minFontSize: 10,
-          stopwords: [],
-          maskShape: "default"
-        },
-        // 情感分析相关状态
-        sentimentConfig: {stopwords: [], internetSlang: {}},
-        // T检验相关状态
-        tTestConfig: {
-          testType: 'one_sample',
-          alpha: 0.05,
-          popmean: 0,
-          groupCol: '',
-          equalVar: true,
-          normalityMethod: 'shapiro'
-        },
-        // 正态性检验相关状态
-        normalityTestConfig: {method: 'shapiro', alpha: 0.05, groupBy: ''},
-        // F检验相关状态
-        fTestConfig: {groupBy: '', alpha: 0.05},
-        chiSquareTestConfig : {groupBy: '', alpha: 0.05},
-      },
+      configs:getDefaultConfigs(),
     }
   },
     
@@ -713,6 +679,7 @@ export default {
       this.lastSelectedColumnIndex= -1;
       this.newColumnNames= [];
       this.headerEditMode= 'add';  // 修改：统一使用字符串类型，默认为添加模式
+      this.configs= getDefaultConfigs()
     },
     
     // 添加到历史记录

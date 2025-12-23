@@ -91,50 +91,43 @@
 
     <CorrelationAnalysisConfig
       v-else-if="currentMethod === 'correlation_analysis'"
-      :correlation-method="correlationMethod"
-      @update:correlationMethod="$emit('update:correlationMethod', $event)"
+      v-model:correlation-method="configs.correlationMethod"
     />
 
     <TTestConfig
       v-else-if="currentMethod === 't_test'"
-      :config="tTestConfig"
+      v-model:config="configs.tTestConfig"
       :categorical-columns="getCategoricalColumns()"
-      @update:config="$emit('update:tTestConfig', $event)"
     />
 
     <FTestConfig
       v-else-if="currentMethod === 'f_test'"
-      :config="fTestConfig"
+      v-model:config="configs.fTestConfig"
       :categorical-columns="getCategoricalColumns()"
-      @update:config="$emit('update:fTestConfig', $event)"
     />
 
     <ChiSquareTestConfig
       v-else-if="currentMethod === 'chi_square_test'"
-      :config="chiSquareTestConfig"
+      v-model:config="configs.chiSquareTestConfig"
       :categorical-columns="getCategoricalColumns()"
-      @update:config="$emit('update:chiSquareTestConfig', $event)"
     />
 
     <NormalityTestConfig
       v-else-if="currentMethod === 'normality_test'"
-      :config="normalityTestConfig"
+      v-model:config="configs.normalityTestConfig"
       :categorical-columns="getCategoricalColumns()"
-      @update:config="$emit('update:normalityTestConfig', $event)"
     />
 
     <WordCloudConfig
       v-else-if="currentMethod === 'text_analysis'"
       :selected-file-columns="selectedFileColumns"
-      :wordcloud-config="wordcloudConfig"
-      @update:wordcloudConfig="$emit('update:wordcloudConfig', $event)"
+      v-model:wordcloud-config="configs.wordcloudConfig"
     />
 
     <SentimentAnalysisConfig
       v-else-if="currentMethod === 'sentiment_analysis'"
       :selected-file-columns="selectedFileColumns"
-      :sentiment-config="sentimentConfig"
-      @update:sentimentConfig="$emit('update:sentimentConfig', $event)"
+      v-model:sentiment-config="configs.sentimentConfig"
     />
   </div>
   </div>
@@ -233,62 +226,46 @@ export default {
       type: Object,
       default: () => ({})
     },
-    correlationMethod: {
-      type: String,
-      default: 'pearson'
-    },
-    tTestConfig: {
+    configs: {
       type: Object,
       default: () => ({
-        testType: 'one_sample',
-        alpha: 0.05,
-        popmean: 0,
-        groupCol: '',
-        equalVar: true,
-        normalityMethod: 'shapiro'
-      })
-    },
-    fTestConfig: {
-      type: Object,
-      default: () => ({
-        groupBy: '',
-        alpha: 0.05
-      })
-    },
-    chiSquareTestConfig: {
-      type: Object,
-      default: () => ({
-        groupBy: '',
-        alpha: 0.05
-      })
-    },
-    normalityTestConfig: {
-      type: Object,
-      default: () => ({
-        method: 'shapiro',
-        alpha: 0.05,
-        groupBy: ''
-      })
-    },
-    wordcloudConfig: {
-      type: Object,
-      default: () => ({
-        color:['#FF274B'],
-        maxWords: 200,
-        width: 1600,
-        height: 900,
-        backgroundColor: "#ffffff",
-        maxFontSize: 200,
-        minFontSize: 10,
-        stopwords: [],
-        maskShape: "default"
-      })
-    },
-    sentimentConfig: {
-      type: Object,
-      default: () => ({
-        stopwords: [],
-        internetSlang: {}
+        correlationMethod: 'pearson',
+        tTestConfig: {
+          testType: 'one_sample',
+          alpha: 0.05,
+          popmean: 0,
+          groupCol: '',
+          equalVar: true,
+          normalityMethod: 'shapiro'
+        },
+        fTestConfig: {
+          groupBy: '',
+          alpha: 0.05
+        },
+        chiSquareTestConfig: {
+          groupBy: '',
+          alpha: 0.05
+        },
+        normalityTestConfig: {
+          method: 'shapiro',
+          alpha: 0.05,
+          groupBy: ''
+        },
+        wordcloudConfig: {
+          color:['#FF274B'],
+          maxWords: 200,
+          width: 1600,
+          height: 900,
+          backgroundColor: "#ffffff",
+          maxFontSize: 200,
+          minFontSize: 10,
+          stopwords: [],
+          maskShape: "default"
+        },
+        sentimentConfig: {
+          stopwords: [],
+          internetSlang: {}
+        }
       })
     },
     isWaitingForResponse: {
@@ -307,12 +284,6 @@ export default {
     'update:knnNeighbors',
     'update:newColumnNames',
     'update:dataTransformationConfig',
-    'update:correlationMethod',
-    'update:tTestConfig',
-    'update:chiSquareTestConfig',
-    'update:normalityTestConfig',
-    'update:wordcloudConfig',
-    'update:sentimentConfig',
     'toggleColumnSelection'
   ],
   methods: {
