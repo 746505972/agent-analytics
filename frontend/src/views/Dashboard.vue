@@ -84,13 +84,13 @@
             :knn-neighbors="knnNeighbors"
             :last-selected-column-index="lastSelectedColumnIndex"
             :data-transformation-config="dataTransformationConfig"
-            :correlation-method="correlationMethod"
-            :t-test-config="tTestConfig"
-            :f-test-config="fTestConfig"
-            :chi-square-test-config="chiSquareTestConfig"
-            :normality-test-config="normalityTestConfig"
-            :wordcloud-config="wordcloudConfig"
-            :sentiment-config="sentimentConfig"
+            :correlation-method="configs.correlationMethod"
+            :t-test-config="configs.tTestConfig"
+            :f-test-config="configs.fTestConfig"
+            :chi-square-test-config="configs.chiSquareTestConfig"
+            :normality-test-config="configs.normalityTestConfig"
+            :wordcloud-config="configs.wordcloudConfig"
+            :sentiment-config="configs.sentimentConfig"
             :is-waiting-for-response="isWaitingForResponse"
             @update:removeDuplicates="removeDuplicates = $event"
             @update:removeDuplicatesCols="removeDuplicatesCols = $event"
@@ -102,13 +102,13 @@
             @update:knnNeighbors="knnNeighbors = $event"
             @update:newColumnNames="handleNewColumnNamesUpdate"
             @update:dataTransformationConfig="updateDataTransformationConfig"
-            @update:correlationMethod="correlationMethod = $event"
-            @update:tTestConfig="tTestConfig = $event"
-            @update:fTestConfig="fTestConfig = $event"
-            @update:chiSquareTestConfig="chiSquareTestConfig = $event"
-            @update:normalityTestConfig="normalityTestConfig = $event"
-            @update:wordcloudConfig="wordcloudConfig = $event"
-            @update:sentimentConfig="sentimentConfig = $event"
+            @update:correlationMethod="configs.correlationMethod = $event"
+            @update:tTestConfig="configs.tTestConfig = $event"
+            @update:fTestConfig="configs.fTestConfig = $event"
+            @update:chiSquareTestConfig="configs.chiSquareTestConfig = $event"
+            @update:normalityTestConfig="configs.normalityTestConfig = $event"
+            @update:wordcloudConfig="configs.wordcloudConfig = $event"
+            @update:sentimentConfig="configs.sentimentConfig = $event"
             @toggleColumnSelection="handleToggleColumnSelection"
           />
         </div>
@@ -252,35 +252,37 @@ export default {
       lastSelectedColumnIndex: -1,
       // 数据转换相关配置
       dataTransformationConfig: {},
-      // 相关性分析参数
-      correlationMethod: 'pearson',
-      wordcloudConfig: {
-        color:['#FF274B'],
-        maxWords: 200,
-        width: 1600,
-        height: 900,
-        backgroundColor: "#ffffff",
-        maxFontSize: 200,
-        minFontSize: 10,
-        stopwords: [],
-        maskShape: "default"
+      configs:{
+        // 相关性分析参数
+        correlationMethod: 'pearson',
+        wordcloudConfig: {
+          color:['#FF274B'],
+          maxWords: 200,
+          width: 1600,
+          height: 900,
+          backgroundColor: "#ffffff",
+          maxFontSize: 200,
+          minFontSize: 10,
+          stopwords: [],
+          maskShape: "default"
+        },
+        // 情感分析相关状态
+        sentimentConfig: {stopwords: [], internetSlang: {}},
+        // T检验相关状态
+        tTestConfig: {
+          testType: 'one_sample',
+          alpha: 0.05,
+          popmean: 0,
+          groupCol: '',
+          equalVar: true,
+          normalityMethod: 'shapiro'
+        },
+        // 正态性检验相关状态
+        normalityTestConfig: {method: 'shapiro', alpha: 0.05, groupBy: ''},
+        // F检验相关状态
+        fTestConfig: {groupBy: '', alpha: 0.05},
+        chiSquareTestConfig : {groupBy: '', alpha: 0.05},
       },
-      // 情感分析相关状态
-      sentimentConfig: {stopwords: [], internetSlang: {}},
-      // T检验相关状态
-      tTestConfig: {
-        testType: 'one_sample',
-        alpha: 0.05,
-        popmean: 0,
-        groupCol: '',
-        equalVar: true,
-        normalityMethod: 'shapiro'
-      },
-      // 正态性检验相关状态
-      normalityTestConfig: {method: 'shapiro', alpha: 0.05, groupBy: ''},
-      // F检验相关状态
-      fTestConfig: {groupBy: '', alpha: 0.05},
-      chiSquareTestConfig : {groupBy: '', alpha: 0.05},
     }
   },
     
@@ -527,10 +529,7 @@ export default {
       this.isWaitingForResponse = true;
       try {
         const result = await fetchResult(this.selectedFile, this.currentMethod, {
-          selectedColumns: this.selectedColumns, correlationMethod: this.correlationMethod,
-          wordcloudConfig: this.wordcloudConfig, sentimentConfig: this.sentimentConfig,
-          tTestConfig: this.tTestConfig, normalityTestConfig: this.normalityTestConfig,
-          fTestConfig: this.fTestConfig, chiSquareTestConfig: this.chiSquareTestConfig,
+          selectedColumns: this.selectedColumns, configs:this.configs
         });
         
         if (result) {

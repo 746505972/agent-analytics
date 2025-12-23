@@ -41,7 +41,8 @@ export async function fetchCompleteData(dataId) {
  */
 export async function fetchAnalysisResult(dataId, method, options = {}) {
   const { selectedColumns = [], correlationMethod = 'pearson' ,
-        wordcloudConfig= {
+      configs =  {
+        wordcloudConfig: {
         color:['#FF274B'],
         maxWords: 200,
         width: 1600,
@@ -51,32 +52,34 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         minFontSize: 10,
         stopwords: [],
         maskShape: "default"
+        },
+        sentimentConfig : {
+          stopwords: [],
+          internetSlang: {}
+        },
+        tTestConfig : {
+          testType: 'one_sample',
+          alpha: 0.05,
+          popmean: 0,
+          groupCol: '',
+          equalVar: true,
+          normalityMethod: 'shapiro'
+        },
+        normalityTestConfig : {
+          method: 'shapiro',
+          alpha: 0.05,
+          groupBy: ''
+        },
+        fTestConfig : {
+          groupBy: '',
+          alpha: 0.05
+        },
+        chiSquareTestConfig : {
+          groupBy: '',
+          alpha: 0.05
+        }
       },
-      sentimentConfig = {
-        stopwords: [],
-        internetSlang: {}
-      },
-      tTestConfig = {
-        testType: 'one_sample',
-        alpha: 0.05,
-        popmean: 0,
-        groupCol: '',
-        equalVar: true,
-        normalityMethod: 'shapiro'
-      },
-      normalityTestConfig = {
-        method: 'shapiro',
-        alpha: 0.05,
-        groupBy: ''
-      },
-      fTestConfig = {
-        groupBy: '',
-        alpha: 0.05
-      },
-      chiSquareTestConfig = {
-        groupBy: '',
-        alpha: 0.05
-      }} = options;
+} = options;
   
   try {
     if (method === 'basic_info') {
@@ -140,21 +143,21 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
     } else if (method === 't_test') {
       // 准备T检验请求体
       const requestBody = {
-        test_type: tTestConfig.testType,
-        alpha: tTestConfig.alpha,
+        test_type: configs.tTestConfig.testType,
+        alpha: configs.tTestConfig.alpha,
         params: {}
       };
       
       // 根据检验类型添加参数
-      if (tTestConfig.testType === 'one_sample') {
-        requestBody.params.popmean = tTestConfig.popmean;
-      } else if (tTestConfig.testType === 'independent') {
-        requestBody.params.group_col = tTestConfig.groupCol;
-        requestBody.params.equal_var = tTestConfig.equalVar;
+      if (configs.tTestConfig.testType === 'one_sample') {
+        requestBody.params.popmean = configs.tTestConfig.popmean;
+      } else if (configs.tTestConfig.testType === 'independent') {
+        requestBody.params.group_col = configs.tTestConfig.groupCol;
+        requestBody.params.equal_var = configs.tTestConfig.equalVar;
       }
       
       // 添加正态性检验方法
-      requestBody.params.normality_method = tTestConfig.normalityMethod;
+      requestBody.params.normality_method = configs.tTestConfig.normalityMethod;
       
       // 添加选中的列
       if (selectedColumns && selectedColumns.length > 0) {
@@ -179,12 +182,12 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
     } else if (method === 'f_test') {
       // 准备F检验请求体
       const requestBody = {
-        alpha: fTestConfig.alpha
+        alpha: configs.fTestConfig.alpha
       };
       
       // 添加分组列（如果有）
-      if (fTestConfig.groupBy) {
-        requestBody.group_by = fTestConfig.groupBy;
+      if (configs.fTestConfig.groupBy) {
+        requestBody.group_by = configs.fTestConfig.groupBy;
       }
       
       // 添加选中的列
@@ -210,12 +213,12 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
     } else if (method === 'chi_square_test') {
       // 准备卡方检验请求体
       const requestBody = {
-        alpha: chiSquareTestConfig.alpha
+        alpha: configs.chiSquareTestConfig.alpha
       };
       
       // 添加分组列（如果有）
-      if (chiSquareTestConfig.groupBy) {
-        requestBody.group_by = chiSquareTestConfig.groupBy;
+      if (configs.chiSquareTestConfig.groupBy) {
+        requestBody.group_by = configs.chiSquareTestConfig.groupBy;
       }
       
       // 添加选中的列
@@ -241,13 +244,13 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
     } else if (method === 'normality_test') {
       // 准备正态性检验请求体
       const requestBody = {
-        method: normalityTestConfig.method,
-        alpha: normalityTestConfig.alpha
+        method: configs.normalityTestConfig.method,
+        alpha: configs.normalityTestConfig.alpha
       };
       
       // 添加分组列（如果有）
-      if (normalityTestConfig.groupBy) {
-        requestBody.group_by = normalityTestConfig.groupBy;
+      if (configs.normalityTestConfig.groupBy) {
+        requestBody.group_by = configs.normalityTestConfig.groupBy;
       }
       
       // 添加选中的列
@@ -276,15 +279,15 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       }
       const requestBody = {
         column: selectedColumns[0],
-        color: wordcloudConfig.color || ['#FF274B'],
-        max_words: wordcloudConfig.maxWords || 200,
-        width: wordcloudConfig.width || 1600,
-        height: wordcloudConfig.height || 900,
-        background_color: wordcloudConfig.backgroundColor || "#ffffff",
-        max_font_size: wordcloudConfig.maxFontSize || 200,
-        min_font_size: wordcloudConfig.minFontSize || 10,
-        stopwords: wordcloudConfig.stopwords || [],
-        mask_shape: wordcloudConfig.maskShape || "default"
+        color: configs.wordcloudConfig.color || ['#FF274B'],
+        max_words: configs.wordcloudConfig.maxWords || 200,
+        width: configs.wordcloudConfig.width || 1600,
+        height: configs.wordcloudConfig.height || 900,
+        background_color: configs.wordcloudConfig.backgroundColor || "#ffffff",
+        max_font_size: configs.wordcloudConfig.maxFontSize || 200,
+        min_font_size: configs.wordcloudConfig.minFontSize || 10,
+        stopwords: configs.wordcloudConfig.stopwords || [],
+        mask_shape: configs.wordcloudConfig.maskShape || "default"
       };
 
       const response = await fetch(`/nlp/${dataId}/wordcloud`, {
@@ -308,8 +311,8 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       }
       const requestBody = {
         column: selectedColumns[0],
-        stopwords: sentimentConfig.stopwords || [],
-        internet_slang: sentimentConfig.internetSlang || {}
+        stopwords: configs.sentimentConfig.stopwords || [],
+        internet_slang: configs.sentimentConfig.internetSlang || {}
       };
 
       const response = await fetch(`/nlp/${dataId}/sentiment`, {

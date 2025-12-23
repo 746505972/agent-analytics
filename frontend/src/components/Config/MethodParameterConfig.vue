@@ -99,7 +99,7 @@
       v-else-if="currentMethod === 't_test'"
       :config="tTestConfig"
       :categorical-columns="getCategoricalColumns()"
-      @update:config="updateTTestConfig"
+      @update:config="$emit('update:tTestConfig', $event)"
     />
 
     <FTestConfig
@@ -120,7 +120,7 @@
       v-else-if="currentMethod === 'normality_test'"
       :config="normalityTestConfig"
       :categorical-columns="getCategoricalColumns()"
-      @update:config="updateNormalityTestConfig"
+      @update:config="$emit('update:normalityTestConfig', $event)"
     />
 
     <WordCloudConfig
@@ -354,14 +354,6 @@ export default {
         // 这里只是一个简单的示例，实际应用中可能需要根据数据类型来判断
         return true;
       });
-    },
-    
-    updateTTestConfig(config) {
-      this.$emit('update:tTestConfig', config);
-    },
-    
-    updateNormalityTestConfig(config) {
-      this.$emit('update:normalityTestConfig', config);
     }
   }
 }
