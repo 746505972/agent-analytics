@@ -40,8 +40,9 @@ export async function fetchCompleteData(dataId) {
  * @returns {Promise<Object>} 分析结果
  */
 export async function fetchAnalysisResult(dataId, method, options = {}) {
-  const { selectedColumns = [], correlationMethod = 'pearson' ,
+  const { selectedColumns = [],
       configs =  {
+        correlationMethod : 'pearson' ,
         wordcloudConfig: {
         color:['#FF274B'],
         maxWords: 200,
@@ -118,7 +119,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
     } else if (method === 'correlation_analysis') {
       // 准备请求体，包含选中的列和方法
       const requestBody = {
-        method: correlationMethod
+        method: configs.correlationMethod
       };
       
       if (selectedColumns && selectedColumns.length > 0) {

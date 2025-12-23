@@ -2,7 +2,7 @@
   <div class="correlation-result">
     <!-- 相关性矩阵表格 -->
     <div class="table-header">
-      <h4>相关性矩阵</h4>
+      <h4>{{datasetDetails.method || ''}}相关性矩阵</h4>
       <button class="copy-button" @click="copyMatrix" title="复制矩阵">
         <img src="@/assets/images/copy.svg" alt="复制" />
       </button>
@@ -163,6 +163,18 @@
                 placeholder="请输入图表标题"
               />
             </div>
+            <div class="config-options">
+              <div class="checkbox-option">
+                <label>
+                  <input
+                    type="checkbox"
+                    v-model="showNumbers"
+                    @change="onShowNumbersChange"
+                  />
+                  显示数字
+                </label>
+              </div>
+            </div>
             <div class="tool-options">
               <button class="tool-button" @click="openColorSchemeModal">切换配色</button>
             </div>
@@ -229,6 +241,7 @@ export default {
       chart: null,
       chartTitle: '相关性热力图',
       showConfigPopup: false,
+      showNumbers: true,  // 控制是否显示数字
       colorScheme: 'default',
       showColorSchemeModal: false,
       showCustomColorModal: false,
@@ -405,9 +418,9 @@ export default {
           type: 'heatmap',
           data: data,
           label: {
-            show: true,
+            show: this.showNumbers,
             formatter: (params) => {
-              return params.value[2].toFixed(2);
+              return this.showNumbers ? params.value[2].toFixed(2) : '';
             }
           },
           emphasis: {
@@ -672,6 +685,22 @@ export default {
       }
     },
     
+    onShowNumbersChange() {
+      if (this.chart) {
+        const option = {
+          series: [{
+            label: {
+              show: this.showNumbers,
+              formatter: (params) => {
+                return this.showNumbers ? params.value[2].toFixed(2) : '';
+              }
+            }
+          }]
+        };
+        this.chart.setOption(option);
+      }
+    },
+    
     saveAsImage() {
       if (this.chart) {
         const imageUrl = this.chart.getDataURL({
@@ -822,6 +851,30 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.config-options {
+  margin: 15px 0;
+}
+
+.checkbox-option {
+  display: flex;
+  align-items: center;
+}
+
+.checkbox-option label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #606266;
+}
+
+.checkbox-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }
 
 .tool-button {

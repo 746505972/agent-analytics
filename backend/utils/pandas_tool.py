@@ -855,6 +855,7 @@ def correlation_analysis(file_path: str,columns: List[str],method: str = "pearso
     
     # 准备返回结果
     result = {
+        "method":method,
         "columns": numeric_columns,
         "correlation_data": correlation_data,
         "correlation_matrix": correlation_matrix

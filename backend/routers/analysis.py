@@ -186,6 +186,7 @@ async def get_correlation_analysis(request: Request, data_id: str, body: Correla
         # 准备返回结果
         result_data = {
             "data_id": data_id,
+            "method": body.method,
             "columns": correlation_result["columns"],
             "correlation_data": correlation_result["correlation_data"],
             "correlation_matrix": correlation_result["correlation_matrix"]

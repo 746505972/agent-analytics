@@ -74,41 +74,26 @@
             :selected-columns="selectedColumns"
             :header-edit-mode="headerEditMode"
             :new-column-names="newColumnNames"
-            :remove-duplicates="removeDuplicates"
-            :remove-duplicates-cols="removeDuplicatesCols"
-            :remove-constant-cols="removeConstantCols"
-            :row-missing-threshold="rowMissingThreshold"
-            :column-missing-threshold="columnMissingThreshold"
-            :interpolation-method="interpolationMethod"
-            :fill-value="fillValue"
-            :knn-neighbors="knnNeighbors"
+            v-model:remove-duplicates="removeDuplicates"
+            v-model:remove-duplicates-cols="removeDuplicatesCols"
+            v-model:remove-constant-cols="removeConstantCols"
+            v-model:row-missing-threshold="rowMissingThreshold"
+            v-model:column-missing-threshold="columnMissingThreshold"
+            v-model:interpolation-method="interpolationMethod"
+            v-model:fill-value="fillValue"
+            v-model:knn-neighbors="knnNeighbors"
             :last-selected-column-index="lastSelectedColumnIndex"
             :data-transformation-config="dataTransformationConfig"
-            :correlation-method="configs.correlationMethod"
-            :t-test-config="configs.tTestConfig"
-            :f-test-config="configs.fTestConfig"
-            :chi-square-test-config="configs.chiSquareTestConfig"
-            :normality-test-config="configs.normalityTestConfig"
-            :wordcloud-config="configs.wordcloudConfig"
-            :sentiment-config="configs.sentimentConfig"
+            v-model:correlation-method="configs.correlationMethod"
+            v-model:t-test-config="configs.tTestConfig"
+            v-model:f-test-config="configs.fTestConfig"
+            v-model:chi-square-test-config="configs.chiSquareTestConfig"
+            v-model:normality-test-config="configs.normalityTestConfig"
+            v-model:wordcloud-config="configs.wordcloudConfig"
+            v-model:sentiment-config="configs.sentimentConfig"
             :is-waiting-for-response="isWaitingForResponse"
-            @update:removeDuplicates="removeDuplicates = $event"
-            @update:removeDuplicatesCols="removeDuplicatesCols = $event"
-            @update:removeConstantCols="removeConstantCols = $event"
-            @update:rowMissingThreshold="rowMissingThreshold = $event"
-            @update:columnMissingThreshold="columnMissingThreshold = $event"
-            @update:interpolationMethod="interpolationMethod = $event"
-            @update:fillValue="fillValue = $event"
-            @update:knnNeighbors="knnNeighbors = $event"
             @update:newColumnNames="handleNewColumnNamesUpdate"
             @update:dataTransformationConfig="updateDataTransformationConfig"
-            @update:correlationMethod="configs.correlationMethod = $event"
-            @update:tTestConfig="configs.tTestConfig = $event"
-            @update:fTestConfig="configs.fTestConfig = $event"
-            @update:chiSquareTestConfig="configs.chiSquareTestConfig = $event"
-            @update:normalityTestConfig="configs.normalityTestConfig = $event"
-            @update:wordcloudConfig="configs.wordcloudConfig = $event"
-            @update:sentimentConfig="configs.sentimentConfig = $event"
             @toggleColumnSelection="handleToggleColumnSelection"
           />
         </div>
@@ -253,8 +238,7 @@ export default {
       // 数据转换相关配置
       dataTransformationConfig: {},
       configs:{
-        // 相关性分析参数
-        correlationMethod: 'pearson',
+        correlationMethod: 'pearson',// 相关性分析参数
         wordcloudConfig: {
           color:['#FF274B'],
           maxWords: 200,
@@ -731,16 +715,11 @@ export default {
       this.headerEditMode= 'add';  // 修改：统一使用字符串类型，默认为添加模式
     },
     
-    // 修改添加到历史记录的方法，增加result参数
+    // 添加到历史记录
     addToHistory(dataId, method, result) {
-      // 添加到历史记录
       this.analysisHistory.push({
-        dataId,
-        method,
-        result // 保存结果
+        dataId, method, result
       });
-
-      // 保存到localStorage
       localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
     },
 
@@ -751,9 +730,7 @@ export default {
       this.isWaitingForResponse = true;
       try {
         const result = await applyHeaderNames(
-          this.selectedFile, 
-          this.newColumnNames, 
-          this.headerEditMode
+          this.selectedFile, this.newColumnNames, this.headerEditMode
         );
             
         // 自动选择新生成的文件
