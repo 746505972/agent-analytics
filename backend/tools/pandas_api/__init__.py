@@ -262,6 +262,27 @@ def f_test_tool(file_path: str, columns: List[str], session_id: str = None,
     return f_test(file_path, columns, session_id, group_by, alpha)
 
 
+# 注册卡方检验工具
+@tool
+def chi_square_test_tool(file_path: str, columns: List[str], session_id: str = None,
+                         group_by: str = None, alpha: float = 0.05) -> dict:
+    """
+    卡方检验 - 对分类变量进行独立性检验或拟合优度检验
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表（需要是分类变量列）
+        session_id (str): 会话ID
+        group_by (str): 分组列名，用于进行独立性检验
+        alpha (float): 显著性水平 (默认0.05)
+
+    Returns:
+        Dict[str, Any]: 包含卡方检验结果的字典
+    """
+    from utils.pandas_tool import chi_square_test
+    return chi_square_test(file_path, columns, session_id, alpha, group_by)
+
+
 # 将模块中的函数注册为工具
 def register_pandas_tools(agent):
     """
@@ -281,3 +302,4 @@ def register_pandas_tools(agent):
     agent.tools.append(normality_test_tool)
     agent.tools.append(t_test_tool)
     agent.tools.append(f_test_tool)
+    agent.tools.append(chi_square_test_tool)

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Tuple, Dict, Any
 
 from routers.data import load_csv_file
-from utils.pandas_tool import statistical_summary, correlation_analysis, normality_test, t_test, f_test
+from utils.pandas_tool import statistical_summary, correlation_analysis, normality_test, t_test, f_test, chi_square_test
 from utils.file_manager import get_file_path
 import pandas as pd
 
@@ -47,6 +47,12 @@ class TTestRequest(BaseModel):
 
 
 class FTestRequest(BaseModel):
+    columns: Optional[List[str]] = None
+    group_by: Optional[str] = None
+    alpha: float = 0.05
+
+
+class ChiSquareTestRequest(BaseModel):
     columns: Optional[List[str]] = None
     group_by: Optional[str] = None
     alpha: float = 0.05
@@ -321,6 +327,48 @@ async def get_f_test(request: Request, data_id: str, body: FTestRequest):
         })
     except Exception as e:
         logger.error(f"获取F检验结果时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )
+
+
+@router.post("/{data_id}/chi_square_test")
+async def get_chi_square_test(request: Request, data_id: str, body: ChiSquareTestRequest):
+    """
+    获取数据文件的卡方检验结果接口，用于"卡方检验"方法
+    """
+    try:
+        # 验证请求数据
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.columns)
+        if error_response:
+            return error_response
+
+        # 调用工具函数处理卡方检验
+        chi_square_result = chi_square_test(file_path, columns_to_process, session_id, body.alpha, body.group_by)
+
+        # 准备返回结果
+        result_data = {
+            "data_id": data_id,
+            "columns": chi_square_result["columns"],
+            "chi_square_test": chi_square_result["chi_square_test"],
+            "alpha": chi_square_result["alpha"]
+        }
+
+        # 如果有分组信息，也返回
+        if "group_by" in chi_square_result:
+            result_data["group_by"] = chi_square_result["group_by"]
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取卡方检验结果时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={

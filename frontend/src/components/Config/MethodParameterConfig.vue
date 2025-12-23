@@ -19,7 +19,7 @@
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
       </div>
-      <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test'].includes(currentMethod)">
+      <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test','chi_square_test'].includes(currentMethod)">
         <h3>选择需要分析的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则分析所有数值型列</p>
@@ -39,7 +39,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test','chi_square_test'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -109,6 +109,13 @@
       @update:config="$emit('update:fTestConfig', $event)"
     />
 
+    <ChiSquareTestConfig
+      v-else-if="currentMethod === 'chi_square_test'"
+      :config="chiSquareTestConfig"
+      :categorical-columns="getCategoricalColumns()"
+      @update:config="$emit('update:chiSquareTestConfig', $event)"
+    />
+
     <NormalityTestConfig
       v-else-if="currentMethod === 'normality_test'"
       :config="normalityTestConfig"
@@ -144,10 +151,12 @@ import NormalityTestConfig from "./NormalityTestConfig.vue";
 import WordCloudConfig from "./WordCloudConfig.vue";
 import SentimentAnalysisConfig from "./SentimentAnalysisConfig.vue";
 import FTestConfig from "@/components/Config/FTestConfig.vue";
+import ChiSquareTestConfig from "@/components/Config/ChiSquareTestConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
   components: {
+    ChiSquareTestConfig,
     FTestConfig,
     AddHeaderConfig,
     InvalidSamplesConfig,
@@ -246,6 +255,13 @@ export default {
         alpha: 0.05
       })
     },
+    chiSquareTestConfig: {
+      type: Object,
+      default: () => ({
+        groupBy: '',
+        alpha: 0.05
+      })
+    },
     normalityTestConfig: {
       type: Object,
       default: () => ({
@@ -293,6 +309,7 @@ export default {
     'update:dataTransformationConfig',
     'update:correlationMethod',
     'update:tTestConfig',
+    'update:chiSquareTestConfig',
     'update:normalityTestConfig',
     'update:wordcloudConfig',
     'update:sentimentConfig',
@@ -315,7 +332,8 @@ export default {
         'sentiment_analysis',
         't_test',
         'normality_test',
-        'f_test'
+        'f_test',
+        'chi_square_test'
       ];
 
       if (!selectableMethods.includes(this.currentMethod)) {

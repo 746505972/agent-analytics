@@ -12,10 +12,8 @@ import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, OneHotEncoder, QuantileTransformer, \
     PowerTransformer, Normalizer
-from scipy.stats import ttest_1samp, ttest_ind, ttest_rel, shapiro, normaltest, levene, bartlett
-
-# 添加导入f_oneway用于F检验
-from scipy.stats import f_oneway
+from scipy.stats import ttest_1samp, ttest_ind, ttest_rel, shapiro, normaltest, \
+    levene, bartlett,f_oneway, chi2_contingency
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -973,6 +971,143 @@ def f_test(file_path: str, columns: List[str], session_id: str = None, group_by:
     result = {
         "columns": numeric_columns,
         "f_test": f_test_results,
+        "alpha": alpha
+    }
+    
+    if group_by:
+        result["group_by"] = group_by
+    
+    return result
+
+
+def chi_square_test(file_path: str, columns: List[str], session_id: str = None, 
+                   alpha: float = 0.05, group_by: str = None) -> Dict[str, Any]:
+    """
+    卡方检验 - 用于检验分类变量之间的独立性或拟合优度
+    
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表（需要是分类变量列）
+        session_id (str): 会话ID
+        alpha (float): 显著性水平 (默认0.05)
+        group_by (str): 分组列名，用于进行独立性检验（可选）
+        
+    Returns:
+        Dict[str, Any]: 包含卡方检验结果的字典
+    """
+    
+    df, _ = check_and_read(file_path, columns, session_id)
+    
+    # 检查列是否都是分类变量
+    categorical_columns = []
+    for col in columns:
+        # 如果是数值型但唯一值较少，也可以当作分类变量处理
+        if pd.api.types.is_numeric_dtype(df[col]):
+            unique_count = df[col].nunique()
+            if unique_count <= min(20, len(df[col]) * 0.1):  # 如果唯一值不超过20或者不超过总数的10%
+                categorical_columns.append(col)
+            else:
+                raise ValueError(f"列 '{col}' 是数值型且唯一值过多，请先进行离散化处理")
+        else:
+            categorical_columns.append(col)
+    
+    if not categorical_columns:
+        raise ValueError("没有有效的分类变量列可供处理")
+    
+    chi_square_results = {}
+    
+    if group_by:
+        # 独立性检验：检验group_by列与其他列是否独立
+        if group_by not in df.columns:
+            raise ValueError(f"分组列 '{group_by}' 不存在于数据集中")
+            
+        # 检查group_by是否为分类变量
+
+        if pd.api.types.is_numeric_dtype(df[group_by]):
+            unique_count = df[group_by].nunique()
+            if unique_count > min(20, len(df[group_by]) * 0.1):
+                raise ValueError(f"分组列 '{group_by}' 是数值型且唯一值过多，请先进行离散化处理")
+
+        # 对每个分类变量列与group_by列进行独立性检验
+        for col in categorical_columns:
+            if col == group_by:
+                continue
+                
+            # 构建列联表
+            contingency_table = pd.crosstab(df[group_by], df[col])
+            
+            # 检查列联表是否有效
+            if contingency_table.size == 0:
+                chi_square_results[col] = {
+                    "error": "无法构建有效的列联表"
+                }
+                continue
+                
+            # 检查期望频数，确保至少80%的单元格期望频数大于5
+            try:
+                chi2, p_value, dof, expected = chi2_contingency(contingency_table)
+                
+                # 计算期望频数小于5的单元格比例
+                low_expected_ratio = (expected < 5).sum() / expected.size
+                
+                chi_square_results[col] = {
+                    "test_type": "independence",
+                    "contingency_table": contingency_table.values.tolist(),
+                    "contingency_table_index": contingency_table.index.tolist(),
+                    "contingency_table_columns": contingency_table.columns.tolist(),
+                    "statistic": _safe_float(chi2),
+                    "p_value": _safe_float(p_value),
+                    "degrees_of_freedom": int(dof),
+                    "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
+                    "low_expected_ratio": float(low_expected_ratio),  # 期望频数小于5的单元格比例
+                    "warning": "期望频数过少" if low_expected_ratio > 0.2 else None
+                }
+            except Exception as e:
+                chi_square_results[col] = {
+                    "test_type": "independence",
+                    "error": str(e)
+                }
+    else:
+        # 拟合优度检验：检验各列的分布是否均匀
+        for col in categorical_columns:
+            # 计算观察频数
+            observed_freq = df[col].value_counts()
+            
+            # 如果类别过多，合并低频类别
+            if len(observed_freq) > 10:
+                # 保留前9个最常见的类别，其余合并为"其他"
+                top_categories = observed_freq.head(9)
+                other_count = observed_freq.iloc[9:].sum()
+                if other_count > 0:
+                    observed_freq = pd.concat([top_categories, pd.Series([other_count], index=["其他"])])
+            
+            # 计算期望频数（均匀分布）
+            expected_freq = np.full(len(observed_freq), observed_freq.sum() / len(observed_freq))
+            
+            # 执行卡方拟合优度检验
+            try:
+                from scipy.stats import chisquare
+                chi2, p_value = chisquare(observed_freq.values, expected_freq)
+                
+                chi_square_results[col] = {
+                    "test_type": "goodness_of_fit",
+                    "categories": observed_freq.index.tolist(),
+                    "observed_frequencies": observed_freq.values.tolist(),
+                    "expected_frequencies": expected_freq.tolist(),
+                    "statistic": _safe_float(chi2),
+                    "p_value": _safe_float(p_value),
+                    "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False
+                }
+            except Exception as e:
+                chi_square_results[col] = {
+                    "test_type": "goodness_of_fit",
+                    "error": str(e)
+                }
+    
+    # 准备返回结果
+    result = {
+        "columns": categorical_columns,
+        "chi_square_test": chi_square_results,
         "alpha": alpha
     }
     

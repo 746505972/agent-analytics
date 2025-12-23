@@ -29,7 +29,12 @@
     <div v-else-if="currentMethod === 'normality_test' && datasetDetails" class="analysis-section">
       <NormalityTestResult :dataset-details="datasetDetails" />
     </div>
-    
+
+    <!-- 卡方检验结果 -->
+    <div v-else-if="currentMethod === 'chi_square_test' && datasetDetails" class="analysis-section">
+      <ChiSquareTestResult :dataset-details="datasetDetails" />
+    </div>
+
     <!-- 词云分析结果 -->
     <div v-else-if="currentMethod === 'text_analysis' && datasetDetails" class="analysis-section">
       <WordCloudResult :dataset-details="datasetDetails" />
@@ -73,10 +78,12 @@ import VisualizationPanel from './Charts/VisualizationPanel.vue';
 import WordCloudResult from './AnalyseResult/WordCloudResult.vue';
 import SentimentAnalysisResult from "@/components/AnalyseResult/SentimentAnalysisResult.vue";
 import FTestResult from "@/components/AnalyseResult/FTestResult.vue";
+import ChiSquareTestResult from "@/components/AnalyseResult/ChiSquareTestResult.vue";
 
 export default {
   name: "ResultContent",
   components: {
+    ChiSquareTestResult,
     FTestResult,
     SentimentAnalysisResult,
     BasicInfoResult,

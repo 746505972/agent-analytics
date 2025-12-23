@@ -87,6 +87,7 @@
             :correlation-method="correlationMethod"
             :t-test-config="tTestConfig"
             :f-test-config="fTestConfig"
+            :chi-square-test-config="chiSquareTestConfig"
             :normality-test-config="normalityTestConfig"
             :wordcloud-config="wordcloudConfig"
             :sentiment-config="sentimentConfig"
@@ -104,6 +105,7 @@
             @update:correlationMethod="correlationMethod = $event"
             @update:tTestConfig="tTestConfig = $event"
             @update:fTestConfig="fTestConfig = $event"
+            @update:chiSquareTestConfig="chiSquareTestConfig = $event"
             @update:normalityTestConfig="normalityTestConfig = $event"
             @update:wordcloudConfig="wordcloudConfig = $event"
             @update:sentimentConfig="sentimentConfig = $event"
@@ -278,6 +280,7 @@ export default {
       normalityTestConfig: {method: 'shapiro', alpha: 0.05, groupBy: ''},
       // F检验相关状态
       fTestConfig: {groupBy: '', alpha: 0.05},
+      chiSquareTestConfig : {groupBy: '', alpha: 0.05},
     }
   },
     
@@ -524,13 +527,10 @@ export default {
       this.isWaitingForResponse = true;
       try {
         const result = await fetchResult(this.selectedFile, this.currentMethod, {
-          selectedColumns: this.selectedColumns,
-          correlationMethod: this.correlationMethod,
-          wordcloudConfig: this.wordcloudConfig,
-          sentimentConfig: this.sentimentConfig,
-          tTestConfig: this.tTestConfig,
-          normalityTestConfig: this.normalityTestConfig,
-          fTestConfig: this.fTestConfig
+          selectedColumns: this.selectedColumns, correlationMethod: this.correlationMethod,
+          wordcloudConfig: this.wordcloudConfig, sentimentConfig: this.sentimentConfig,
+          tTestConfig: this.tTestConfig, normalityTestConfig: this.normalityTestConfig,
+          fTestConfig: this.fTestConfig, chiSquareTestConfig: this.chiSquareTestConfig,
         });
         
         if (result) {
@@ -727,9 +727,6 @@ export default {
       this.removeConstantCols= false;
       this.rowMissingThreshold= 1;
       this.columnMissingThreshold= 1;
-      // 插值法参数
-      this.fillValue= '';
-      this.knnNeighbors= 5;
       this.lastSelectedColumnIndex= -1;
       this.newColumnNames= [];
       this.headerEditMode= 'add';  // 修改：统一使用字符串类型，默认为添加模式

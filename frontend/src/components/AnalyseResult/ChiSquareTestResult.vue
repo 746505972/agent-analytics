@@ -1,6 +1,6 @@
 <template>
-  <div class="f-test-result">
-    <!-- F检验信息 -->
+  <div class="chi-square-test-result">
+    <!-- 卡方检验信息 -->
     <div class="info-grid">
       <div class="info-item">
         <span class="info-label">显著性水平 (α):</span>
@@ -16,71 +16,27 @@
       </div>
     </div>
 
-    <!-- 方差齐性检验结果 -->
-    <div v-if="datasetDetails.f_test.variance_homogeneity" class="section">
+    <!-- 拟合优度检验结果 -->
+    <div v-if="hasGoodnessOfFitResults" class="section">
       <div class="table-header">
-        <h4>方差齐性检验 (Levene检验)</h4>
-        <button class="copy-button" @click="copyTable('variance')" title="复制表格">
+        <h4>拟合优度检验</h4>
+        <button class="copy-button" @click="copyTable('goodnessOfFit')" title="复制表格">
           <img src="@/assets/images/copy.svg" alt="复制" />
         </button>
       </div>
       <div class="stats-summary-container">
-        <table class="stats-summary-table" ref="varianceTable">
-          <thead>
-            <tr>
-              <th>统计量</th>
-              <th>P值</th>
-              <th>显著性</th>
-              <th>方差齐性</th>
-              <th>列数</th>
-              <th>样本量</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>{{ formatValue(varianceHomogeneityTest.statistic) }}</td>
-              <td>{{ formatValue(varianceHomogeneityTest.p_value) }}</td>
-              <td>
-                <span :class="varianceHomogeneityTest.significant ? 'significant' : 'not-significant'">
-                  {{ varianceHomogeneityTest.significant ? '显著' : '不显著' }}
-                </span>
-              </td>
-              <td>
-                <span :class="varianceHomogeneityTest.equal_variance ? 'equal-var' : 'unequal-var'">
-                  {{ varianceHomogeneityTest.equal_variance ? '是' : '否' }}
-                </span>
-              </td>
-              <td>{{ varianceHomogeneityTest.columns?.length || '-' }}</td>
-              <td>{{ varianceHomogeneityTest.sample_sizes?.join(', ') || '-' }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- 方差分析结果 -->
-    <div class="section">
-      <div class="table-header">
-        <h4>方差分析 (ANOVA)</h4>
-        <button class="copy-button" @click="copyTable('anova')" title="复制表格">
-          <img src="@/assets/images/copy.svg" alt="复制" />
-        </button>
-      </div>
-      <div class="stats-summary-container">
-        <table class="stats-summary-table" ref="anovaTable">
+        <table class="stats-summary-table" ref="goodnessOfFitTable">
           <thead>
             <tr>
               <th>列名</th>
-              <th>F统计量</th>
+              <th>卡方统计量</th>
               <th>P值</th>
               <th>显著性</th>
-              <th>组数</th>
-              <th>组名</th>
-              <th>样本量</th>
+              <th>类别数</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(item, columnName) in anovaResults" :key="columnName">
+            <tr v-for="(item, columnName) in goodnessOfFitResults" :key="columnName">
               <td>{{ columnName }}</td>
               <td>{{ formatValue(item.statistic) }}</td>
               <td>{{ formatValue(item.p_value) }}</td>
@@ -89,49 +45,54 @@
                   {{ item.significant ? '显著' : '不显著' }}
                 </span>
               </td>
-              <td>{{ item.groups }}</td>
-              <td>{{ item.group_names?.join(', ') || '-' }}</td>
-              <td>{{ item.sample_sizes?.join(', ') || '-' }}</td>
+              <td>{{ item.categories?.length || '-' }}</td>
             </tr>
-            <tr v-if="Object.keys(anovaResults).length === 0">
-              <td colspan="7" class="no-data">无统计数据</td>
+            <tr v-if="Object.keys(goodnessOfFitResults).length === 0">
+              <td colspan="5" class="no-data">无统计数据</td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- 各组统计信息 -->
-    <div v-if="hasGroupStats" class="section">
+    <!-- 独立性检验结果 -->
+    <div v-if="hasIndependenceResults" class="section">
       <div class="table-header">
-        <h4>各组统计信息</h4>
-        <button class="copy-button" @click="copyTable('groupStats')" title="复制表格">
+        <h4>独立性检验</h4>
+        <button class="copy-button" @click="copyTable('independence')" title="复制表格">
           <img src="@/assets/images/copy.svg" alt="复制" />
         </button>
       </div>
       <div class="stats-summary-container">
-        <table class="stats-summary-table" ref="groupStatsTable">
+        <table class="stats-summary-table" ref="independenceTable">
           <thead>
             <tr>
               <th>列名</th>
-              <th>组名</th>
-              <th>平均值</th>
-              <th>标准差</th>
-              <th>样本量</th>
+              <th>卡方统计量</th>
+              <th>P值</th>
+              <th>自由度</th>
+              <th>显著性</th>
+              <th>警告</th>
             </tr>
           </thead>
           <tbody>
-            <template v-for="(item, columnName) in anovaResultsWithGroupStats" :key="columnName">
-              <tr v-for="(groupStat, index) in item.group_stats" :key="`${columnName}-${index}`">
-                <td v-if="index === 0" :rowspan="item.group_stats.length">{{ columnName }}</td>
-                <td>{{ groupStat.name }}</td>
-                <td>{{ formatValue(groupStat.mean) }}</td>
-                <td>{{ formatValue(groupStat.std) }}</td>
-                <td>{{ groupStat.size }}</td>
-              </tr>
-            </template>
-            <tr v-if="!hasGroupStats">
-              <td colspan="5" class="no-data">无统计数据</td>
+            <tr v-for="(item, columnName) in independenceResults" :key="columnName">
+              <td>{{ columnName }}</td>
+              <td>{{ formatValue(item.statistic) }}</td>
+              <td>{{ formatValue(item.p_value) }}</td>
+              <td>{{ item.degrees_of_freedom }}</td>
+              <td>
+                <span :class="item.significant ? 'significant' : 'not-significant'">
+                  {{ item.significant ? '显著' : '不显著' }}
+                </span>
+              </td>
+              <td>
+                <span v-if="item.warning" class="warning">{{ item.warning }}</span>
+                <span v-else>-</span>
+              </td>
+            </tr>
+            <tr v-if="Object.keys(independenceResults).length === 0">
+              <td colspan="6" class="no-data">无统计数据</td>
             </tr>
           </tbody>
         </table>
@@ -150,7 +111,7 @@
 
 <script>
 export default {
-  name: "FTestResult",
+  name: "ChiSquareTestResult",
   props: {
     datasetDetails: {
       type: Object,
@@ -177,40 +138,39 @@ export default {
       return columns;
     },
     
-    varianceHomogeneityTest() {
-      return this.datasetDetails.f_test.variance_homogeneity || null;
+    goodnessOfFitResults() {
+      const results = {};
+      Object.keys(this.datasetDetails.chi_square_test).forEach(key => {
+        if (this.datasetDetails.chi_square_test[key].test_type === 'goodness_of_fit') {
+          results[key] = this.datasetDetails.chi_square_test[key];
+        }
+      });
+      return results;
     },
     
-    anovaResults() {
+    independenceResults() {
       const results = {};
-      Object.keys(this.datasetDetails.f_test).forEach(key => {
-        if (this.datasetDetails.f_test[key].test_type === 'anova') {
-          results[key] = this.datasetDetails.f_test[key];
+      Object.keys(this.datasetDetails.chi_square_test).forEach(key => {
+        if (this.datasetDetails.chi_square_test[key].test_type === 'independence') {
+          results[key] = this.datasetDetails.chi_square_test[key];
         }
       });
       return results;
     },
-
-    anovaResultsWithGroupStats() {
-      const results = {};
-      Object.keys(this.datasetDetails.f_test).forEach(key => {
-        const item = this.datasetDetails.f_test[key];
-        if (item.test_type === 'anova' && item.group_stats) {
-          results[key] = item;
-        }
-      });
-      return results;
+    
+    hasGoodnessOfFitResults() {
+      return Object.keys(this.goodnessOfFitResults).length > 0;
     },
-
-    hasGroupStats() {
-      return Object.keys(this.anovaResultsWithGroupStats).length > 0;
+    
+    hasIndependenceResults() {
+      return Object.keys(this.independenceResults).length > 0;
     },
     
     errorMessages() {
       const errors = {};
-      Object.keys(this.datasetDetails.f_test).forEach(key => {
-        if (this.datasetDetails.f_test[key].error) {
-          errors[key] = this.datasetDetails.f_test[key].error;
+      Object.keys(this.datasetDetails.chi_square_test).forEach(key => {
+        if (this.datasetDetails.chi_square_test[key].error) {
+          errors[key] = this.datasetDetails.chi_square_test[key].error;
         }
       });
       return errors;
@@ -227,14 +187,11 @@ export default {
       let table;
       
       switch(tableType) {
-        case 'variance':
-          table = this.$refs.varianceTable;
+        case 'goodnessOfFit':
+          table = this.$refs.goodnessOfFitTable;
           break;
-        case 'anova':
-          table = this.$refs.anovaTable;
-          break;
-        case 'groupStats':
-          table = this.$refs.groupStatsTable;
+        case 'independence':
+          table = this.$refs.independenceTable;
           break;
         default:
           return;
@@ -376,7 +333,7 @@ export default {
   height: 16px;
 }
 
-.f-test-result {
+.chi-square-test-result {
   padding: 20px;
 }
 
@@ -458,12 +415,7 @@ export default {
   font-weight: bold;
 }
 
-.equal-var {
-  color: #67c23a;
-  font-weight: bold;
-}
-
-.unequal-var {
+.warning {
   color: #e6a23c;
   font-weight: bold;
 }

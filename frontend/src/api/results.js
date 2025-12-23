@@ -72,6 +72,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       fTestConfig = {
         groupBy: '',
         alpha: 0.05
+      },
+      chiSquareTestConfig = {
+        groupBy: '',
+        alpha: 0.05
       }} = options;
   
   try {
@@ -202,6 +206,37 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         return result.data;
       } else {
         throw new Error(result.error || "获取F检验结果失败");
+      }
+    } else if (method === 'chi_square_test') {
+      // 准备卡方检验请求体
+      const requestBody = {
+        alpha: chiSquareTestConfig.alpha
+      };
+      
+      // 添加分组列（如果有）
+      if (chiSquareTestConfig.groupBy) {
+        requestBody.group_by = chiSquareTestConfig.groupBy;
+      }
+      
+      // 添加选中的列
+      if (selectedColumns && selectedColumns.length > 0) {
+        requestBody.columns = selectedColumns;
+      }
+
+      const response = await fetch(`/data/${dataId}/chi_square_test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "获取卡方检验结果失败");
       }
     } else if (method === 'normality_test') {
       // 准备正态性检验请求体
