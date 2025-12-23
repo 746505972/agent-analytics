@@ -91,50 +91,43 @@
 
     <CorrelationAnalysisConfig
       v-else-if="currentMethod === 'correlation_analysis'"
-      :correlation-method="correlationMethod"
-      @update:correlationMethod="$emit('update:correlationMethod', $event)"
+      v-model:correlation-method="configs.correlationMethod"
     />
 
     <TTestConfig
       v-else-if="currentMethod === 't_test'"
-      :config="tTestConfig"
-      :categorical-columns="getCategoricalColumns()"
-      @update:config="$emit('update:tTestConfig', $event)"
+      v-model:config="configs.tTestConfig"
+      :categorical-columns="selectedFileColumns"
     />
 
     <FTestConfig
       v-else-if="currentMethod === 'f_test'"
-      :config="fTestConfig"
-      :categorical-columns="getCategoricalColumns()"
-      @update:config="$emit('update:fTestConfig', $event)"
+      v-model:config="configs.fTestConfig"
+      :categorical-columns="selectedFileColumns"
     />
 
     <ChiSquareTestConfig
       v-else-if="currentMethod === 'chi_square_test'"
-      :config="chiSquareTestConfig"
-      :categorical-columns="getCategoricalColumns()"
-      @update:config="$emit('update:chiSquareTestConfig', $event)"
+      v-model:config="configs.chiSquareTestConfig"
+      :categorical-columns="selectedFileColumns"
     />
 
     <NormalityTestConfig
       v-else-if="currentMethod === 'normality_test'"
-      :config="normalityTestConfig"
-      :categorical-columns="getCategoricalColumns()"
-      @update:config="$emit('update:normalityTestConfig', $event)"
+      v-model:config="configs.normalityTestConfig"
+      :categorical-columns="selectedFileColumns"
     />
 
     <WordCloudConfig
       v-else-if="currentMethod === 'text_analysis'"
       :selected-file-columns="selectedFileColumns"
-      :wordcloud-config="wordcloudConfig"
-      @update:wordcloudConfig="$emit('update:wordcloudConfig', $event)"
+      v-model:wordcloud-config="configs.wordcloudConfig"
     />
 
     <SentimentAnalysisConfig
       v-else-if="currentMethod === 'sentiment_analysis'"
       :selected-file-columns="selectedFileColumns"
-      :sentiment-config="sentimentConfig"
-      @update:sentimentConfig="$emit('update:sentimentConfig', $event)"
+      v-model:sentiment-config="configs.sentimentConfig"
     />
   </div>
   </div>
@@ -152,6 +145,7 @@ import WordCloudConfig from "./WordCloudConfig.vue";
 import SentimentAnalysisConfig from "./SentimentAnalysisConfig.vue";
 import FTestConfig from "@/components/Config/FTestConfig.vue";
 import ChiSquareTestConfig from "@/components/Config/ChiSquareTestConfig.vue";
+import { getDefaultConfigs } from '@/utils/configDefaults.js'
 
 export default {
   name: "MethodParameterConfig",
@@ -233,63 +227,9 @@ export default {
       type: Object,
       default: () => ({})
     },
-    correlationMethod: {
-      type: String,
-      default: 'pearson'
-    },
-    tTestConfig: {
+    configs: {
       type: Object,
-      default: () => ({
-        testType: 'one_sample',
-        alpha: 0.05,
-        popmean: 0,
-        groupCol: '',
-        equalVar: true,
-        normalityMethod: 'shapiro'
-      })
-    },
-    fTestConfig: {
-      type: Object,
-      default: () => ({
-        groupBy: '',
-        alpha: 0.05
-      })
-    },
-    chiSquareTestConfig: {
-      type: Object,
-      default: () => ({
-        groupBy: '',
-        alpha: 0.05
-      })
-    },
-    normalityTestConfig: {
-      type: Object,
-      default: () => ({
-        method: 'shapiro',
-        alpha: 0.05,
-        groupBy: ''
-      })
-    },
-    wordcloudConfig: {
-      type: Object,
-      default: () => ({
-        color:['#FF274B'],
-        maxWords: 200,
-        width: 1600,
-        height: 900,
-        backgroundColor: "#ffffff",
-        maxFontSize: 200,
-        minFontSize: 10,
-        stopwords: [],
-        maskShape: "default"
-      })
-    },
-    sentimentConfig: {
-      type: Object,
-      default: () => ({
-        stopwords: [],
-        internetSlang: {}
-      })
+      default: getDefaultConfigs()
     },
     isWaitingForResponse: {
       type: Boolean,
@@ -307,12 +247,6 @@ export default {
     'update:knnNeighbors',
     'update:newColumnNames',
     'update:dataTransformationConfig',
-    'update:correlationMethod',
-    'update:tTestConfig',
-    'update:chiSquareTestConfig',
-    'update:normalityTestConfig',
-    'update:wordcloudConfig',
-    'update:sentimentConfig',
     'toggleColumnSelection'
   ],
   methods: {
@@ -346,15 +280,6 @@ export default {
     handleNewColumnNamesUpdate({ index, value }) {
       this.$emit('update:newColumnNames', { index, value });
     },
-    
-    getCategoricalColumns() {
-      // 简单地认为非数值型的列是分类列
-      // 在实际应用中，可能需要更复杂的逻辑来判断
-      return this.selectedFileColumns.filter(column => {
-        // 这里只是一个简单的示例，实际应用中可能需要根据数据类型来判断
-        return true;
-      });
-    }
   }
 }
 </script>
