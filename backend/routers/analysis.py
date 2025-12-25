@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Tuple, Dict, Any
 
 from routers.data import load_csv_file
-from utils.pandas_tool import statistical_summary, correlation_analysis, normality_test, t_test, f_test, chi_square_test
+from utils.pandas_tool import statistical_summary, correlation_analysis, normality_test, t_test, f_test, chi_square_test, non_parametric_test
 from utils.file_manager import get_file_path
 import pandas as pd
 
@@ -56,6 +56,14 @@ class ChiSquareTestRequest(BaseModel):
     columns: Optional[List[str]] = None
     group_by: Optional[str] = None
     alpha: float = 0.05
+
+
+class NonParametricTestRequest(BaseModel):
+    columns: Optional[List[str]] = None
+    test_type: str = "mannwhitney"
+    group_by: Optional[str] = None
+    alpha: float = 0.05
+    params: Optional[Dict[str, Any]] = None
 
 
 def validate_request_data(request: Request, data_id: str, body_columns: Optional[List[str]] = None) -> Tuple[str, str, pd.DataFrame, List[str], JSONResponse]:
@@ -370,6 +378,53 @@ async def get_chi_square_test(request: Request, data_id: str, body: ChiSquareTes
         })
     except Exception as e:
         logger.error(f"获取卡方检验结果时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )
+
+
+@router.post("/{data_id}/non_parametric_test")
+async def get_non_parametric_test(request: Request, data_id: str, body: NonParametricTestRequest):
+    """
+    获取数据文件的非参数检验结果接口，用于"非参数检验"方法
+    """
+    try:
+        # 验证请求数据
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.columns)
+        if error_response:
+            return error_response
+
+        # 准备参数
+        kwargs = body.params if body.params else {}
+
+        # 调用工具函数处理非参数检验
+        non_parametric_result = non_parametric_test(
+            file_path, columns_to_process, body.test_type, session_id, body.group_by, body.alpha, **kwargs)
+
+        # 准备返回结果
+        result_data = {
+            "data_id": data_id,
+            "columns": non_parametric_result["columns"],
+            "test_type": non_parametric_result["test_type"],
+            "non_parametric_test": non_parametric_result["non_parametric_test"],
+            "alpha": non_parametric_result["alpha"]
+        }
+
+        # 如果有分组信息，也返回
+        if "group_by" in non_parametric_result:
+            result_data["group_by"] = non_parametric_result["group_by"]
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取非参数检验结果时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={

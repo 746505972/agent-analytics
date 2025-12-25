@@ -11,7 +11,10 @@ export const getDefaultConfigs = () => ({
     stopwords: [],
     maskShape: "default"
   },
-  sentimentConfig: { stopwords: [], internetSlang: {} },
+  sentimentConfig: {
+    stopwords: [],
+    internetSlang: {}
+  },
   tTestConfig: {
     testType: 'one_sample',
     alpha: 0.05,
@@ -20,7 +23,24 @@ export const getDefaultConfigs = () => ({
     equalVar: true,
     normalityMethod: 'shapiro'
   },
-  normalityTestConfig: { method: 'shapiro', alpha: 0.05, groupBy: '' },
-  fTestConfig: { groupBy: '', alpha: 0.05 },
-  chiSquareTestConfig: { groupBy: '', alpha: 0.05 },
+  normalityTestConfig: {
+    method: 'shapiro',
+    alpha: 0.05,
+    groupBy: ''
+  },
+  fTestConfig: {
+    groupBy: '',
+    alpha: 0.05
+  },
+  chiSquareTestConfig: {
+    groupBy: '',
+    alpha: 0.05
+  },
+  nonParametricTestConfig: {
+    testType: 'mannwhitney',
+    groupBy: '',
+    alpha: 0.05,
+    alternative: 'two-sided',
+    distribution: 'norm'
+  }
 })

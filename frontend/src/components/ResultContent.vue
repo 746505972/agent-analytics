@@ -35,6 +35,11 @@
       <ChiSquareTestResult :dataset-details="datasetDetails" />
     </div>
 
+    <!-- 非参数检验结果 -->
+    <div v-else-if="currentMethod === 'non_parametric_test' && datasetDetails" class="analysis-section">
+      <NonParametricTestResult :dataset-details="datasetDetails" />
+    </div>
+
     <!-- 词云分析结果 -->
     <div v-else-if="currentMethod === 'text_analysis' && datasetDetails" class="analysis-section">
       <WordCloudResult :dataset-details="datasetDetails" />
@@ -79,6 +84,7 @@ import WordCloudResult from './AnalyseResult/WordCloudResult.vue';
 import SentimentAnalysisResult from "@/components/AnalyseResult/SentimentAnalysisResult.vue";
 import FTestResult from "@/components/AnalyseResult/FTestResult.vue";
 import ChiSquareTestResult from "@/components/AnalyseResult/ChiSquareTestResult.vue";
+import NonParametricTestResult from "@/components/AnalyseResult/NonParametricTestResult.vue";
 
 export default {
   name: "ResultContent",
@@ -92,7 +98,8 @@ export default {
     TTestResult,
     NormalityTestResult,
     VisualizationPanel,
-    WordCloudResult
+    WordCloudResult,
+    NonParametricTestResult
   },
   props: {
     currentMethod: {

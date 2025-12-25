@@ -283,6 +283,35 @@ def chi_square_test_tool(file_path: str, columns: List[str], session_id: str = N
     return chi_square_test(file_path, columns, session_id, alpha, group_by)
 
 
+# 注册非参数检验工具
+@tool
+def non_parametric_test_tool(file_path: str, columns: List[str], test_type: str = "mannwhitney",
+                            session_id: str = None, group_by: str = None, alpha: float = 0.05, **kwargs) -> dict:
+    """
+    非参数检验 - 提供多种非参数检验方法
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表
+        test_type (str): 非参数检验类型
+            - "mannwhitney": Mann-Whitney U检验（两个独立样本）
+            - "wilcoxon": Wilcoxon符号秩检验（两个相关样本）
+            - "kruskal": Kruskal-Wallis检验（多个独立样本）
+            - "kolmogorov_smirnov": Kolmogorov-Smirnov检验（单样本或两样本）
+        session_id (str): 会话ID
+        group_by (str): 分组列名，用于进行分组检验
+        alpha (float): 显著性水平 (默认0.05)
+        **kwargs: 其他参数
+            - alternative: 检验方向 ("two-sided", "less", "greater")
+            - distribution: 单样本K-S检验的理论分布 ("norm", "uniform", "expon", "logistic")
+
+    Returns:
+        Dict[str, Any]: 包含非参数检验结果的字典
+    """
+    from utils.pandas_tool import non_parametric_test
+    return non_parametric_test(file_path, columns, test_type, session_id, group_by, alpha, **kwargs)
+
+
 # 将模块中的函数注册为工具
 def register_pandas_tools(agent):
     """
@@ -303,3 +332,4 @@ def register_pandas_tools(agent):
     agent.tools.append(t_test_tool)
     agent.tools.append(f_test_tool)
     agent.tools.append(chi_square_test_tool)
+    agent.tools.append(non_parametric_test_tool)

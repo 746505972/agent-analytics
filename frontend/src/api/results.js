@@ -39,47 +39,10 @@ export async function fetchCompleteData(dataId) {
  * @param {Object} options - 选项参数
  * @returns {Promise<Object>} 分析结果
  */
+import { getDefaultConfigs } from '@/utils/configDefaults.js'
 export async function fetchAnalysisResult(dataId, method, options = {}) {
   const { selectedColumns = [],
-      configs =  {
-        correlationMethod : 'pearson' ,
-        wordcloudConfig: {
-        color:['#FF274B'],
-        maxWords: 200,
-        width: 1600,
-        height: 900,
-        backgroundColor: "#ffffff",
-        maxFontSize: 200,
-        minFontSize: 10,
-        stopwords: [],
-        maskShape: "default"
-        },
-        sentimentConfig : {
-          stopwords: [],
-          internetSlang: {}
-        },
-        tTestConfig : {
-          testType: 'one_sample',
-          alpha: 0.05,
-          popmean: 0,
-          groupCol: '',
-          equalVar: true,
-          normalityMethod: 'shapiro'
-        },
-        normalityTestConfig : {
-          method: 'shapiro',
-          alpha: 0.05,
-          groupBy: ''
-        },
-        fTestConfig : {
-          groupBy: '',
-          alpha: 0.05
-        },
-        chiSquareTestConfig : {
-          groupBy: '',
-          alpha: 0.05
-        }
-      },
+      configs =  getDefaultConfigs(),
 } = options;
   
   try {
@@ -241,6 +204,47 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         return result.data;
       } else {
         throw new Error(result.error || "获取卡方检验结果失败");
+      }
+    } else if (method === 'non_parametric_test') {
+      // 准备非参数检验请求体
+      const requestBody = {
+        test_type: configs.nonParametricTestConfig.testType,
+        alpha: configs.nonParametricTestConfig.alpha,
+        params: {
+          alternative: configs.nonParametricTestConfig.alternative
+        }
+      };
+      
+      // 添加分组列（如果有）
+      if (configs.nonParametricTestConfig.groupBy) {
+        requestBody.group_by = configs.nonParametricTestConfig.groupBy;
+      }
+      
+      // 添加分布类型（如果适用）
+      if (configs.nonParametricTestConfig.distribution && 
+          configs.nonParametricTestConfig.testType === 'kolmogorov_smirnov') {
+        requestBody.params.distribution = configs.nonParametricTestConfig.distribution;
+      }
+      
+      // 添加选中的列
+      if (selectedColumns && selectedColumns.length > 0) {
+        requestBody.columns = selectedColumns;
+      }
+
+      const response = await fetch(`/data/${dataId}/non_parametric_test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "获取非参数检验结果失败");
       }
     } else if (method === 'normality_test') {
       // 准备正态性检验请求体

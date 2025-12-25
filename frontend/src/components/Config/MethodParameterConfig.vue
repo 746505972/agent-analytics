@@ -19,7 +19,7 @@
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
       </div>
-      <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test','chi_square_test'].includes(currentMethod)">
+      <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test','chi_square_test', 'non_parametric_test'].includes(currentMethod)">
         <h3>选择需要分析的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则分析所有数值型列</p>
@@ -39,7 +39,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test','chi_square_test'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test','chi_square_test', 'non_parametric_test'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -112,6 +112,12 @@
       :categorical-columns="selectedFileColumns"
     />
 
+    <NonParametricTestConfig
+      v-else-if="currentMethod === 'non_parametric_test'"
+      v-model:config="configs.nonParametricTestConfig"
+      :categorical-columns="selectedFileColumns"
+    />
+
     <NormalityTestConfig
       v-else-if="currentMethod === 'normality_test'"
       v-model:config="configs.normalityTestConfig"
@@ -145,6 +151,7 @@ import WordCloudConfig from "./WordCloudConfig.vue";
 import SentimentAnalysisConfig from "./SentimentAnalysisConfig.vue";
 import FTestConfig from "@/components/Config/FTestConfig.vue";
 import ChiSquareTestConfig from "@/components/Config/ChiSquareTestConfig.vue";
+import NonParametricTestConfig from "@/components/Config/NonParametricTestConfig.vue";
 import { getDefaultConfigs } from '@/utils/configDefaults.js'
 
 export default {
@@ -160,7 +167,8 @@ export default {
     TTestConfig,
     NormalityTestConfig,
     WordCloudConfig,
-    SentimentAnalysisConfig
+    SentimentAnalysisConfig,
+    NonParametricTestConfig
   },
   props: {
     currentMethod: {
@@ -267,7 +275,8 @@ export default {
         't_test',
         'normality_test',
         'f_test',
-        'chi_square_test'
+        'chi_square_test',
+        'non_parametric_test'
       ];
 
       if (!selectableMethods.includes(this.currentMethod)) {

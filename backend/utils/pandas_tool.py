@@ -13,7 +13,7 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler, OneHotEncoder, QuantileTransformer, \
     PowerTransformer, Normalizer
 from scipy.stats import ttest_1samp, ttest_ind, ttest_rel, shapiro, normaltest, \
-    levene, bartlett,f_oneway, chi2_contingency
+    levene, bartlett,f_oneway, chi2_contingency, mannwhitneyu, wilcoxon, kruskal, ks_2samp, kstest
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
@@ -1118,14 +1118,360 @@ def chi_square_test(file_path: str, columns: List[str], session_id: str = None,
     return result
 
 
-if __name__ == "__main__":
-    # 测试代码
-    file_path = "data/100/anova_data_with_groups.csv"
-    columns = ["Soil_pH"]
-    test_type = "one_sample"
-    session_id = "100"
+def non_parametric_test(file_path: str, columns: List[str], test_type: str = "mannwhitney",
+                       session_id: str = None, group_by: str = None, alpha: float = 0.05, **kwargs) -> Dict[str, Any]:
+    """
+    非参数检验 - 提供多种非参数检验方法
 
-    import json
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表
+        test_type (str): 非参数检验类型
+            - "mannwhitney": Mann-Whitney U检验（两个独立样本）
+            - "wilcoxon": Wilcoxon符号秩检验（两个相关样本）
+            - "kruskal": Kruskal-Wallis检验（多个独立样本）
+            - "kolmogorov_smirnov": Kolmogorov-Smirnov检验（单样本或两样本）
+        session_id (str): 会话ID
+        group_by (str): 分组列名，用于进行分组检验
+        alpha (float): 显著性水平 (默认0.05)
+        **kwargs: 其他参数
+            - alternative: 检验方向 ("two-sided", "less", "greater")
+            - distribution: 单样本K-S检验的理论分布 ("norm", "uniform", "expon", "logistic")
 
-    result = f_test(file_path, columns, session_id, group_by="Fertilizer_Type", alpha=0.05)
-    print(json.dumps(result, indent=2, ensure_ascii=False))
+    Returns:
+        Dict[str, Any]: 包含非参数检验结果的字典
+    """
+
+    df, numeric_columns = check_and_read(file_path, columns, session_id)
+
+    # 获取参数
+    alternative = kwargs.get("alternative", "two-sided")
+    distribution = kwargs.get("distribution", "norm")
+
+    non_parametric_results = {}
+
+    if test_type == "mannwhitney":
+        # Mann-Whitney U检验：用于比较两个独立样本的分布
+        if not group_by:
+            raise ValueError("Mann-Whitney U检验需要指定分组列 (group_by)")
+
+        if group_by not in df.columns:
+            raise ValueError(f"分组列 '{group_by}' 不存在于数据集中")
+
+        # 检查分组列是否为分类变量
+        if pd.api.types.is_numeric_dtype(df[group_by]):
+            print(f"警告: 分组列 '{group_by}' 是数值型，建议确认是否为正确的分组变量")
+
+        # 获取唯一分组
+        unique_groups = df[group_by].dropna().unique()
+        if len(unique_groups) != 2:
+            raise ValueError(f"Mann-Whitney U检验要求分组列恰好有2个不同的组，当前有 {len(unique_groups)} 个组")
+
+        # 提取两组数据
+        group1_name, group2_name = unique_groups[0], unique_groups[1]
+        group1_data = df[df[group_by] == group1_name][numeric_columns].dropna()
+        group2_data = df[df[group_by] == group2_name][numeric_columns].dropna()
+
+        # 对每个数值列执行Mann-Whitney U检验
+        for col in numeric_columns:
+            try:
+                # 获取两组数据
+                x = group1_data[col].values
+                y = group2_data[col].values
+
+                # 检查数据是否有效
+                if len(x) == 0 or len(y) == 0:
+                    non_parametric_results[col] = {
+                        "test_type": "mannwhitney",
+                        "error": f"组 '{group1_name}' 或 '{group2_name}' 中列 '{col}' 没有有效数据"
+                    }
+                    continue
+
+                if len(x) < 3 or len(y) < 3:
+                    non_parametric_results[col] = {
+                        "test_type": "mannwhitney",
+                        "error": f"组 '{group1_name}' 或 '{group2_name}' 中列 '{col}' 的样本量过小（<3）"
+                    }
+                    continue
+
+                # 执行Mann-Whitney U检验
+                stat, p_value = mannwhitneyu(x, y, alternative=alternative)
+
+                non_parametric_results[col] = {
+                    "test_type": "mannwhitney",
+                    "statistic": _safe_float(stat),
+                    "p_value": _safe_float(p_value),
+                    "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
+                    "alternative": alternative,
+                    "group1": {
+                        "name": str(group1_name),
+                        "median": _safe_float(np.median(x)),
+                        "size": len(x)
+                    },
+                    "group2": {
+                        "name": str(group2_name),
+                        "median": _safe_float(np.median(y)),
+                        "size": len(y)
+                    }
+                }
+            except Exception as e:
+                non_parametric_results[col] = {
+                    "test_type": "mannwhitney",
+                    "error": str(e)
+                }
+
+    elif test_type == "wilcoxon":
+        # Wilcoxon符号秩检验：用于比较两个相关样本的分布
+        if len(numeric_columns) != 2:
+            raise ValueError("Wilcoxon符号秩检验需要恰好2个数值列")
+
+        col1, col2 = numeric_columns[0], numeric_columns[1]
+
+        # 提取成对的数据（去除任一列的缺失值）
+        paired_data = df[[col1, col2]].dropna()
+
+        if len(paired_data) < 3:
+            raise ValueError("Wilcoxon符号秩检验需要至少3对有效数据")
+
+        try:
+            # 执行Wilcoxon符号秩检验
+            stat, p_value = wilcoxon(paired_data[col1], paired_data[col2])
+
+            # 计算差异
+            differences = paired_data[col1] - paired_data[col2]
+
+            non_parametric_results["paired_test"] = {
+                "test_type": "wilcoxon",
+                "statistic": _safe_float(stat),
+                "p_value": _safe_float(p_value),
+                "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
+                "alternative": alternative,
+                "column1": col1,
+                "column2": col2,
+                "median_difference": _safe_float(np.median(differences)),
+                "mean_difference": _safe_float(differences.mean()),
+                "sample_size": len(differences)
+            }
+        except Exception as e:
+            non_parametric_results["paired_test"] = {
+                "test_type": "wilcoxon",
+                "error": str(e)
+            }
+
+    elif test_type == "kruskal":
+        # Kruskal-Wallis检验：用于比较多个独立样本的分布
+        if group_by:
+            # 按组进行Kruskal-Wallis检验
+            if group_by not in df.columns:
+                raise ValueError(f"分组列 '{group_by}' 不存在于数据集中")
+
+            # 获取唯一分组
+            unique_groups = df[group_by].dropna().unique()
+
+            if len(unique_groups) < 2:
+                raise ValueError("分组数必须大于等于2才能进行Kruskal-Wallis检验")
+
+            # 对每个数值列进行Kruskal-Wallis检验
+            for col in numeric_columns:
+                # 按组提取数据
+                groups_data = []
+                group_names = []
+
+                for group in unique_groups:
+                    group_data = df[df[group_by] == group][col].dropna()
+                    if len(group_data) > 0:  # 只有当组内有数据时才添加
+                        groups_data.append(group_data.values)
+                        group_names.append(str(group))
+
+                if len(groups_data) < 2:
+                    non_parametric_results[col] = {
+                        "error": "有效分组数少于2组，无法进行Kruskal-Wallis检验"
+                    }
+                    continue
+
+                if any(len(group_data) < 3 for group_data in groups_data):
+                    non_parametric_results[col] = {
+                        "error": "至少一个组的样本量过小（<3）"
+                    }
+                    continue
+
+                try:
+                    # 执行Kruskal-Wallis检验
+                    stat, p_value = kruskal(*groups_data)
+
+                    # 计算每组的中位数
+                    group_stats = []
+                    for i, group in enumerate(unique_groups):
+                        group_data = df[df[group_by] == group][col].dropna()
+                        group_stats.append({
+                            "name": str(group),
+                            "median": _safe_float(np.median(group_data)),
+                            "size": len(group_data)
+                        })
+
+                    non_parametric_results[col] = {
+                        "test_type": "kruskal",
+                        "statistic": _safe_float(stat),
+                        "p_value": _safe_float(p_value),
+                        "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
+                        "groups": len(groups_data),
+                        "group_names": group_names,
+                        "group_stats": group_stats
+                    }
+                except Exception as e:
+                    non_parametric_results[col] = {
+                        "test_type": "kruskal",
+                        "error": str(e)
+                    }
+        else:
+            # 如果没有分组列，则需要提供多个数值列进行检验
+            if len(numeric_columns) < 2:
+                raise ValueError("Kruskal-Wallis检验至少需要2个数值列或指定分组列")
+
+            # 准备数据
+            data_to_test = [df[col].dropna().values for col in numeric_columns]
+
+            # 检查数据量
+            if any(len(data) < 3 for data in data_to_test):
+                raise ValueError("Kruskal-Wallis检验中至少一个列的样本量过小（<3）")
+
+            try:
+                # 执行Kruskal-Wallis检验
+                stat, p_value = kruskal(*data_to_test)
+
+                non_parametric_results["kruskal_test"] = {
+                    "test_type": "kruskal",
+                    "statistic": _safe_float(stat),
+                    "p_value": _safe_float(p_value),
+                    "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
+                    "columns": numeric_columns,
+                    "sample_sizes": [len(data) for data in data_to_test]
+                }
+            except Exception as e:
+                non_parametric_results["kruskal_test"] = {
+                    "test_type": "kruskal",
+                    "error": str(e)
+                }
+
+    elif test_type == "kolmogorov_smirnov":
+        # Kolmogorov-Smirnov检验：用于检验样本分布与理论分布的差异或两个样本的分布差异
+        if group_by:
+            # 两样本K-S检验：比较group_by列的两个组之间的数值列分布
+            if group_by not in df.columns:
+                raise ValueError(f"分组列 '{group_by}' 不存在于数据集中")
+
+            # 获取唯一分组
+            unique_groups = df[group_by].dropna().unique()
+            if len(unique_groups) != 2:
+                raise ValueError(f"Kolmogorov-Smirnov检验要求分组列恰好有2个不同的组，当前有 {len(unique_groups)} 个组")
+
+            # 提取两组数据
+            group1_name, group2_name = unique_groups[0], unique_groups[1]
+            group1_data = df[df[group_by] == group1_name][numeric_columns].dropna()
+            group2_data = df[df[group_by] == group2_name][numeric_columns].dropna()
+
+            # 对每个数值列执行两样本K-S检验
+            for col in numeric_columns:
+                try:
+                    # 获取两组数据
+                    x = group1_data[col].values
+                    y = group2_data[col].values
+
+                    # 检查数据是否有效
+                    if len(x) == 0 or len(y) == 0:
+                        non_parametric_results[col] = {
+                            "test_type": "kolmogorov_smirnov",
+                            "error": f"组 '{group1_name}' 或 '{group2_name}' 中列 '{col}' 没有有效数据"
+                        }
+                        continue
+
+                    if len(x) < 3 or len(y) < 3:
+                        non_parametric_results[col] = {
+                            "test_type": "kolmogorov_smirnov",
+                            "error": f"组 '{group1_name}' 或 '{group2_name}' 中列 '{col}' 的样本量过小（<3）"
+                        }
+                        continue
+
+                    # 执行两样本K-S检验
+                    stat, p_value = ks_2samp(x, y)
+
+                    non_parametric_results[col] = {
+                        "test_type": "kolmogorov_smirnov",
+                        "statistic": _safe_float(stat),
+                        "p_value": _safe_float(p_value),
+                        "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
+                        "group1": {
+                            "name": str(group1_name),
+                            "size": len(x)
+                        },
+                        "group2": {
+                            "name": str(group2_name),
+                            "size": len(y)
+                        }
+                    }
+                except Exception as e:
+                    non_parametric_results[col] = {
+                        "test_type": "kolmogorov_smirnov",
+                        "error": str(e)
+                    }
+        else:
+            # 单样本K-S检验：检验数值列是否符合某种理论分布
+            for col in numeric_columns:
+                col_data = df[col].dropna().values
+
+                if len(col_data) < 3:
+                    non_parametric_results[col] = {
+                        "test_type": "kolmogorov_smirnov",
+                        "error": f"列 '{col}' 的样本量过小（<3）"
+                    }
+                    continue
+
+                try:
+                    # 执行单样本K-S检验，检验数据是否符合指定的理论分布
+                    if distribution == "norm":
+                        stat, p_value = kstest(col_data, 'norm',
+                                              args=(np.mean(col_data), np.std(col_data, ddof=1)))
+                    elif distribution == "uniform":
+                        stat, p_value = kstest(col_data, 'uniform',
+                                              args=(np.min(col_data), np.max(col_data)-np.min(col_data)))
+                    elif distribution == "expon":
+                        stat, p_value = kstest(col_data, 'expon',
+                                              args=(0, np.mean(col_data)))
+                    elif distribution == "logistic":
+                        from scipy.stats import logistic
+                        stat, p_value = kstest(col_data, 'logistic',
+                                              args=(np.mean(col_data), np.std(col_data, ddof=1)/np.sqrt(3.0)))
+                    else:
+                        # 默认使用正态分布
+                        stat, p_value = kstest(col_data, 'norm',
+                                              args=(np.mean(col_data), np.std(col_data, ddof=1)))
+
+                    non_parametric_results[col] = {
+                        "test_type": "kolmogorov_smirnov",
+                        "statistic": _safe_float(stat),
+                        "p_value": _safe_float(p_value),
+                        "significant": bool(p_value < alpha) if _safe_float(p_value) is not None else False,
+                        "distribution": distribution,
+                        "sample_size": len(col_data)
+                    }
+                except Exception as e:
+                    non_parametric_results[col] = {
+                        "test_type": "kolmogorov_smirnov",
+                        "error": str(e)
+                    }
+
+    else:
+        raise ValueError(f"不支持的非参数检验类型: {test_type}，支持的类型: 'mannwhitney', 'wilcoxon', 'kruskal', 'kolmogorov_smirnov'")
+
+    # 准备返回结果
+    result = {
+        "columns": numeric_columns,
+        "test_type": test_type,
+        "non_parametric_test": non_parametric_results,
+        "alpha": alpha
+    }
+
+    if group_by:
+        result["group_by"] = group_by
+
+    return result
