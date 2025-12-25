@@ -222,7 +222,7 @@ export default {
 
 .file-selector-trigger h3 {
   margin: 0;
-  color: #303133;
+  color: rgb(65, 159, 255);
   font-size: 16px;
 }
 
