@@ -194,6 +194,123 @@ def correlation_analysis_tool(
     from utils.pandas_tool import correlation_analysis
     return correlation_analysis(file_path, columns, method, session_id)
 
+# 注册正态性检验工具
+@tool
+def normality_test_tool(file_path: str, columns: List[str], session_id: str = None,
+        method: str = "shapiro", alpha: float = 0.05, group_by: str = None) -> dict:
+    """
+    正态性检验（自带常值检验）
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要检验的列名列表
+        session_id (str): session_id
+        method (str): 正态性检验方法 ("shapiro", "normaltest")
+        alpha (float): 显著性水平 (默认0.05)
+        group_by (str): 分组列名，如果提供则按组进行正态性检验
+    """
+    from utils.pandas_tool import normality_test
+    return normality_test(file_path, columns, session_id, method, alpha, group_by)
+
+# 注册T检验工具
+@tool
+def t_test_tool(file_path: str, columns: List[str], test_type: str = "one_sample",
+        session_id: str = None, **kwargs) -> dict:
+    """
+    T检验 - 对数据执行不同类型的T检验，自带正态性检验
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表
+        test_type (str): T检验类型
+            - "one_sample": 单样本T检验
+            - "independent": 独立样本T检验
+            - "paired": 配对样本T检验
+        session_id (str): 会话ID
+        **kwargs: 其他参数，用于特定检验的配置
+            - popmean: 单样本t检验中的总体均值 (用于"one_sample"类型)
+            - equal_var: 独立样本t检验中是否假设方差相等 (用于"independent"类型)
+            - group_col: 分组列名，用于独立样本t检验 (用于"independent"类型)
+            - normality_method: 正态性检验方法 ("shapiro", "normaltest")
+            - alpha: 显著性水平 (默认0.05)
+
+    Returns:
+        Dict[str, Any]: 包含T检验结果和正态性检验结果的字典
+    """
+    from utils.pandas_tool import t_test
+    return t_test(file_path, columns, test_type, session_id, **kwargs)
+
+
+# 注册F检验工具
+@tool
+def f_test_tool(file_path: str, columns: List[str], session_id: str = None, 
+                group_by: str = None, alpha: float = 0.05) -> dict:
+    """
+    F检验 - 对数据执行F检验，用于检验多个样本的方差是否相等或进行方差分析(ANOVA)
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表
+        session_id (str): 会话ID
+        group_by (str): 分组列名，用于进行组间方差分析
+        alpha (float): 显著性水平 (默认0.05)
+
+    Returns:
+        Dict[str, Any]: 包含F检验结果的字典
+    """
+    from utils.pandas_tool import f_test
+    return f_test(file_path, columns, session_id, group_by, alpha)
+
+
+# 注册卡方检验工具
+@tool
+def chi_square_test_tool(file_path: str, columns: List[str], session_id: str = None,
+                         group_by: str = None, alpha: float = 0.05) -> dict:
+    """
+    卡方检验 - 对分类变量进行独立性检验或拟合优度检验
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表（需要是分类变量列）
+        session_id (str): 会话ID
+        group_by (str): 分组列名，用于进行独立性检验
+        alpha (float): 显著性水平 (默认0.05)
+
+    Returns:
+        Dict[str, Any]: 包含卡方检验结果的字典
+    """
+    from utils.pandas_tool import chi_square_test
+    return chi_square_test(file_path, columns, session_id, alpha, group_by)
+
+
+# 注册非参数检验工具
+@tool
+def non_parametric_test_tool(file_path: str, columns: List[str], test_type: str = "mannwhitney",
+                            session_id: str = None, group_by: str = None, alpha: float = 0.05, **kwargs) -> dict:
+    """
+    非参数检验 - 提供多种非参数检验方法
+
+    Args:
+        file_path (str): 文件路径
+        columns (List[str]): 需要分析的列名列表
+        test_type (str): 非参数检验类型
+            - "mannwhitney": Mann-Whitney U检验（两个独立样本）
+            - "wilcoxon": Wilcoxon符号秩检验（两个相关样本）
+            - "kruskal": Kruskal-Wallis检验（多个独立样本）
+            - "kolmogorov_smirnov": Kolmogorov-Smirnov检验（单样本或两样本）
+        session_id (str): 会话ID
+        group_by (str): 分组列名，用于进行分组检验
+        alpha (float): 显著性水平 (默认0.05)
+        **kwargs: 其他参数
+            - alternative: 检验方向 ("two-sided", "less", "greater")
+            - distribution: 单样本K-S检验的理论分布 ("norm", "uniform", "expon", "logistic")
+
+    Returns:
+        Dict[str, Any]: 包含非参数检验结果的字典
+    """
+    from utils.pandas_tool import non_parametric_test
+    return non_parametric_test(file_path, columns, test_type, session_id, group_by, alpha, **kwargs)
+
 
 # 将模块中的函数注册为工具
 def register_pandas_tools(agent):
@@ -203,7 +320,6 @@ def register_pandas_tools(agent):
     Args:
         agent: DataAnalysisAgent实例
     """
-    # 已经使用装饰器注册为工具，这里只需要将它们添加到agent中
     agent.tools.append(remove_invalid_samples_tool)
     agent.tools.append(handle_missing_values_tool)
     agent.tools.append(dimensionless_processing_tool)
@@ -212,3 +328,8 @@ def register_pandas_tools(agent):
     agent.tools.append(statistical_summary_tool)
     agent.tools.append(correlation_analysis_tool)
     agent.tools.append(text_to_numeric_or_datetime_tool)
+    agent.tools.append(normality_test_tool)
+    agent.tools.append(t_test_tool)
+    agent.tools.append(f_test_tool)
+    agent.tools.append(chi_square_test_tool)
+    agent.tools.append(non_parametric_test_tool)

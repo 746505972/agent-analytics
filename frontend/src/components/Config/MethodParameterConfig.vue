@@ -19,10 +19,15 @@
         <h3>选择需要处理的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
       </div>
-      <div v-else-if="['statistical_summary','correlation_analysis'].includes(currentMethod)">
+      <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test','chi_square_test', 'non_parametric_test'].includes(currentMethod)">
         <h3>选择需要分析的列</h3>
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则分析所有数值型列</p>
+      </div>
+      <div v-else-if="['text_analysis', 'sentiment_analysis'].includes(currentMethod)">
+        <h3>选择需要分析的文本列</h3>
+        <p>点击选择一列，用于分析文本数据</p>
+        <p>多选则默认分析第一列</p>
       </div>
       <div v-else>
         <h3>列名列表</h3>
@@ -34,7 +39,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test','chi_square_test', 'non_parametric_test'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -86,15 +91,49 @@
 
     <CorrelationAnalysisConfig
       v-else-if="currentMethod === 'correlation_analysis'"
-      :correlation-method="correlationMethod"
-      @update:correlationMethod="$emit('update:correlationMethod', $event)"
+      v-model:correlation-method="configs.correlationMethod"
+    />
+
+    <TTestConfig
+      v-else-if="currentMethod === 't_test'"
+      v-model:config="configs.tTestConfig"
+      :categorical-columns="selectedFileColumns"
+    />
+
+    <FTestConfig
+      v-else-if="currentMethod === 'f_test'"
+      v-model:config="configs.fTestConfig"
+      :categorical-columns="selectedFileColumns"
+    />
+
+    <ChiSquareTestConfig
+      v-else-if="currentMethod === 'chi_square_test'"
+      v-model:config="configs.chiSquareTestConfig"
+      :categorical-columns="selectedFileColumns"
+    />
+
+    <NonParametricTestConfig
+      v-else-if="currentMethod === 'non_parametric_test'"
+      v-model:config="configs.nonParametricTestConfig"
+      :categorical-columns="selectedFileColumns"
+    />
+
+    <NormalityTestConfig
+      v-else-if="currentMethod === 'normality_test'"
+      v-model:config="configs.normalityTestConfig"
+      :categorical-columns="selectedFileColumns"
     />
 
     <WordCloudConfig
       v-else-if="currentMethod === 'text_analysis'"
       :selected-file-columns="selectedFileColumns"
-      :wordcloud-config="wordcloudConfig"
-      @update:wordcloudConfig="$emit('update:wordcloudConfig', $event)"
+      v-model:wordcloud-config="configs.wordcloudConfig"
+    />
+
+    <SentimentAnalysisConfig
+      v-else-if="currentMethod === 'sentiment_analysis'"
+      :selected-file-columns="selectedFileColumns"
+      v-model:sentiment-config="configs.sentimentConfig"
     />
   </div>
   </div>
@@ -106,17 +145,30 @@ import InvalidSamplesConfig from "./InvalidSamplesConfig.vue";
 import MissingValueInterpolationConfig from "./MissingValueInterpolationConfig.vue";
 import DataTransformationConfig from "./DataTransformationConfig.vue";
 import CorrelationAnalysisConfig from "./CorrelationAnalysisConfig.vue";
+import TTestConfig from "./TTestConfig.vue";
+import NormalityTestConfig from "./NormalityTestConfig.vue";
 import WordCloudConfig from "./WordCloudConfig.vue";
+import SentimentAnalysisConfig from "./SentimentAnalysisConfig.vue";
+import FTestConfig from "@/components/Config/FTestConfig.vue";
+import ChiSquareTestConfig from "@/components/Config/ChiSquareTestConfig.vue";
+import NonParametricTestConfig from "@/components/Config/NonParametricTestConfig.vue";
+import { getDefaultConfigs } from '@/utils/configDefaults.js'
 
 export default {
   name: "MethodParameterConfig",
   components: {
+    ChiSquareTestConfig,
+    FTestConfig,
     AddHeaderConfig,
     InvalidSamplesConfig,
     MissingValueInterpolationConfig,
     DataTransformationConfig,
     CorrelationAnalysisConfig,
-    WordCloudConfig
+    TTestConfig,
+    NormalityTestConfig,
+    WordCloudConfig,
+    SentimentAnalysisConfig,
+    NonParametricTestConfig
   },
   props: {
     currentMethod: {
@@ -183,24 +235,9 @@ export default {
       type: Object,
       default: () => ({})
     },
-    correlationMethod: {
-      type: String,
-      default: 'pearson'
-    },
-    wordcloudConfig: {
+    configs: {
       type: Object,
-      default: () => ({
-        column: "",
-        color:['#FF274B'],
-        maxWords: 200,
-        width: 1600,
-        height: 900,
-        backgroundColor: "#ffffff",
-        maxFontSize: 200,
-        minFontSize: 10,
-        stopwords: [],
-        maskShape: "default"
-      })
+      default: getDefaultConfigs()
     },
     isWaitingForResponse: {
       type: Boolean,
@@ -218,8 +255,6 @@ export default {
     'update:knnNeighbors',
     'update:newColumnNames',
     'update:dataTransformationConfig',
-    'update:correlationMethod',
-    'update:wordcloudConfig',
     'toggleColumnSelection'
   ],
   methods: {
@@ -235,7 +270,13 @@ export default {
         'data_transformation', 
         'statistical_summary',
         'correlation_analysis',
-        'text_analysis'
+        'text_analysis',
+        'sentiment_analysis',
+        't_test',
+        'normality_test',
+        'f_test',
+        'chi_square_test',
+        'non_parametric_test'
       ];
 
       if (!selectableMethods.includes(this.currentMethod)) {
@@ -247,7 +288,7 @@ export default {
     
     handleNewColumnNamesUpdate({ index, value }) {
       this.$emit('update:newColumnNames', { index, value });
-    }
+    },
   }
 }
 </script>
@@ -315,24 +356,6 @@ export default {
 .column-item.selected {
   background-color: #409eff;
   color: white;
-}
-
-.param-config-section {
-  background: white;
-  padding: 20px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid #ededed;
-  border-top: 1px solid #ededed;
-}
-
-.default-config-placeholder {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  color: #909399;
 }
 
 .loading-overlay {

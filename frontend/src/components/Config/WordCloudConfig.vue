@@ -1,24 +1,6 @@
 <template>
   <div class="wordcloud-config">
     <h3>词云配置</h3>
-    <div class="config-item">
-      <label>选择文本列：</label>
-      <select 
-        v-model="selectedColumn" 
-        @change="onColumnChange"
-        class="column-select"
-      >
-        <option value="" disabled>请选择一列</option>
-        <option 
-          v-for="column in textColumns" 
-          :key="column" 
-          :value="column"
-        >
-          {{ column }}
-        </option>
-      </select>
-      <p class="help-text">请选择包含文本数据的一列用于生成词云</p>
-    </div>
     
     <div class="config-item">
       <label>最大词数：</label>

@@ -4,30 +4,30 @@
     <div class="info-grid">
       <div class="info-item">
         <span class="info-label">文件名:</span>
-        <span class="info-value">{{ datasetDetails.filename }}</span>
+        <span class="info-value">{{ datasetDetails?.filename }}</span>
       </div>
       <div class="info-item">
         <div>
           <span class="info-label">行数:</span>
-          <span class="info-value">{{ datasetDetails.rows.toLocaleString() }}</span>
+          <span class="info-value">{{ datasetDetails.rows?.toLocaleString()}}</span>
         </div>
         <div>
           <span class="info-label">列数:</span>
-          <span class="info-value">{{ datasetDetails.columns.toLocaleString() }}</span>
+          <span class="info-value">{{ datasetDetails.columns?.toLocaleString()}}</span>
         </div>
       </div>
       <div class="info-item">
         <div>
           <span class="info-label">完整性:</span>
-          <span class="info-value">{{ (datasetDetails.completeness * 100).toFixed(2) }}%</span>
+          <span class="info-value">{{ datasetDetails.completeness ? (datasetDetails.completeness * 100).toFixed(2) : 'N/A' }}%</span>
         </div>
         <div>
           <span class="info-label">总单元格数:</span>
-          <span class="info-value">{{ datasetDetails.total_cells.toLocaleString() }}</span>
+          <span class="info-value">{{ datasetDetails.total_cells?.toLocaleString() || 'N/A' }}</span>
         </div>
         <div>
           <span class="info-label">缺失值总数:</span>
-          <span class="info-value">{{ datasetDetails.total_missing.toLocaleString() }}</span>
+          <span class="info-value">{{ datasetDetails.total_missing?.toLocaleString() || 'N/A' }}</span>
         </div>
       </div>
     </div>
@@ -47,8 +47,8 @@
           <tr v-for="(dtype, columnName) in datasetDetails.dtypes" :key="columnName">
             <td>{{ columnName }}</td>
             <td>{{ dtype }}</td>
-            <td>{{ datasetDetails.missing_values[columnName].toLocaleString() || 0 }}</td>
-            <td>{{ (datasetDetails.completeness_values[columnName] * 100).toFixed(2) + '%' || 'unknown' }}</td>
+            <td>{{ datasetDetails.missing_values?.[columnName]?.toLocaleString() || 0 }}</td>
+            <td>{{ datasetDetails.completeness_values?.[columnName] ? (datasetDetails.completeness_values[columnName] * 100).toFixed(2) + '%' : 'N/A' }}</td>
           </tr>
         </tbody>
       </table>
@@ -69,12 +69,12 @@
         <tbody>
           <tr v-for="(stats, columnName) in datasetDetails.numeric_stats" :key="columnName">
             <td>{{ columnName }}</td>
-            <td>{{ stats.min !== null ? stats.min.toLocaleString() : 'N/A' }}</td>
-            <td>{{ stats.max !== null ? stats.max.toLocaleString() : 'N/A' }}</td>
-            <td>{{ stats.mean !== null ? Number(stats.mean.toFixed(2)).toLocaleString() : 'N/A' }}</td>
-            <td>{{ stats.std !== null ? Number(stats.std.toFixed(2)).toLocaleString() : 'N/A' }}</td>
+            <td>{{ stats.min !== null && stats.min !== undefined ? stats.min.toLocaleString() : 'N/A' }}</td>
+            <td>{{ stats.max !== null && stats.max !== undefined ? stats.max.toLocaleString() : 'N/A' }}</td>
+            <td>{{ stats.mean !== null && stats.mean !== undefined ? Number(stats.mean.toFixed(2)).toLocaleString() : 'N/A' }}</td>
+            <td>{{ stats.std !== null && stats.std !== undefined ? Number(stats.std.toFixed(2)).toLocaleString() : 'N/A' }}</td>
           </tr>
-          <tr v-if="Object.keys(datasetDetails.numeric_stats).length === 0">
+          <tr v-if="!datasetDetails.numeric_stats || Object.keys(datasetDetails.numeric_stats).length === 0">
             <td colspan="5" class="no-data">无数值型列</td>
           </tr>
         </tbody>
@@ -101,7 +101,7 @@
               </div>
             </td>
           </tr>
-          <tr v-if="Object.keys(datasetDetails.categorical_stats).length === 0">
+          <tr v-if="!datasetDetails.categorical_stats || Object.keys(datasetDetails.categorical_stats).length === 0">
             <td colspan="3" class="no-data">无分类型列</td>
           </tr>
         </tbody>
@@ -118,7 +118,7 @@
         </thead>
         <tbody>
           <tr v-for="(row, index) in datasetDetails.head" :key="index">
-            <td v-for="col in datasetDetails.column_names" :key="col">{{ row[col] }}</td>
+            <td v-for="col in datasetDetails.column_names" :key="col">{{ row?.[col] || 'N/A' }}</td>
           </tr>
         </tbody>
       </table>

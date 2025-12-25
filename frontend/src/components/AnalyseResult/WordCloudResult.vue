@@ -1,13 +1,6 @@
 <template>
   <div class="wordcloud-result">
-    <div v-if="loading" class="loading">
-      <div class="spinner"></div>
-      <p>正在生成词云...</p>
-    </div>
-    <div v-else-if="error" class="error">
-      <p>生成词云时出错: {{ error }}</p>
-    </div>
-    <div v-else-if="wordcloudData" class="result-content">
+    <div v-if="wordcloudData" class="result-content">
       <div class="wordcloud-image-container">
         <div class="image-header">
           <h3>词云图像</h3>
@@ -58,7 +51,7 @@
 export default {
   name: "WordCloudResult",
   props: {
-    data: {
+    datasetDetails: {
       type: Object,
       default: () => null
     },
@@ -81,6 +74,7 @@ export default {
     },
 
     getImageUrlWithTimestamp(imagePath) {
+      if (!imagePath) return '';
       // 添加时间戳以避免浏览器缓存
       const timestamp = Date.now();
       const url = this.getImageUrl(imagePath);
@@ -99,7 +93,7 @@ export default {
   },
   computed: {
     wordcloudData() {
-      return this.data || null;
+      return this.datasetDetails || null;
     },
     
     topWords() {

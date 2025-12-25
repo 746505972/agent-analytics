@@ -12,7 +12,6 @@
       @remove-from-history="removeFromHistory"
       @show-preview="showDataPreview"
     />
-    
     <!-- 文件选择悬浮区域 -->
     <FileSelectionOverlay 
       v-if="!isFileSectionCollapsed"
@@ -46,14 +45,12 @@
             <button @click="switchToConfigView" class="back-button">← 返回参数配置</button>
             <h2>{{ getMethodName(currentMethod) }}分析结果</h2>
           </div>
-          
           <ResultContent
             :current-method="currentMethod"
             :dataset-details="datasetDetails"
             :loading-details="loadingDetails"
           />
         </div>
-        
         <!-- 参数配置区 -->
         <div v-else class="config-section">
           <!-- 方法描述和执行按钮 -->
@@ -77,31 +74,20 @@
             :selected-columns="selectedColumns"
             :header-edit-mode="headerEditMode"
             :new-column-names="newColumnNames"
-            :remove-duplicates="removeDuplicates"
-            :remove-duplicates-cols="removeDuplicatesCols"
-            :remove-constant-cols="removeConstantCols"
-            :row-missing-threshold="rowMissingThreshold"
-            :column-missing-threshold="columnMissingThreshold"
-            :interpolation-method="interpolationMethod"
-            :fill-value="fillValue"
-            :knn-neighbors="knnNeighbors"
+            v-model:remove-duplicates="removeDuplicates"
+            v-model:remove-duplicates-cols="removeDuplicatesCols"
+            v-model:remove-constant-cols="removeConstantCols"
+            v-model:row-missing-threshold="rowMissingThreshold"
+            v-model:column-missing-threshold="columnMissingThreshold"
+            v-model:interpolation-method="interpolationMethod"
+            v-model:fill-value="fillValue"
+            v-model:knn-neighbors="knnNeighbors"
             :last-selected-column-index="lastSelectedColumnIndex"
             :data-transformation-config="dataTransformationConfig"
-            :correlation-method="correlationMethod"
-            :wordcloud-config="wordcloudConfig"
+            v-model:configs="configs"
             :is-waiting-for-response="isWaitingForResponse"
-            @update:removeDuplicates="removeDuplicates = $event"
-            @update:removeDuplicatesCols="removeDuplicatesCols = $event"
-            @update:removeConstantCols="removeConstantCols = $event"
-            @update:rowMissingThreshold="rowMissingThreshold = $event"
-            @update:columnMissingThreshold="columnMissingThreshold = $event"
-            @update:interpolationMethod="interpolationMethod = $event"
-            @update:fillValue="fillValue = $event"
-            @update:knnNeighbors="knnNeighbors = $event"
             @update:newColumnNames="handleNewColumnNamesUpdate"
             @update:dataTransformationConfig="updateDataTransformationConfig"
-            @update:correlationMethod="correlationMethod = $event"
-            @update:wordcloudConfig="wordcloudConfig = $event"
             @toggleColumnSelection="handleToggleColumnSelection"
           />
         </div>
@@ -139,6 +125,7 @@ import FileSelectionOverlay from "@/components/FileSelectionOverlay.vue";
 import DashboardHeader from "@/components/DashboardHeader.vue";
 import MethodParameterConfig from "@/components/Config/MethodParameterConfig.vue";
 import PreviewModal from "@/components/PreviewModal.vue";
+import RightSidebar from "@/components/RightSidebar.vue";
 import { executeDataTransformation } from "@/api/dataTransformation.js";
 import { executeDeleteColumns, executeMissingValueInterpolation, executeInvalidSamples } from "@/api/columnOperations.js";
 import { applyHeaderNames } from "@/api/headerOperations.js";
@@ -150,8 +137,8 @@ import {
   generateInvalidSamplesFeedback
 } from "@/api/feedbackHandler.js";
 import { getMethodName } from "@/utils/methodUtils.js";
+import { getDefaultConfigs } from '@/utils/configDefaults.js'
 import methodCategories from "@/utils/methodCategories.json";
-import RightSidebar from "@/components/RightSidebar.vue";
 
 export default {
   name: "Dashboard",
@@ -193,7 +180,7 @@ export default {
       files: [],
       selectedFile: null,
       selectedFileColumns: [], // 用于显示选择的文件的列名
-      selectedColumns: [], // 用于插值法选中的列
+      selectedColumns: [], // 选中的列
       userInput: "",
       chatMessages: [
         {
@@ -245,22 +232,10 @@ export default {
       lastSelectedColumnIndex: -1,
       // 数据转换相关配置
       dataTransformationConfig: {},
-      // 相关性分析参数
-      correlationMethod: 'pearson',
-      wordcloudConfig: {
-        column: "",
-        color:['#FF274B'],
-        maxWords: 200,
-        width: 1600,
-        height: 900,
-        backgroundColor: "#ffffff",
-        maxFontSize: 200,
-        minFontSize: 10,
-        stopwords: [],
-        maskShape: "default"
-      },
+      configs:getDefaultConfigs(),
     }
   },
+    
   async mounted() {
     await this.loadUploadedFiles();
     // 恢复保存的状态
@@ -323,8 +298,10 @@ export default {
       
       // 如果历史记录中有结果数据，则直接显示
       if (historyItem.result) {
-        this.datasetDetails = historyItem.result;
-        this.switchToResultView();
+        this.datasetDetails = JSON.parse(JSON.stringify(historyItem.result));
+        await this.$nextTick();
+        this.middleSectionView = 'result';
+        await this.$nextTick();
       } else {
         // 否则执行方法获取结果
         await this.executeMethod();
@@ -370,16 +347,13 @@ export default {
       if (event) {
         event.stopPropagation();
       }
-      
       this.isFileSectionCollapsed = !this.isFileSectionCollapsed;
-      // 保存文件选择区域的展开/收起状态到localStorage
       localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
     },
     
     // 关闭文件选择区域
     closeFileSelection() {
       this.isFileSectionCollapsed = true;
-      // 保存文件选择区域的展开/收起状态到localStorage
       localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
     },
 
@@ -395,7 +369,7 @@ export default {
           this.files = result.data;
           this.session_id = result.session_id;
           const storedSessionId = localStorage.getItem('session_id');
-          if (storedSessionId && this.session_id !== storedSessionId) {
+          if (this.session_id !== storedSessionId) {
             // 如果session_id变化，清除localStorage中的数据
             this.clearLocalStorage();
             localStorage.setItem('session_id', this.session_id);
@@ -497,24 +471,15 @@ export default {
       if (!this.selectedFile || !this.currentMethod) {
         return;
       }
-      
       // 保存聊天记录到localStorage
       localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
-      
-      // 保存文件选择区域的展开/收起状态
-      localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
-      
-      // 保存当前选中的方法
-      localStorage.setItem('selectedMethod', this.currentMethod);
       
       // 直接调用API获取分析结果
       this.loadingDetails = true;
       this.isWaitingForResponse = true;
       try {
         const result = await fetchResult(this.selectedFile, this.currentMethod, {
-          selectedColumns: this.selectedColumns,
-          correlationMethod: this.correlationMethod,
-          wordcloudConfig: this.wordcloudConfig,
+          selectedColumns: this.selectedColumns, configs:this.configs
         });
         
         if (result) {
@@ -524,12 +489,10 @@ export default {
           } else {
             this.addToHistory(this.selectedFile, this.currentMethod, result);
           }
-          
           // 设置分析结果数据
           this.datasetDetails = result;
-          
           // 切换到结果视图
-          this.switchToResultView();
+          this.middleSectionView = 'result';
         }
       } catch (error) {
         alert("获取分析结果失败: " + error.message);
@@ -588,12 +551,6 @@ export default {
     },
     
     handleToggleColumnSelection({ event, column, index }) {
-      // 双重验证
-      const interpolationMethods = ['missing_value_interpolation', 'delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis'];
-
-      if (!interpolationMethods.includes(this.currentMethod)) {
-        return;
-      }
       const lastIndex = this.lastSelectedColumnIndex;
 
       if (event.ctrlKey || event.metaKey) {
@@ -710,10 +667,6 @@ export default {
         this.isWaitingForResponse = false;
       }
     },
-
-    switchToResultView() {
-      this.middleSectionView = 'result';
-    },
     // TODO:在这里添加清除参数
     switchToConfigView() {
       this.middleSectionView = 'config';
@@ -723,24 +676,17 @@ export default {
       this.removeConstantCols= false;
       this.rowMissingThreshold= 1;
       this.columnMissingThreshold= 1;
-      // 插值法参数
-      this.fillValue= '';
-      this.knnNeighbors= 5;
       this.lastSelectedColumnIndex= -1;
       this.newColumnNames= [];
       this.headerEditMode= 'add';  // 修改：统一使用字符串类型，默认为添加模式
+      this.configs= getDefaultConfigs()
     },
     
-    // 修改添加到历史记录的方法，增加result参数
+    // 添加到历史记录
     addToHistory(dataId, method, result) {
-      // 添加到历史记录
       this.analysisHistory.push({
-        dataId,
-        method,
-        result // 保存结果
+        dataId, method, result
       });
-
-      // 保存到localStorage
       localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
     },
 
@@ -751,9 +697,7 @@ export default {
       this.isWaitingForResponse = true;
       try {
         const result = await applyHeaderNames(
-          this.selectedFile, 
-          this.newColumnNames, 
-          this.headerEditMode
+          this.selectedFile, this.newColumnNames, this.headerEditMode
         );
             
         // 自动选择新生成的文件
@@ -853,12 +797,10 @@ export default {
       // 加载数据
       await this.loadPreviewData();
     },
-    
     // 关闭数据预览弹窗
     closePreviewModal() {
       this.showPreviewModal = false;
     },
-    
     // 加载预览数据
     async loadPreviewData() {
       this.previewData.loading = true;
@@ -902,19 +844,16 @@ export default {
       this.previewData.totalPages = Math.ceil(this.previewData.totalRows / this.previewData.pageSize);
       this.previewData.documentName = '示例数据文档';
     },
-    
     // 翻页相关方法
     changePage(page) {
       this.previewData.currentPage = page;
       this.loadPreviewData();
     },
-    
     prevPage() {
       if (this.previewData.currentPage > 1) {
         this.changePage(this.previewData.currentPage - 1);
       }
     },
-    
     nextPage() {
       if (this.previewData.currentPage < this.previewData.totalPages) {
         this.changePage(this.previewData.currentPage + 1);

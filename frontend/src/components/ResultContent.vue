@@ -15,14 +15,44 @@
       <CorrelationAnalysisResult :dataset-details="datasetDetails" />
     </div>
     
+    <!-- T检验结果 -->
+    <div v-else-if="currentMethod === 't_test' && datasetDetails" class="analysis-section">
+      <TTestResult :dataset-details="datasetDetails" />
+    </div>
+    
+    <!-- F检验结果 -->
+    <div v-else-if="currentMethod === 'f_test' && datasetDetails" class="analysis-section">
+      <FTestResult :dataset-details="datasetDetails" />
+    </div>
+    
+    <!-- 正态性检验结果 -->
+    <div v-else-if="currentMethod === 'normality_test' && datasetDetails" class="analysis-section">
+      <NormalityTestResult :dataset-details="datasetDetails" />
+    </div>
+
+    <!-- 卡方检验结果 -->
+    <div v-else-if="currentMethod === 'chi_square_test' && datasetDetails" class="analysis-section">
+      <ChiSquareTestResult :dataset-details="datasetDetails" />
+    </div>
+
+    <!-- 非参数检验结果 -->
+    <div v-else-if="currentMethod === 'non_parametric_test' && datasetDetails" class="analysis-section">
+      <NonParametricTestResult :dataset-details="datasetDetails" />
+    </div>
+
     <!-- 词云分析结果 -->
     <div v-else-if="currentMethod === 'text_analysis' && datasetDetails" class="analysis-section">
-      <WordCloudResult :data="datasetDetails" />
+      <WordCloudResult :dataset-details="datasetDetails" />
     </div>
     
     <!-- 数据可视化结果 -->
     <div v-else-if="(currentMethod === 'line_chart' || currentMethod === 'data_visualization') && datasetDetails" class="analysis-section">
       <VisualizationPanel :dataset-details="datasetDetails" />
+    </div>
+
+    <!-- 情感分析结果 -->
+    <div v-else-if="currentMethod === 'sentiment_analysis' && datasetDetails" class="analysis-section">
+      <SentimentAnalysisResult :dataset-details="datasetDetails" />
     </div>
     
     <!-- 机器学习分析结果 -->
@@ -47,17 +77,29 @@
 import BasicInfoResult from './AnalyseResult/BasicInfoResult.vue';
 import StatisticalSummaryResult from './AnalyseResult/StatisticalSummaryResult.vue';
 import CorrelationAnalysisResult from './AnalyseResult/CorrelationAnalysisResult.vue';
+import TTestResult from './AnalyseResult/TTestResult.vue';
+import NormalityTestResult from './AnalyseResult/NormalityTestResult.vue';
 import VisualizationPanel from './Charts/VisualizationPanel.vue';
 import WordCloudResult from './AnalyseResult/WordCloudResult.vue';
+import SentimentAnalysisResult from "@/components/AnalyseResult/SentimentAnalysisResult.vue";
+import FTestResult from "@/components/AnalyseResult/FTestResult.vue";
+import ChiSquareTestResult from "@/components/AnalyseResult/ChiSquareTestResult.vue";
+import NonParametricTestResult from "@/components/AnalyseResult/NonParametricTestResult.vue";
 
 export default {
   name: "ResultContent",
   components: {
+    ChiSquareTestResult,
+    FTestResult,
+    SentimentAnalysisResult,
     BasicInfoResult,
     StatisticalSummaryResult,
     CorrelationAnalysisResult,
+    TTestResult,
+    NormalityTestResult,
     VisualizationPanel,
-    WordCloudResult
+    WordCloudResult,
+    NonParametricTestResult
   },
   props: {
     currentMethod: {

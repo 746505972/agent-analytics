@@ -201,12 +201,10 @@ class DataAnalysisAgent:
         """
         # 导入各模块的注册函数
         from tools.pandas_api import register_pandas_tools
-        from tools.nlp_api import register_nlp_tools
         from tools.ml_api import register_ml_tools
         
         # 注册各模块的工具
         register_pandas_tools(self)
-        register_nlp_tools(self)
         register_ml_tools(self)
     
     def process_query_stream(self, query: str, data_context=None, session_id=None):
