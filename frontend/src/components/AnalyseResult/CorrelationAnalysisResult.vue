@@ -977,6 +977,18 @@ export default {
   font-weight: bold;
 }
 
+.strong-correlation {
+  background-color: #fef0f0;
+}
+
+.moderate-correlation {
+  background-color: #fdf6ec;
+}
+
+.weak-correlation {
+  background-color: #f0f9eb;
+}
+
 .significance-note {
   margin-top: 5px;
   font-size: 14px;

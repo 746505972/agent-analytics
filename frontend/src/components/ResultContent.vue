@@ -40,6 +40,11 @@
       <NonParametricTestResult :dataset-details="datasetDetails" />
     </div>
 
+    <!-- 线性回归结果 -->
+    <div v-else-if="currentMethod === 'linear_regression' && datasetDetails" class="analysis-section">
+      <LinearRegressionResult :result="datasetDetails" />
+    </div>
+
     <!-- 词云分析结果 -->
     <div v-else-if="currentMethod === 'text_analysis' && datasetDetails" class="analysis-section">
       <WordCloudResult :dataset-details="datasetDetails" />
@@ -85,6 +90,7 @@ import SentimentAnalysisResult from "@/components/AnalyseResult/SentimentAnalysi
 import FTestResult from "@/components/AnalyseResult/FTestResult.vue";
 import ChiSquareTestResult from "@/components/AnalyseResult/ChiSquareTestResult.vue";
 import NonParametricTestResult from "@/components/AnalyseResult/NonParametricTestResult.vue";
+import LinearRegressionResult from "@/components/AnalyseResult/LinearRegressionResult.vue";
 
 export default {
   name: "ResultContent",
@@ -99,7 +105,8 @@ export default {
     NormalityTestResult,
     VisualizationPanel,
     WordCloudResult,
-    NonParametricTestResult
+    NonParametricTestResult,
+    LinearRegressionResult
   },
   props: {
     currentMethod: {

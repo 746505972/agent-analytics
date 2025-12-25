@@ -335,6 +335,41 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       } else {
         throw new Error(result.error || "获取情感分析结果失败");
       }
+    } else if (method === 'linear_regression') {
+      // 准备线性回归请求体
+      const requestBody = {
+        x_columns: selectedColumns || [],
+        y_column: configs.linearRegressionConfig.y_column,
+        method: configs.linearRegressionConfig.method || 'ols',
+        alpha: configs.linearRegressionConfig.alpha || 1.0,
+        l1_ratio: configs.linearRegressionConfig.l1_ratio || 0.5,
+        params: {
+          max_iter: configs.linearRegressionConfig.params.max_iter || 1000,
+          tol: configs.linearRegressionConfig.params.tol || 0.0001,
+          fit_intercept: configs.linearRegressionConfig.params.fit_intercept !== undefined ? configs.linearRegressionConfig.params.fit_intercept : true
+        }
+      };
+
+      // 验证Y列是否已选择
+      if (!requestBody.y_column) {
+        throw new Error("请选择因变量(Y列)");
+      }
+
+      const response = await fetch(`/data/${dataId}/linear_regression`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.error || "获取线性回归结果失败");
+      }
     }
     // 其他分析方法可以在这里添加
     return null;
