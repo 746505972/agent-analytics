@@ -8,7 +8,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 sys.path.insert(0, current_dir)
-
+# 确保数据目录存在
+os.makedirs("data", exist_ok=True)
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -64,9 +65,6 @@ app.mount("/data", StaticFiles(directory="data"), name="data")
 # 存储定时任务的引用
 cleanup_task = None
 
-# 确保数据目录存在
-os.makedirs("data", exist_ok=True)
-
 async def periodic_cleanup():
     """
     定期清理过期的session数据
@@ -82,36 +80,13 @@ async def periodic_cleanup():
         # 每隔10分钟执行一次清理
         await asyncio.sleep(3600)  # 600秒 = 10分钟
 
-@app.on_event("startup")
-async def startup_event():
-    """
-    应用启动时的事件处理
-    """
-    global cleanup_task
-    # 启动定期清理任务
-    cleanup_task = asyncio.create_task(periodic_cleanup())
-    logger.info("定期清理任务已启动")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """
-    应用关闭时的事件处理
-    """
-    global cleanup_task
-    if cleanup_task:
-        cleanup_task.cancel()
-        try:
-            await cleanup_task
-        except asyncio.CancelledError:
-            pass
-    logger.info("定期清理任务已停止")
-
 @app.middleware("http")
 async def session_middleware(request: Request, call_next):
     # 为每个请求生成或获取session_id
     session_id = request.cookies.get("session_id")
     if not session_id:
-        session_id = str(uuid.uuid4())
+        # session_id = str(uuid.uuid4())
+        session_id = "000"
     
     # 将session_id添加到请求状态中
     request.state.session_id = session_id

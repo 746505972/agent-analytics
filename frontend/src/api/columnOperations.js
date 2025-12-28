@@ -2,6 +2,7 @@
  * 列操作 API 模块
  * 提供各种列操作功能的封装
  */
+import { backendBaseUrl } from './apiConfig.js';
 
 /**
  * 执行删除列操作
@@ -18,7 +19,7 @@ export async function executeDeleteColumns(fileId, columnsToDelete) {
     throw new Error('请选择要删除的列');
   }
 
-  const response = await fetch(`/user/${fileId}/delete_columns`, {
+  const response = await fetch(`${backendBaseUrl}/user/${fileId}/delete_columns`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -50,7 +51,7 @@ export async function executeMissingValueInterpolation(fileId, selectedColumns, 
     throw new Error('请先选择一个文件');
   }
 
-  const response = await fetch(`/user/${fileId}/handle_missing_values`, {
+  const response = await fetch(`${backendBaseUrl}/user/${fileId}/handle_missing_values`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -84,7 +85,7 @@ export async function executeInvalidSamples(fileId, invalidSamplesConfig) {
     throw new Error('请先选择一个文件');
   }
 
-  const response = await fetch(`/user/${fileId}/remove_invalid_samples`, {
+  const response = await fetch(`${backendBaseUrl}/user/${fileId}/remove_invalid_samples`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

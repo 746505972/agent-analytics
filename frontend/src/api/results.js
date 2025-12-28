@@ -2,6 +2,8 @@
  * 获取分析结果的API函数
  * 根据不同的分析方法调用相应的后端接口
  */
+import { backendBaseUrl } from './apiConfig.js';
+
 export async function fetchResult(dataId, method, options = {}){
   if(method === 'line_chart' || method === 'data_visualization'){
     return await fetchCompleteData(dataId);
@@ -16,7 +18,7 @@ export async function fetchResult(dataId, method, options = {}){
  */
 export async function fetchCompleteData(dataId) {
   try {
-    const response = await fetch(`/data/${dataId}/complete`, {
+    const response = await fetch(`${backendBaseUrl}/data/${dataId}/complete`, {
       credentials: 'include'
     });
 
@@ -47,7 +49,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
   
   try {
     if (method === 'basic_info') {
-      const response = await fetch(`/data/${dataId}/details`, {
+      const response = await fetch(`${backendBaseUrl}/data/${dataId}/details`, {
         credentials: 'include'
       });
 
@@ -64,7 +66,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         requestBody.columns = selectedColumns;
       }
       
-      const response = await fetch(`/data/${dataId}/statistical_summary`, {
+      const response = await fetch(`${backendBaseUrl}/data/${dataId}/statistical_summary`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -89,7 +91,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         requestBody.columns = selectedColumns;
       }
       
-      const response = await fetch(`/data/${dataId}/correlation_analysis`, {
+      const response = await fetch(`${backendBaseUrl}/data/${dataId}/correlation_analysis`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -128,7 +130,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         requestBody.columns = selectedColumns;
       }
       
-      const response = await fetch(`/data/${dataId}/t_test`, {
+      const response = await fetch(`${backendBaseUrl}/data/${dataId}/t_test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -159,7 +161,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         requestBody.columns = selectedColumns;
       }
 
-      const response = await fetch(`/data/${dataId}/f_test`, {
+      const response = await fetch(`${backendBaseUrl}/data/${dataId}/f_test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -190,7 +192,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         requestBody.columns = selectedColumns;
       }
 
-      const response = await fetch(`/data/${dataId}/chi_square_test`, {
+      const response = await fetch(`${backendBaseUrl}/data/${dataId}/chi_square_test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -231,7 +233,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         requestBody.columns = selectedColumns;
       }
 
-      const response = await fetch(`/data/${dataId}/non_parametric_test`, {
+      const response = await fetch(`${backendBaseUrl}/data/${dataId}/non_parametric_test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -263,7 +265,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         requestBody.columns = selectedColumns;
       }
       
-      const response = await fetch(`/data/${dataId}/normality_test`, {
+      const response = await fetch(`${backendBaseUrl}/data/${dataId}/normality_test`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -295,7 +297,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         mask_shape: configs.wordcloudConfig.maskShape || "default"
       };
 
-      const response = await fetch(`/nlp/${dataId}/wordcloud`, {
+      const response = await fetch(`${backendBaseUrl}/nlp/${dataId}/wordcloud`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -320,7 +322,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         internet_slang: configs.sentimentConfig.internetSlang || {}
       };
 
-      const response = await fetch(`/nlp/${dataId}/sentiment`, {
+      const response = await fetch(`${backendBaseUrl}/nlp/${dataId}/sentiment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -355,7 +357,7 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
         throw new Error("请选择因变量(Y列)");
       }
 
-      const response = await fetch(`/data/${dataId}/linear_regression`, {
+      const response = await fetch(`${backendBaseUrl}/data/${dataId}/linear_regression`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

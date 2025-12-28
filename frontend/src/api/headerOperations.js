@@ -2,6 +2,7 @@
  * 标题行操作 API 模块
  * 提供标题行相关功能的封装
  */
+import { backendBaseUrl } from './apiConfig.js';
 
 /**
  * 应用自定义标题行
@@ -30,7 +31,7 @@ export async function applyHeaderNames(fileId, columnNames, mode = "add") {
     modeParam = "remove";
   }
 
-  const response = await fetch(`/user/${fileId}/add_header`, {
+  const response = await fetch(`${backendBaseUrl}/user/${fileId}/add_header`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

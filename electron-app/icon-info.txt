@@ -1,0 +1,13 @@
+应用图标说明
+============
+
+为了使Electron应用有自定义图标，您需要：
+
+1. 准备一个512x512像素的PNG格式图标文件
+2. 将其命名为icon.png
+3. 放置在electron-app目录中
+
+示例命令（如果您有ImageMagick）：
+convert your-icon.png -resize 512x512 icon.png
+
+或者使用在线转换工具将您的图标转换为512x512像素的PNG格式。

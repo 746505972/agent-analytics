@@ -2,6 +2,7 @@
  * 数据转换 API 模块
  * 提供各种数据转换功能的封装
  */
+import { backendBaseUrl } from './apiConfig.js';
 
 /**
  * 执行数据转换
@@ -25,7 +26,7 @@ export async function executeDataTransformation(fileId, selectedColumns, config)
   // 根据转换类型调用不同的API
   switch (config.transformationType) {
     case 'dimensionless':
-      endpoint = `/user/${fileId}/dimensionless_processing`;
+      endpoint = `${backendBaseUrl}/user/${fileId}/dimensionless_processing`;
       requestBody = {
         columns: selectedColumns,
         method: config.dimensionless.method,
@@ -34,7 +35,7 @@ export async function executeDataTransformation(fileId, selectedColumns, config)
       break;
       
     case 'scientific':
-      endpoint = `/user/${fileId}/scientific_calculation`;
+      endpoint = `${backendBaseUrl}/user/${fileId}/scientific_calculation`;
       requestBody = {
         columns: selectedColumns,
         operation: config.scientific.operation,
@@ -43,7 +44,7 @@ export async function executeDataTransformation(fileId, selectedColumns, config)
       break;
       
     case 'onehot':
-      endpoint = `/user/${fileId}/one_hot_encoding`;
+      endpoint = `${backendBaseUrl}/user/${fileId}/one_hot_encoding`;
       requestBody = {
         columns: selectedColumns,
         drop_first: config.onehot.drop_first
@@ -51,7 +52,7 @@ export async function executeDataTransformation(fileId, selectedColumns, config)
       break;
       
     case 'text_to_numeric_or_datetime':
-      endpoint = `/user/${fileId}/text_to_numeric_or_datetime`;
+      endpoint = `${backendBaseUrl}/user/${fileId}/text_to_numeric_or_datetime`;
       requestBody = {
         columns: selectedColumns,
         convert_to: config.text_to_numeric_or_datetime.convert_to,

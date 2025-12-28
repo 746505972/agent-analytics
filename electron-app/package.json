@@ -1,0 +1,62 @@
+{
+  "name": "agent-analytics",
+  "version": "1.0.0",
+  "description": "数据分析系统桌面应用",
+  "main": "main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "build": "node build-frontend.js && electron-builder --dir",
+    "dist": "node build-frontend.js && electron-builder",
+    "pack": "node build-frontend.js && electron-builder --dir",
+    "build-frontend": "node build-frontend.js",
+    "build-backend": "node build-backend.js",
+    "build-all": "npm run build-backend && npm run build-frontend && electron-builder"
+  },
+  "keywords": [
+    "analytics",
+    "data",
+    "visualization"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "electron-is-dev": "^2.0.0",
+    "concurrently": "^9.1.0",
+    "fs-extra": "^11.2.0"
+  },
+  "build": {
+    "appId": "com.example.agent-analytics",
+    "productName": "Agent Analytics",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!node_modules/**/*",
+      "node_modules/electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend-server/",
+        "to": "backend-server/"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.png"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "icon.png"
+    }
+  }
+}
