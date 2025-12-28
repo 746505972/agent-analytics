@@ -24,6 +24,11 @@
         <p>点击选择列，支持 Ctrl/Shift 多选</p>
         <p>不选则分析所有数值型列</p>
       </div>
+      <div v-else-if="['linear_regression'].includes(currentMethod)">
+        <h3>选择自变量 (X)</h3>
+        <p>点击选择列，支持 Ctrl/Shift 多选</p>
+        <p>不选则使用所有数值型列</p>
+      </div>
       <div v-else-if="['text_analysis', 'sentiment_analysis'].includes(currentMethod)">
         <h3>选择需要分析的文本列</h3>
         <p>点击选择一列，用于分析文本数据</p>
@@ -39,7 +44,7 @@
             class="column-item"
             :class="{
               selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test','chi_square_test', 'non_parametric_test'].includes(currentMethod)
+              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test','chi_square_test', 'non_parametric_test', 'linear_regression'].includes(currentMethod)
             }"
             @click="toggleColumnSelection($event, column, index)"
         >
@@ -124,6 +129,12 @@
       :categorical-columns="selectedFileColumns"
     />
 
+    <LinearRegressionConfig
+      v-else-if="currentMethod === 'linear_regression'"
+      v-model:config="configs.linearRegressionConfig"
+      :available-columns="selectedFileColumns"
+    />
+
     <WordCloudConfig
       v-else-if="currentMethod === 'text_analysis'"
       :selected-file-columns="selectedFileColumns"
@@ -152,6 +163,7 @@ import SentimentAnalysisConfig from "./SentimentAnalysisConfig.vue";
 import FTestConfig from "@/components/Config/FTestConfig.vue";
 import ChiSquareTestConfig from "@/components/Config/ChiSquareTestConfig.vue";
 import NonParametricTestConfig from "@/components/Config/NonParametricTestConfig.vue";
+import LinearRegressionConfig from "@/components/Config/LinearRegressionConfig.vue";
 import { getDefaultConfigs } from '@/utils/configDefaults.js'
 
 export default {
@@ -168,7 +180,8 @@ export default {
     NormalityTestConfig,
     WordCloudConfig,
     SentimentAnalysisConfig,
-    NonParametricTestConfig
+    NonParametricTestConfig,
+    LinearRegressionConfig
   },
   props: {
     currentMethod: {
@@ -276,7 +289,8 @@ export default {
         'normality_test',
         'f_test',
         'chi_square_test',
-        'non_parametric_test'
+        'non_parametric_test',
+        'linear_regression'
       ];
 
       if (!selectableMethods.includes(this.currentMethod)) {

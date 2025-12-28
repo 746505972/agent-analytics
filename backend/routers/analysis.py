@@ -13,7 +13,8 @@ from pydantic import BaseModel
 from typing import List, Optional, Tuple, Dict, Any
 
 from routers.data import load_csv_file
-from utils.pandas_tool import statistical_summary, correlation_analysis, normality_test, t_test, f_test, chi_square_test, non_parametric_test
+from utils.pandas_tool import statistical_summary, correlation_analysis, \
+    normality_test, t_test, f_test, chi_square_test, non_parametric_test,linear_regression
 from utils.file_manager import get_file_path
 import pandas as pd
 
@@ -425,6 +426,67 @@ async def get_non_parametric_test(request: Request, data_id: str, body: NonParam
         })
     except Exception as e:
         logger.error(f"获取非参数检验结果时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )
+
+
+class LinearRegressionRequest(BaseModel):
+    x_columns: List[str]  # 自变量列
+    y_column: str         # 因变量列
+    method: str = "ols"   # 回归方法
+    alpha: float = 1.0    # 正则化强度
+    l1_ratio: float = 0.5 # ElasticNet中L1正则化的比例
+    params: Optional[Dict[str, Any]] = None  # 其他参数
+
+
+@router.post("/{data_id}/linear_regression")
+async def get_linear_regression(request: Request, data_id: str, body: LinearRegressionRequest):
+    """
+    获取数据文件的线性回归分析结果接口，用于"线性回归"方法
+    """
+    try:
+        # 验证请求数据
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.x_columns)
+        if error_response:
+            return error_response
+
+        # 准备参数
+        kwargs = body.params if body.params else {}
+
+        # 调用工具函数处理线性回归
+        regression_result = linear_regression(
+            file_path, columns_to_process, body.y_column, body.method, session_id, body.alpha, body.l1_ratio, **kwargs)
+
+        # 准备返回结果
+        result_data = {
+            "data_id": data_id,
+            "method": regression_result["method"],
+            "x_columns": regression_result["x_columns"],
+            "y_column": regression_result["y_column"],
+            "coefficients": regression_result["coefficients"],
+            "intercept": regression_result["intercept"],
+            "evaluation_metrics": regression_result["evaluation_metrics"],
+            "sample_size": regression_result["sample_size"],
+            "alpha": regression_result["alpha"],
+            "l1_ratio": regression_result["l1_ratio"]
+        }
+
+        # 如果有正则化参数，也返回
+        if "regularization_params" in regression_result:
+            result_data["regularization_params"] = regression_result["regularization_params"]
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取线性回归结果时出错: {str(e)}")
         return JSONResponse(
             status_code=500,
             content={

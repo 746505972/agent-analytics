@@ -8,7 +8,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 sys.path.insert(0, current_dir)
-
+# 确保数据目录存在
+os.makedirs("data", exist_ok=True)
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -63,9 +64,6 @@ app.mount("/data", StaticFiles(directory="data"), name="data")
 
 # 存储定时任务的引用
 cleanup_task = None
-
-# 确保数据目录存在
-os.makedirs("data", exist_ok=True)
 
 async def periodic_cleanup():
     """

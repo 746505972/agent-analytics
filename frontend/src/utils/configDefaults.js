@@ -42,5 +42,16 @@ export const getDefaultConfigs = () => ({
     alpha: 0.05,
     alternative: 'two-sided',
     distribution: 'norm'
+  },
+  linearRegressionConfig: {
+    y_column: '',
+    method: 'ols',
+    alpha: 1.0,
+    l1_ratio: 0.5,
+    params: {
+      max_iter: 1000,
+      tol: 0.0001,
+      fit_intercept: true
+    }
   }
 })

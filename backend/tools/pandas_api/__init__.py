@@ -312,6 +312,38 @@ def non_parametric_test_tool(file_path: str, columns: List[str], test_type: str 
     return non_parametric_test(file_path, columns, test_type, session_id, group_by, alpha, **kwargs)
 
 
+# 注册线性回归工具
+@tool
+def linear_regression_tool(file_path: str, x_columns: List[str], y_column: str, 
+                         method: str = "ols", session_id: str = None, 
+                         alpha: float = 1.0, l1_ratio: float = 0.5, **kwargs) -> dict:
+    """
+    线性回归 - 使用普通最小二乘法或带正则化的线性回归方法
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列）
+        method (str): 回归方法
+            - "ols": 普通最小二乘法 (默认)
+            - "lasso": L1正则化 (Lasso)
+            - "ridge": L2正则化 (Ridge)
+            - "elastic_net": 弹性网络 (ElasticNet)
+        session_id (str): 会话ID
+        alpha (float): 正则化强度 (默认1.0)
+        l1_ratio (float): ElasticNet中L1正则化的比例 (0到1之间，仅用于elastic_net)
+        **kwargs: 其他参数，用于特定回归方法的配置
+            - max_iter: 最大迭代次数 (默认1000)
+            - tol: 收敛容差 (默认1e-4)
+            - fit_intercept: 是否拟合截距 (默认True)
+
+    Returns:
+        Dict[str, Any]: 包含线性回归结果的字典
+    """
+    from utils.pandas_tool import linear_regression
+    return linear_regression(file_path, x_columns, y_column, method, session_id, alpha, l1_ratio, **kwargs)
+
+
 # 将模块中的函数注册为工具
 def register_pandas_tools(agent):
     """
@@ -333,3 +365,4 @@ def register_pandas_tools(agent):
     agent.tools.append(f_test_tool)
     agent.tools.append(chi_square_test_tool)
     agent.tools.append(non_parametric_test_tool)
+    agent.tools.append(linear_regression_tool)

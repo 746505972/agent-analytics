@@ -201,4 +201,10 @@ export default {
   color: white;
   border-color: #409eff;
 }
+
+@media (max-width: 768px) {
+  .category-methods {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
 </style>
