@@ -139,6 +139,7 @@ import {
 import { getMethodName } from "@/utils/methodUtils.js";
 import { getDefaultConfigs } from '@/utils/configDefaults.js'
 import methodCategories from "@/utils/methodCategories.json";
+import {backendBaseUrl} from "@/api/apiConfig";
 
 export default {
   name: "Dashboard",
@@ -360,7 +361,7 @@ export default {
     async loadUploadedFiles() {
       // 调用后端API获取用户上传的文件列表
       try {
-        const response = await fetch('/user/files', {
+        const response = await fetch(`${backendBaseUrl}/user/files`, {
           credentials: 'include' // 包含cookies，用于session管理
         });
 
@@ -388,7 +389,7 @@ export default {
       }
       
       try {
-        const response = await fetch(`/data/${fileId}`, {
+        const response = await fetch(`${backendBaseUrl}/data/${fileId}`, {
           method: 'DELETE',
           credentials: 'include'
         });
@@ -418,7 +419,7 @@ export default {
       localStorage.setItem('selectedFile', fileId);
       
       try {
-        const response = await fetch(`/data/${fileId}/info`, {
+        const response = await fetch(`${backendBaseUrl}/data/${fileId}/info`, {
           credentials: 'include'
         });
         
@@ -805,7 +806,7 @@ export default {
     async loadPreviewData() {
       this.previewData.loading = true;
       try {
-        const response = await fetch(`/data/${this.selectedFile}?page=${this.previewData.currentPage}&page_size=${this.previewData.pageSize}`, {
+        const response = await fetch(`${backendBaseUrl}/data/${this.selectedFile}?page=${this.previewData.currentPage}&page_size=${this.previewData.pageSize}`, {
           credentials: 'include'
         });
 

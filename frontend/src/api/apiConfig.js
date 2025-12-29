@@ -7,10 +7,13 @@ if (window && window.electronAPI) {
   if (window.electronAPI.getBackendUrl) {
     window.electronAPI.getBackendUrl().then(url => {
       backendBaseUrl = url;
+      console.log('从Electron获取后端URL:', url);
     }).catch(err => {
       console.warn('无法从Electron获取后端URL，使用默认URL:', err);
     });
   }
+} else {
+  console.log('未在Electron环境中运行，使用默认后端URL:', backendBaseUrl);
 }
 
 export { backendBaseUrl };

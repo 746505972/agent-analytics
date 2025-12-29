@@ -47,6 +47,7 @@
 
 <script>
 import { marked } from 'marked';
+import {backendBaseUrl} from "@/api/apiConfig";
 
 export default {
   name: "ChatAssistant",
@@ -84,7 +85,7 @@ export default {
     // 添加初始化session的方法
     async initializeSession() {
       try {
-        const response = await fetch('/chat/test', {
+        const response = await fetch(`${backendBaseUrl}/chat/test`, {
           method: 'POST',
           credentials: 'include'
         });
@@ -143,7 +144,7 @@ export default {
         };
         
         // 发起流式请求
-        const response = await fetch('/chat/stream', {
+        const response = await fetch(`${backendBaseUrl}/chat/stream`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

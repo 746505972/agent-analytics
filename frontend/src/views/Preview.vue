@@ -63,6 +63,7 @@
 <script>
 import DataPreview from '@/components/DataPreview.vue';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal.vue';
+import {backendBaseUrl} from "@/api/apiConfig";
 
 export default {
   name: 'Preview',
@@ -131,7 +132,7 @@ export default {
       this.loading = true
       try {
         // 调用后端API获取数据
-        const response = await fetch(`/data/${this.dataId}?page=${this.currentPage}&page_size=${this.pageSize}`, {
+        const response = await fetch(`${backendBaseUrl}/data/${this.dataId}?page=${this.currentPage}&page_size=${this.pageSize}`, {
           credentials: 'include' // 包含cookies，用于session管理
         })
 
@@ -216,7 +217,7 @@ export default {
     async confirmDeleteAndLeave() {
       // 调用后端删除API
       try {
-        const response = await fetch(`/data/${this.dataId}`, {
+        const response = await fetch(`${backendBaseUrl}/data/${this.dataId}`, {
           method: 'DELETE',
           credentials: 'include' // 包含cookies，用于session管理
         });

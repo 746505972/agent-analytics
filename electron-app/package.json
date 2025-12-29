@@ -46,9 +46,21 @@
         "to": "backend-server/"
       }
     ],
+    "extraFiles": [
+      {
+        "from": "backend-server/",
+        "to": "resources/backend-server/"
+      }
+    ],
     "win": {
       "target": "nsis",
       "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     },
     "mac": {
       "target": "dmg",

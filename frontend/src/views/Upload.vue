@@ -97,7 +97,9 @@ export default {
         formData.append('file', file)
 
         // 发送文件到后端
-        const response = await fetch('/upload', {
+        // 从apiConfig获取后端基础URL
+        const { backendBaseUrl } = await import('@/api/apiConfig.js');
+        const response = await fetch(`${backendBaseUrl}/upload`, {
           method: 'POST',
           body: formData,
           credentials: 'include' // 包含cookies，用于session管理
