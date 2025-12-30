@@ -405,6 +405,11 @@ export default {
         } else {
           console.error('删除失败:', result.error);
         }
+
+        // 自动选择剩下的第一个文件
+        if (this.files.length > 0) {
+          await this.selectFile(this.files[0].data_id);
+        }
       } catch (error) {
         console.error('删除文件时发生错误:', error);
       }

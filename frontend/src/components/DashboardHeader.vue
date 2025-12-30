@@ -10,12 +10,10 @@
           当前选中: {{ getSelectedFileName() }}
         </div>
       </div>
-      <div class="center-section">
+      <div class="right-section">
         <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
           <img src="@/assets/images/logo.png" width="100" alt="Agent-Analytics">
         </a>
-      </div>
-      <div class="right-section">
       </div>
     </div>
   </div>
@@ -182,12 +180,6 @@ export default {
   flex: 1;
 }
 
-.center-section {
-  display: flex;
-  justify-content: center;
-  flex: 1;
-}
-
 .right-section {
   flex: 1;
   display: flex;
@@ -200,6 +192,8 @@ export default {
   font-size: 14px;
   white-space: nowrap;
   cursor: pointer;
+  overflow-y: auto;
+  max-width: 500px;
 }
 
 .file-selector-trigger {
@@ -236,22 +230,19 @@ export default {
     flex-direction: column;
     gap: 10px;
   }
-  
-  .left-section, .center-section, .right-section {
+
+  .left-section, .right-section {
     align-items: center;
     justify-content: center;
   }
-  
+
   .left-section {
     order: 2;
+    display: grid;
   }
-  
-  .center-section {
-    order: 1;
-  }
-  
+
   .right-section {
-    order: 3;
+    order: 1;
   }
 }
 </style>
