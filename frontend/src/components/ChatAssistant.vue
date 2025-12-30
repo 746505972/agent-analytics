@@ -32,14 +32,59 @@
         </div>
       </div>
       <div class="input-area">
-        <input 
-          type="text" 
-          placeholder="输入您的分析需求..." 
-          v-model="userInput"
-          @keyup.enter="sendMessage"
-          :disabled="!selectedFile || isWaitingForResponse"
-        />
-        <button @click="sendMessage" :disabled="!selectedFile || isWaitingForResponse">发送</button>
+        <div class="messageBox">
+          <div class="fileUploadWrapper">
+            <label>
+              <svg @click="onAddClick" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 337 337">
+                <circle
+                  stroke-width="20"
+                  stroke="#6c6c6c"
+                  fill="none"
+                  r="158.5"
+                  cy="168.5"
+                  cx="168.5"
+                ></circle>
+                <path
+                  stroke-linecap="round"
+                  stroke-width="25"
+                  stroke="#6c6c6c"
+                  d="M167.759 79V259"
+                ></path>
+                <path
+                  stroke-linecap="round"
+                  stroke-width="25"
+                  stroke="#6c6c6c"
+                  d="M79 167.138H259"
+                ></path>
+              </svg>
+              <span class="tooltip">添加历史</span>
+            </label>
+          </div>
+          <input 
+            type="text" 
+            placeholder="输入您的分析需求..." 
+            v-model="userInput"
+            @keyup.enter="sendMessage"
+            :disabled="!selectedFile || isWaitingForResponse"
+            required
+            id="messageInput"
+          />
+          <button @click="sendMessage" :disabled="!selectedFile || isWaitingForResponse" id="sendButton">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 664 663">
+              <path
+                fill="none"
+                d="M646.293 331.888L17.7538 17.6187L155.245 331.888M646.293 331.888L17.753 646.157L155.245 331.888M646.293 331.888L318.735 330.228L155.245 331.888"
+              ></path>
+              <path
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                stroke-width="33.67"
+                stroke="#6c6c6c"
+                d="M646.293 331.888L17.7538 17.6187L155.245 331.888M646.293 331.888L17.753 646.157L155.245 331.888M646.293 331.888L318.735 330.228L155.245 331.888"
+              ></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -342,6 +387,11 @@ export default {
         }
       }, 3000);
     },
+
+    onAddClick() {
+      // 用于将localStorage里的分析结果添加到agent上下文中。
+      // 待实现
+    },
     
     restoreChatHistory() {
       // 从localStorage恢复聊天记录
@@ -536,6 +586,119 @@ export default {
 
 .input-area button:disabled {
   background-color: #a0cfff;
+  cursor: not-allowed;
+}
+
+.messageBox {
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f7fa;
+  padding: 0 15px;
+  border-radius: 4px;
+  border: 1px solid #dcdfe6;
+}
+.messageBox:focus-within {
+  border: 1px solid #409eff;
+}
+.fileUploadWrapper {
+  width: fit-content;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+
+.fileUploadWrapper label {
+  cursor: pointer;
+  width: fit-content;
+  height: fit-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.fileUploadWrapper label svg {
+  height: 18px;
+}
+.fileUploadWrapper label svg path {
+  transition: all 0.3s;
+  stroke: #606266;
+}
+.fileUploadWrapper label svg circle {
+  transition: all 0.3s;
+  stroke: #606266;
+}
+.fileUploadWrapper label:hover svg path {
+  stroke: #409eff;
+}
+.fileUploadWrapper label:hover svg circle {
+  stroke: #409eff;
+  fill: #f5f7fa;
+}
+.fileUploadWrapper label:hover .tooltip {
+  display: block;
+  opacity: 1;
+}
+.tooltip {
+  position: absolute;
+  top: -40px;
+  display: none;
+  opacity: 0;
+  font-size: 10px;
+  text-wrap: nowrap;
+  background-color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.596);
+  transition: all 0.3s;
+}
+#messageInput {
+  width: 200px;
+  height: 100%;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  padding: 0 10px;
+  color: #606266;
+  flex: 1;
+}
+#messageInput:focus ~ #sendButton svg path,
+#messageInput:valid ~ #sendButton svg path {
+  stroke: #409eff;
+}
+
+#sendButton {
+  width: fit-content;
+  height: 100%;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-left: 10px;
+}
+#sendButton svg {
+  height: 18px;
+}
+#sendButton svg path {
+  transition: all 0.3s;
+  stroke: #606266;
+}
+#sendButton:hover svg path {
+  stroke: #409eff;
+}
+
+/* 保持原有的按钮样式 */
+#sendButton:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
 }
 </style>

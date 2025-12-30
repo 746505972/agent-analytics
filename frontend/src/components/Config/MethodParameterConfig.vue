@@ -1,152 +1,151 @@
 <template>
   <!-- 加载指示器 -->
-  <div v-if="isWaitingForResponse" class="loading-overlay">
-    <div class="loading-content">
-      <img src="@/assets/images/loading.gif" alt="Loading..." class="loading-gif" />
-      <p>正在处理中...</p>
-    </div>
-  </div>
+  <Waiting v-if="isWaitingForResponse"/>
   <div v-else>
     <div v-if="selectedFile && selectedFileColumns.length > 0" class="column-add-header-container">
-    <!-- 列名列表区域 -->
-    <div class="column-list-section">
-      <div v-if="['missing_value_interpolation'].includes(currentMethod)">
-        <h3>选择需要处理的列</h3>
-        <p>点击选择列，支持 Ctrl/Shift 多选</p>
-        <p>不选则处理所有列</p>
-      </div>
-      <div v-else-if="['data_transformation','delete_columns'].includes(currentMethod)">
-        <h3>选择需要处理的列</h3>
-        <p>点击选择列，支持 Ctrl/Shift 多选</p>
-      </div>
-      <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test','chi_square_test', 'non_parametric_test'].includes(currentMethod)">
-        <h3>选择需要分析的列</h3>
-        <p>点击选择列，支持 Ctrl/Shift 多选</p>
-        <p>不选则分析所有数值型列</p>
-      </div>
-      <div v-else-if="['linear_regression'].includes(currentMethod)">
-        <h3>选择自变量 (X)</h3>
-        <p>点击选择列，支持 Ctrl/Shift 多选</p>
-        <p>不选则使用所有数值型列</p>
-      </div>
-      <div v-else-if="['text_analysis', 'sentiment_analysis'].includes(currentMethod)">
-        <h3>选择需要分析的文本列</h3>
-        <p>点击选择一列，用于分析文本数据</p>
-        <p>多选则默认分析第一列</p>
-      </div>
-      <div v-else>
-        <h3>列名列表</h3>
+      <!-- 列名列表区域 -->
+      <div class="column-list-section">
+        <div v-if="['missing_value_interpolation'].includes(currentMethod)">
+          <h3>选择需要处理的列</h3>
+          <p>点击选择列，支持 Ctrl/Shift 多选</p>
+          <p>不选则处理所有列</p>
+        </div>
+        <div v-else-if="['data_transformation','delete_columns'].includes(currentMethod)">
+          <h3>选择需要处理的列</h3>
+          <p>点击选择列，支持 Ctrl/Shift 多选</p>
+        </div>
+        <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test','chi_square_test', 'non_parametric_test'].includes(currentMethod)">
+          <h3>选择需要分析的列</h3>
+          <p>点击选择列，支持 Ctrl/Shift 多选</p>
+          <p>不选则分析所有数值型列</p>
+        </div>
+        <div v-else-if="['linear_regression'].includes(currentMethod)">
+          <h3>选择自变量 (X)</h3>
+          <p>点击选择列，支持 Ctrl/Shift 多选</p>
+          <p>不选则使用所有数值型列</p>
+        </div>
+        <div v-else-if="['text_analysis', 'sentiment_analysis'].includes(currentMethod)">
+          <h3>选择需要分析的文本列</h3>
+          <p>点击选择一列，用于分析文本数据</p>
+          <p>多选则默认分析第一列</p>
+        </div>
+        <div v-else>
+          <h3>列名列表</h3>
+        </div>
+
+        <ul class="column-list">
+          <li v-for="(column, index) in selectedFileColumns"
+              :key="index"
+              class="column-item"
+              :class="{
+                selected: isColumnSelected(column),
+                clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test','chi_square_test', 'non_parametric_test', 'linear_regression'].includes(currentMethod)
+              }"
+              @click="toggleColumnSelection($event, column, index)"
+          >
+            {{ column }}
+          </li>
+        </ul>
       </div>
 
-      <ul class="column-list">
-        <li v-for="(column, index) in selectedFileColumns"
-            :key="index"
-            class="column-item"
-            :class="{
-              selected: isColumnSelected(column),
-              clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test','chi_square_test', 'non_parametric_test', 'linear_regression'].includes(currentMethod)
-            }"
-            @click="toggleColumnSelection($event, column, index)"
-        >
-          {{ column }}
-        </li>
-      </ul>
+      <!-- 参数配置区域 -->
+      <AddHeaderConfig
+        v-if="currentMethod === 'add_header' && headerEditMode !== 'remove'"
+        :selected-file-columns="selectedFileColumns"
+        :new-column-names="newColumnNames"
+        @update:newColumnNames="handleNewColumnNamesUpdate"
+      />
+
+      <InvalidSamplesConfig
+        v-else-if="currentMethod === 'invalid_samples'"
+        :remove-duplicates="removeDuplicates"
+        :remove-duplicates-cols="removeDuplicatesCols"
+        :remove-constant-cols="removeConstantCols"
+        :row-missing-threshold="rowMissingThreshold"
+        :column-missing-threshold="columnMissingThreshold"
+        @update:removeDuplicates="$emit('update:removeDuplicates', $event)"
+        @update:removeDuplicatesCols="$emit('update:removeDuplicatesCols', $event)"
+        @update:removeConstantCols="$emit('update:removeConstantCols', $event)"
+        @update:rowMissingThreshold="$emit('update:rowMissingThreshold', $event)"
+        @update:columnMissingThreshold="$emit('update:columnMissingThreshold', $event)"
+      />
+
+      <MissingValueInterpolationConfig
+        v-else-if="currentMethod === 'missing_value_interpolation'"
+        :interpolation-method="interpolationMethod"
+        :fill-value="fillValue"
+        :knn-neighbors="knnNeighbors"
+        @update:interpolationMethod="$emit('update:interpolationMethod', $event)"
+        @update:fillValue="$emit('update:fillValue', $event)"
+        @update:knnNeighbors="$emit('update:knnNeighbors', $event)"
+      />
+
+      <DataTransformationConfig
+        v-else-if="currentMethod === 'data_transformation'"
+        :selected-file-columns="selectedFileColumns"
+        :selected-columns="selectedColumns"
+        :data-transformation-config="dataTransformationConfig"
+        @update:dataTransformationConfig="$emit('update:dataTransformationConfig', $event)"
+        @config-change="$emit('update:dataTransformationConfig', $event)"
+      />
+
+      <CorrelationAnalysisConfig
+        v-else-if="currentMethod === 'correlation_analysis'"
+        v-model:correlation-method="configs.correlationMethod"
+      />
+
+      <TTestConfig
+        v-else-if="currentMethod === 't_test'"
+        v-model:config="configs.tTestConfig"
+        :categorical-columns="selectedFileColumns"
+      />
+
+      <FTestConfig
+        v-else-if="currentMethod === 'f_test'"
+        v-model:config="configs.fTestConfig"
+        :categorical-columns="selectedFileColumns"
+      />
+
+      <ChiSquareTestConfig
+        v-else-if="currentMethod === 'chi_square_test'"
+        v-model:config="configs.chiSquareTestConfig"
+        :categorical-columns="selectedFileColumns"
+      />
+
+      <NonParametricTestConfig
+        v-else-if="currentMethod === 'non_parametric_test'"
+        v-model:config="configs.nonParametricTestConfig"
+        :categorical-columns="selectedFileColumns"
+      />
+
+      <NormalityTestConfig
+        v-else-if="currentMethod === 'normality_test'"
+        v-model:config="configs.normalityTestConfig"
+        :categorical-columns="selectedFileColumns"
+      />
+
+      <LinearRegressionConfig
+        v-else-if="currentMethod === 'linear_regression'"
+        v-model:config="configs.linearRegressionConfig"
+        :available-columns="selectedFileColumns"
+      />
+
+      <WordCloudConfig
+        v-else-if="currentMethod === 'text_analysis'"
+        :selected-file-columns="selectedFileColumns"
+        v-model:wordcloud-config="configs.wordcloudConfig"
+      />
+
+      <SentimentAnalysisConfig
+        v-else-if="currentMethod === 'sentiment_analysis'"
+        :selected-file-columns="selectedFileColumns"
+        v-model:sentiment-config="configs.sentimentConfig"
+      />
     </div>
 
-    <!-- 参数配置区域 -->
-    <AddHeaderConfig
-      v-if="currentMethod === 'add_header' && headerEditMode !== 'remove'"
-      :selected-file-columns="selectedFileColumns"
-      :new-column-names="newColumnNames"
-      @update:newColumnNames="handleNewColumnNamesUpdate"
-    />
-
-    <InvalidSamplesConfig
-      v-else-if="currentMethod === 'invalid_samples'"
-      :remove-duplicates="removeDuplicates"
-      :remove-duplicates-cols="removeDuplicatesCols"
-      :remove-constant-cols="removeConstantCols"
-      :row-missing-threshold="rowMissingThreshold"
-      :column-missing-threshold="columnMissingThreshold"
-      @update:removeDuplicates="$emit('update:removeDuplicates', $event)"
-      @update:removeDuplicatesCols="$emit('update:removeDuplicatesCols', $event)"
-      @update:removeConstantCols="$emit('update:removeConstantCols', $event)"
-      @update:rowMissingThreshold="$emit('update:rowMissingThreshold', $event)"
-      @update:columnMissingThreshold="$emit('update:columnMissingThreshold', $event)"
-    />
-
-    <MissingValueInterpolationConfig
-      v-else-if="currentMethod === 'missing_value_interpolation'"
-      :interpolation-method="interpolationMethod"
-      :fill-value="fillValue"
-      :knn-neighbors="knnNeighbors"
-      @update:interpolationMethod="$emit('update:interpolationMethod', $event)"
-      @update:fillValue="$emit('update:fillValue', $event)"
-      @update:knnNeighbors="$emit('update:knnNeighbors', $event)"
-    />
-
-    <DataTransformationConfig
-      v-else-if="currentMethod === 'data_transformation'"
-      :selected-file-columns="selectedFileColumns"
-      :selected-columns="selectedColumns"
-      :data-transformation-config="dataTransformationConfig"
-      @update:dataTransformationConfig="$emit('update:dataTransformationConfig', $event)"
-      @config-change="$emit('update:dataTransformationConfig', $event)"
-    />
-
-    <CorrelationAnalysisConfig
-      v-else-if="currentMethod === 'correlation_analysis'"
-      v-model:correlation-method="configs.correlationMethod"
-    />
-
-    <TTestConfig
-      v-else-if="currentMethod === 't_test'"
-      v-model:config="configs.tTestConfig"
-      :categorical-columns="selectedFileColumns"
-    />
-
-    <FTestConfig
-      v-else-if="currentMethod === 'f_test'"
-      v-model:config="configs.fTestConfig"
-      :categorical-columns="selectedFileColumns"
-    />
-
-    <ChiSquareTestConfig
-      v-else-if="currentMethod === 'chi_square_test'"
-      v-model:config="configs.chiSquareTestConfig"
-      :categorical-columns="selectedFileColumns"
-    />
-
-    <NonParametricTestConfig
-      v-else-if="currentMethod === 'non_parametric_test'"
-      v-model:config="configs.nonParametricTestConfig"
-      :categorical-columns="selectedFileColumns"
-    />
-
-    <NormalityTestConfig
-      v-else-if="currentMethod === 'normality_test'"
-      v-model:config="configs.normalityTestConfig"
-      :categorical-columns="selectedFileColumns"
-    />
-
-    <LinearRegressionConfig
-      v-else-if="currentMethod === 'linear_regression'"
-      v-model:config="configs.linearRegressionConfig"
-      :available-columns="selectedFileColumns"
-    />
-
-    <WordCloudConfig
-      v-else-if="currentMethod === 'text_analysis'"
-      :selected-file-columns="selectedFileColumns"
-      v-model:wordcloud-config="configs.wordcloudConfig"
-    />
-
-    <SentimentAnalysisConfig
-      v-else-if="currentMethod === 'sentiment_analysis'"
-      :selected-file-columns="selectedFileColumns"
-      v-model:sentiment-config="configs.sentimentConfig"
-    />
-  </div>
+    <div v-else class="choose-file">
+      <span>请选择一个文件</span>
+    </div>
   </div>
 </template>
 
@@ -165,10 +164,12 @@ import ChiSquareTestConfig from "@/components/Config/ChiSquareTestConfig.vue";
 import NonParametricTestConfig from "@/components/Config/NonParametricTestConfig.vue";
 import LinearRegressionConfig from "@/components/Config/LinearRegressionConfig.vue";
 import { getDefaultConfigs } from '@/utils/configDefaults.js'
+import Waiting from "@/components/Waiting.vue";
 
 export default {
   name: "MethodParameterConfig",
   components: {
+    Waiting,
     ChiSquareTestConfig,
     FTestConfig,
     AddHeaderConfig,
@@ -372,28 +373,9 @@ export default {
   color: white;
 }
 
-.loading-overlay {
-  width: 100%;
-  height: 100%;
-  background-color: rgb(241, 241, 241);
+.choose-file{
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 100;
-}
-
-.loading-content {
-  text-align: center;
-}
-
-.loading-gif {
-  width: 50px;
-  height: 50px;
-}
-
-.loading-content p {
-  margin-top: 10px;
-  font-size: 16px;
-  color: #303133;
+  justify-content: center;
 }
 </style>
