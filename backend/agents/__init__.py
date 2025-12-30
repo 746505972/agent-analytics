@@ -41,25 +41,29 @@ class DataAnalysisAgent:
         # 初始化模型
         api_key = os.getenv("DASHSCOPE_API_KEY")
         if not api_key:
-            raise ValueError("DASHSCOPE_API_KEY 环境变量未设置")
+            # 如果环境变量未设置，将llm设为None，在使用时再检查并返回错误信息
+            self.llm = None
+            print("警告: DASHSCOPE_API_KEY 环境变量未设置，AI Agent功能将不可用")
+            # 不创建agent，因为没有可用的模型
+            self.agent = None
+        else:
+            self.llm = ChatOpenAI(
+                api_key=api_key,
+                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+                model="qwen-plus"
+            )
             
-        self.llm = ChatOpenAI(
-            api_key=api_key,
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-            model="qwen-plus"
-        )
-        
-        # 注册内置工具
-        self.register_builtin_tools()
-        
-        # 注册各个模块的工具
-        self.register_module_tools()
-        
-        # 创建agent
-        self.agent = create_react_agent(
-            model=self.llm,
-            tools=self.tools
-        )
+            # 注册内置工具
+            self.register_builtin_tools()
+            
+            # 注册各个模块的工具
+            self.register_module_tools()
+            
+            # 创建agent
+            self.agent = create_react_agent(
+                model=self.llm,
+                tools=self.tools
+            )
     
     def register_builtin_tools(self):
         """
@@ -219,6 +223,13 @@ class DataAnalysisAgent:
         Yields:
             dict: 处理过程中的流式响应
         """
+        if self.agent is None:
+            yield {
+                'type': 'error',
+                'data': 'AI Agent功能未启用，请设置DASHSCOPE_API_KEY环境变量以使用此功能。其他服务仍可正常使用。'
+            }
+            return
+        
         try:
             # 准备输入
             messages = []
@@ -311,6 +322,14 @@ class DataAnalysisAgent:
         Returns:
             dict: 处理结果和响应
         """
+        if self.agent is None:
+            return {
+                'query': query,
+                'result': 'AI Agent功能未启用，请设置DASHSCOPE_API_KEY环境变量以使用此功能。其他服务仍可正常使用。',
+                'tool_calls': [],
+                'status': 'error'
+            }
+        
         try:
             # 准备输入
             messages = []
@@ -393,6 +412,9 @@ class DataAnalysisAgent:
         Returns:
             str: 生成的分析报告
         """
+        if self.agent is None:
+            return "报告生成功能未启用，请设置DASHSCOPE_API_KEY环境变量以使用此功能。其他服务仍可正常使用。"
+        
         # 构造报告生成提示
         prompt = f"""
         基于以下分析结果生成一份详细的分析报告：
