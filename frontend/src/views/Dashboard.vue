@@ -48,7 +48,7 @@
           <ResultContent
             :current-method="currentMethod"
             :dataset-details="datasetDetails"
-            :loading-details="loadingDetails"
+            :is-waiting-for-response="isWaitingForResponse"
           />
         </div>
         <!-- 参数配置区 -->
@@ -212,13 +212,10 @@ export default {
       // 添加标题行相关数据
       newColumnNames: [],
       headerEditMode: 'add',
-      // 分析历史相关数据
       analysisHistory: [],
-      // 控制中间区域显示内容的状态
       middleSectionView: 'config', // 'config' 表示参数配置区，'result' 表示结果渲染区
       // 数据集详情
       datasetDetails: null,
-      loadingDetails: false,
       // 无效样本参数
       removeDuplicates: false,
       removeDuplicatesCols: false,
@@ -475,7 +472,6 @@ export default {
       localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
       
       // 直接调用API获取分析结果
-      this.loadingDetails = true;
       this.isWaitingForResponse = true;
       try {
         const result = await fetchResult(this.selectedFile, this.currentMethod, {
@@ -497,7 +493,6 @@ export default {
       } catch (error) {
         alert("获取分析结果失败: " + error.message);
       } finally {
-        this.loadingDetails = false;
         this.isWaitingForResponse = false;
       }
     },
