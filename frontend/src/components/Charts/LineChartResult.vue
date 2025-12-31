@@ -2,7 +2,7 @@
   <div class="controls">
     <div class="control-group">
       <label>X轴字段:</label>
-      <select v-model="xAxisColumn" @change="drawChart">
+      <select v-model="xAxisColumn" @change="onConfigChange">
         <option v-for="col in availableColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
@@ -10,7 +10,7 @@
       <label>Y轴字段:</label>
       <div class="y-axis-fields">
         <div v-for="(field, index) in yAxisColumns" :key="index" class="y-axis-field">
-          <select v-model="yAxisColumns[index]" @change="drawChart">
+          <select v-model="yAxisColumns[index]" @change="onConfigChange">
             <option v-for="col in availableColumns" :key="col" :value="col">{{ col }}</option>
           </select>
           <button v-if="yAxisColumns.length > 1" @click="removeYAxisField(index)" class="remove-field-btn">×</button>
@@ -25,9 +25,11 @@
       </button>
     </div>
   </div>
-  <div class="chart-container">
-    <div ref="chart" class="chart"></div>
-  </div>
+
+  <BackendChartResult
+    :chart-path="chartPath"
+    :loading="loading"
+  />
 
   <!-- 图表配置浮窗 -->
   <div v-if="showConfigPopup" class="config-popup-overlay" @click.self="showConfigPopup = false">
@@ -66,9 +68,6 @@
               <span>{{ getColorSchemeName(index) }}</span>
             </div>
           </div>
-        </div>
-
-        <div class="config-section">
           <h4>自定义颜色</h4>
           <div class="custom-color-picker">
             <label>线条颜色:</label>
@@ -113,6 +112,102 @@
                 显示填充区域
               </label>
             </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showLabel"
+                  @change="applyStyleChanges"
+                />
+                显示数据标签
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showLegend"
+                  @change="applyStyleChanges"
+                />
+                显示图例
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.stack"
+                  @change="applyStyleChanges"
+                />
+                堆叠显示
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.step"
+                  @change="applyStyleChanges"
+                />
+                阶梯图
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showSymbol"
+                  @change="applyStyleChanges"
+                />
+                显示标记点
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showToolbox"
+                  @change="applyStyleChanges"
+                />
+                显示工具箱
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="config-section">
+          <h4>坐标轴设置</h4>
+          <div class="axis-options">
+            <div class="axis-option">
+              <label>X轴标签旋转角度:</label>
+              <input
+                type="range"
+                v-model="chartStyles.xAxisLabelRotate"
+                @change="applyStyleChanges"
+                min="0"
+                max="90"
+                step="5"
+              />
+              <span>{{ chartStyles.xAxisLabelRotate }}°</span>
+            </div>
+            <div class="axis-option">
+              <label>Y轴最小值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.yAxisMin"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
+            </div>
+            <div class="axis-option">
+              <label>Y轴最大值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.yAxisMax"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -121,10 +216,12 @@
 </template>
 
 <script>
-import * as echarts from 'echarts';
+
+import BackendChartResult from "@/components/Charts/BackendChartResult.vue";
 
 export default {
   name: "LineChartResult",
+  components: {BackendChartResult},
   props: {
     datasetDetails: {
       type: Object,
@@ -133,9 +230,9 @@ export default {
   },
   data() {
     return {
-      chart: null,
       xAxisColumn: '',
       yAxisColumns: [''],
+      chartPath: null,
       loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
@@ -152,21 +249,20 @@ export default {
       chartStyles: {
         showGrid: true,
         smoothLine: true,
-        showArea: false
-      },
-      resizeObserver: null
+        showArea: false,
+        showLabel: false,
+        showLegend: true,
+        xAxisLabelRotate: 0,
+        yAxisMin: null,
+        yAxisMax: null,
+        stack: false,
+        step: false,
+        showSymbol: true,
+        showToolbox: true
+      }
     };
   },
   computed: {
-    numericColumns() {
-      // 从数据集中提取数值型列
-      if (this.datasetDetails && this.datasetDetails.column_info) {
-        return Object.keys(this.datasetDetails.column_info).filter(col => 
-          this.datasetDetails.column_info[col].dtype === 'numeric'
-        );
-      }
-      return [];
-    },
     availableColumns() {
       // 获取所有可用列（包括数值型、分类型、日期时间型等）
       if (this.datasetDetails && this.datasetDetails.column_info) {
@@ -182,332 +278,48 @@ export default {
   watch: {
     datasetDetails: {
       handler(newVal) {
-        if (newVal && newVal.data && newVal.data.length > 0) {
-          this.initChart();
+        if (newVal && newVal.column_info) {
+          this.generateBackendChart();
         }
       },
       deep: true,
       immediate: true
-    },
-    xAxisColumn() {
-      this.drawChart();
-    },
-    yAxisColumns: {
-      handler() {
-        this.drawChart();
-      },
-      deep: true
     }
   },
   methods: {
-    initChart() {
-      // 确保DOM已经更新
-      this.$nextTick(() => {
-        if (!this.$refs.chart) {
-          console.warn('Chart container not found');
-          return;
-        }
-
-        // 如果已有图表实例，先销毁
-        if (this.chart) {
-          this.chart.dispose();
-          this.chart = null;
-        }
-
-        // 初始化ECharts实例
-        this.chart = echarts.init(this.$refs.chart);
-        
-        // 添加resize监听
-        this.setupResizeObserver();
-
-        // 设置默认字段
-        if ((!this.xAxisColumn && this.yAxisColumns.length === 1 && !this.yAxisColumns[0]) || 
-            (this.xAxisColumn === '' && this.yAxisColumns.length === 1 && this.yAxisColumns[0] === '')) {
-          // X轴可以选择任何支持的类型
-          if (this.availableColumns.length >= 1) {
-            this.xAxisColumn = this.availableColumns[0];
-          }
-          
-          // Y轴优先选择数值型列
-          if (this.numericColumns.length >= 1) {
-            this.yAxisColumns = [this.numericColumns[0]];
-          } else if (this.availableColumns.length >= 2) {
-            this.yAxisColumns = [this.availableColumns[1]];
-          }
-        }
-
-        this.$nextTick(() => {
-          this.drawChart();
-        });
-      });
-    },
-    
-    setupResizeObserver() {
-      // 清除之前的监听器
-      if (this.resizeObserver) {
-        this.resizeObserver.disconnect();
-      }
-      
-      // 创建新的ResizeObserver
-      this.resizeObserver = new ResizeObserver(() => {
-        if (this.chart) {
-          this.chart.resize();
-        }
-      });
-      
-      // 监听图表容器变化
-      if (this.$refs.chart) {
-        this.resizeObserver.observe(this.$refs.chart);
-      }
-    },
-    
     addYAxisField() {
       this.yAxisColumns.push('');
+      this.onConfigChange();
     },
     
     removeYAxisField(index) {
       this.yAxisColumns.splice(index, 1);
+      this.onConfigChange();
     },
     
-    drawChart() {
-      // 检查必要条件是否满足
-      if (!this.chart || !this.xAxisColumn || !this.yAxisColumns || this.yAxisColumns.length === 0 ||
-          !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
-        return;
+    onConfigChange() {
+      if (this.xAxisColumn.length > 0 && this.yAxisColumns.length > 0){
+        this.generateBackendChart();
       }
-      
-      try {
-        // 直接从传入的数据中提取数据
-        const data = this.datasetDetails.data;
-        
-        // 提取X轴数据
-        const xAxisData = data.map(row => row[this.xAxisColumn]);
-        
-        // 根据X轴数据类型确定X轴类型
-        const xColumnType = this.datasetDetails.column_info[this.xAxisColumn]?.dtype || 'category';
-        const xAxisType = ['numeric', 'datetime'].includes(xColumnType) ? 'value' : 'category';
-        
-        // 创建系列数据
-        const series = [];
-        const yAxes = [];
-        
-        // 过滤掉空的Y轴字段
-        const validYAxisColumns = this.yAxisColumns.filter(col => col !== '');
-        
-        for (let i = 0; i < validYAxisColumns.length; i++) {
-          const yAxisColumn = validYAxisColumns[i];
-          
-          // Y轴通常应该是数值型的
-          const yColumnType = this.datasetDetails.column_info[yAxisColumn]?.dtype || 'value';
-          const yAxisType = yColumnType === 'datetime' ? 'time' : 
-                           yColumnType === 'numeric' ? 'value' : 'category';
-          
-          // 准备系列数据
-          let seriesData;
-          if (xAxisType === 'category') {
-            seriesData = data.map(row => row[yAxisColumn]);
-          } else {
-            // 对于数值型或时间型X轴，需要组合XY数据
-            seriesData = data.map((row, index) => [row[this.xAxisColumn], row[yAxisColumn]]);
-          }
-          
-          // 为每个系列创建Y轴（除了第一个）
-          if (i > 0) {
-            yAxes.push({
-              type: yAxisType,
-              name: yAxisColumn,
-              axisLabel: {
-                color: '#666',
-                formatter: yAxisType === 'value' ? '{value}' : undefined
-              },
-              axisLine: {
-                lineStyle: {
-                  color: this.colorSchemes[this.currentColorScheme][i % this.colorSchemes[this.currentColorScheme].length] || '#666'
-                }
-              },
-              splitLine: {
-                show: false
-              },
-              position: 'right',
-              offset: (i - 1) * 50
-            });
-          }
-          
-          series.push({
-            name: yAxisColumn,
-            type: 'line',
-            data: seriesData,
-            smooth: this.chartStyles.smoothLine,
-            areaStyle: this.chartStyles.showArea ? {
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [{
-                  offset: 0,
-                  color: this.colorSchemes[this.currentColorScheme][i % this.colorSchemes[this.currentColorScheme].length] || this.customColors.line
-                }, {
-                  offset: 1,
-                  color: 'rgba(255, 255, 255, 0.1)'
-                }]
-              }
-            } : undefined,
-            itemStyle: {
-              color: this.colorSchemes[this.currentColorScheme][i % this.colorSchemes[this.currentColorScheme].length] || this.customColors.line
-            },
-            lineStyle: {
-              color: this.colorSchemes[this.currentColorScheme][i % this.colorSchemes[this.currentColorScheme].length] || this.customColors.line,
-              width: 2
-            },
-            symbolSize: 4,
-            yAxisIndex: i > 0 ? i : 0,
-            emphasis: {
-              focus: 'series'
-            }
-          });
-        }
-        
-        const option = {
-          title: {
-            text: this.chartTitle,
-            left: 'center',
-            textStyle: {
-              color: '#666',
-              fontSize: 16
-            }
-          },
-          tooltip: {
-            trigger: 'axis',
-            axisPointer: {
-              type: 'cross',
-              crossStyle: {
-                color: '#999'
-              }
-            },
-            snap: true,
-            label: {
-              show: true,
-              backgroundColor: '#666'
-            },
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            textStyle: {
-              color: '#fff'
-            },
-          },
-          toolbox: {
-            show: true,
-            feature: {
-              dataView: { readOnly: false },
-              restore: {},
-              saveAsImage: {}
-            }
-          },
-          grid: {
-            top: '20%',
-            bottom: '15%',
-            left: '10%',
-            right: validYAxisColumns.length > 1 ? '15%' : '10%',
-            containLabel: true
-          },
-          legend: {
-            top: '10%',
-          },
-          xAxis: {
-            type: xAxisType,
-            name: this.xAxisColumn,
-            data: xAxisType === 'category' ? xAxisData : undefined,
-            axisLabel: {
-              color: '#666',
-              rotate: 0,
-              interval: 'auto'
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            boundaryGap: false,
-            min: 'dataMin',
-            max: 'dataMax'
-          },
-          yAxis: [{
-            type: validYAxisColumns.length > 0 ? 
-                 (this.datasetDetails.column_info[validYAxisColumns[0]]?.dtype === 'datetime' ? 'time' : 
-                  this.datasetDetails.column_info[validYAxisColumns[0]]?.dtype === 'numeric' ? 'value' : 'category') : 'value',
-            name: validYAxisColumns.length > 0 ? validYAxisColumns[0] : '',
-            axisLabel: {
-              color: '#666',
-              formatter: validYAxisColumns.length > 0 && 
-                        this.datasetDetails.column_info[validYAxisColumns[0]]?.dtype === 'numeric' ? '{value}' : undefined
-            },
-            axisLine: {
-              lineStyle: {
-                color: this.colorSchemes[this.currentColorScheme][0] || '#ccc'
-              }
-            },
-            splitLine: {
-              lineStyle: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            }
-          }, ...yAxes],
-          series: series,
-          dataZoom: [
-            {
-              type: 'inside',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
-            },
-            {
-              type: 'slider',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-            },
-            {
-              type: 'inside',
-              xAxisIndex: false,
-              yAxisIndex: Array.from({length: validYAxisColumns.length}, (_, i) => i),
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
-            },
-            {
-              type: 'slider',
-              xAxisIndex: false,
-              yAxisIndex: Array.from({length: validYAxisColumns.length}, (_, i) => i),
-            }
-          ],
-          axisPointer: {
-            link: { xAxisIndex: 'all' },
-            triggerTooltip: true
-          }
-        };
-        
-        // 如果不显示网格线
-        if (!this.chartStyles.showGrid) {
-          option.xAxis.splitLine = { show: false };
-          option.yAxis.forEach(axis => {
-            axis.splitLine = { show: false };
-          });
-        }
-
-        // 先清空图表再重新设置选项，确保坐标系正确初始化
-        this.chart.clear();
-        this.chart.setOption(option, true);
-
-      } catch (error) {
-        console.error('绘制图表失败:', error);
-      }
+    },
+    
+    getChartConfig() {
+      // 返回当前图表配置
+      return {
+        data_id: this.datasetDetails.data_id || 'default',
+        x_axis_column: this.xAxisColumn,
+        y_axis_columns: this.yAxisColumns.filter(col => col !== ''),
+        chart_title: this.chartTitle,
+        chart_styles: this.chartStyles,
+        color_scheme: this.currentColorScheme,
+        custom_colors: this.customColors,
+        chart_type: 'line'
+      };
     },
     
     selectColorScheme(index) {
       this.currentColorScheme = index;
-      this.$nextTick(() => {
-        this.drawChart();
-      });
+      this.onConfigChange();
     },
     
     getColorSchemeName(index) {
@@ -519,48 +331,58 @@ export default {
       // 使用自定义颜色更新配色方案
       this.colorSchemes[0][0] = this.customColors.line;
       this.currentColorScheme = 0; // 切换到自定义配色方案
-      this.drawChart();
+      this.onConfigChange();
     },
     
     applyStyleChanges() {
-      this.drawChart();
+      this.onConfigChange();
     },
 
     onTitleChange() {
-      this.drawChart();
+      this.onConfigChange();
+    },
+    // 后端图表生成方法
+    async generateBackendChart() {
+      try {
+        this.loading = true;
+        this.chartPath = null;
+        
+        const response = await fetch('/charts/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...this.getChartConfig(),
+            chart_type: 'line'
+          }),
+          credentials: 'include'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          this.chartPath = result.chart_path;
+        } else {
+          console.error('生成图表失败:', result.error);
+        }
+      } catch (error) {
+        console.error('请求生成图表时出错:', error);
+      } finally {
+        this.loading = false;
+      }
     }
   },
   
   mounted() {
-    this.initChart();
-  },
-  
-  beforeUnmount() {
-    // 组件销毁前清理资源
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-      this.resizeObserver = null;
-    }
-    
-    if (this.chart) {
-      this.chart.dispose();
-      this.chart = null;
-    }
+    this.xAxisColumn = this.availableColumns[0];
+    this.yAxisColumns = [this.availableColumns[1]];
+    // 初始化后端图表生成
+    this.generateBackendChart();
   }
 };
 </script>
 
 <style scoped>
-.chart-container {
-  width: 100%;
-  height: 500px;
-  margin-bottom: 20px;
-}
-
-.chart {
-  width: 100%;
-  height: 100%;
-}
 
 .controls {
   display: flex;
@@ -615,9 +437,9 @@ export default {
 
 .config-popup {
   background-color: white;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 600px;
   max-width: 90vw;
   max-height: 90vh;
   display: flex;
@@ -625,7 +447,7 @@ export default {
 }
 
 .popup-header {
-  padding: 12px 15px;
+  padding: 16px 20px;
   background-color: #f5f7fa;
   display: flex;
   justify-content: space-between;
@@ -633,6 +455,8 @@ export default {
   font-weight: bold;
   color: #606266;
   border-bottom: 1px solid #dcdfe6;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 }
 
 .close-btn {
@@ -648,52 +472,74 @@ export default {
 }
 
 .popup-content {
-  padding: 15px;
+  padding: 20px;
   overflow-y: auto;
 }
 
 .config-section {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #e4e7ed;
 }
 
 .config-section:last-child {
   margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .config-section h4 {
-  margin: 0 0 10px 0;
-  color: #606266;
-  font-size: 14px;
+  margin: 5px 0 5px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.config-section h4::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: #409eff;
+  margin-right: 10px;
+  border-radius: 2px;
 }
 
 .color-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .color-scheme-option {
   cursor: pointer;
   border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 8px;
-  width: 100px;
+  border-radius: 6px;
+  padding: 12px 8px;
   text-align: center;
   transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .color-scheme-option:hover,
 .color-scheme-option.active {
   border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  box-shadow: 0 4px 8px rgba(64, 158, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .color-preview {
   display: flex;
-  height: 20px;
-  margin-bottom: 5px;
-  border-radius: 2px;
+  height: 24px;
+  margin-bottom: 8px;
+  border-radius: 3px;
   overflow: hidden;
+  width: 100%;
 }
 
 .color-item {
@@ -703,18 +549,20 @@ export default {
 .custom-color-picker {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
+  margin-top: 10px;
 }
 
 .custom-color-picker label {
   font-size: 14px;
   color: #606266;
+  min-width: 80px;
 }
 
 .style-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin-top: 10px;
 }
 
 .style-option label {
@@ -724,6 +572,44 @@ export default {
   font-size: 14px;
   color: #606266;
   cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.style-option label:hover {
+  background-color: #f5f7fa;
+}
+
+.axis-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.axis-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.axis-option label {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 2px;
+}
+
+.axis-option input[type="range"] {
+  width: 100%;
+}
+
+.axis-option input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
 .y-axis-fields {

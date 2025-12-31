@@ -485,11 +485,7 @@ export default {
         
         if (result) {
           // 将结果保存到历史记录中
-          if (['line_chart', 'data_visualization'].includes(this.currentMethod)){
-            this.addToHistory(this.selectedFile, this.currentMethod, null);
-          } else {
-            this.addToHistory(this.selectedFile, this.currentMethod, result);
-          }
+          this.addToHistory(this.selectedFile, this.currentMethod, result);
           // 设置分析结果数据
           this.datasetDetails = result;
           // 切换到结果视图

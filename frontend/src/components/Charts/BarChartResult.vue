@@ -2,13 +2,13 @@
   <div class="controls">
     <div class="control-group">
       <label>X轴字段:</label>
-      <select v-model="xAxisColumn" @change="drawChart">
+      <select v-model="xAxisColumn" @change="onConfigChange">
         <option v-for="col in availableColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
     <div class="control-group">
       <label>Y轴字段:</label>
-      <select v-model="yAxisColumn" @change="drawChart">
+      <select v-model="yAxisColumn" @change="onConfigChange">
         <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
@@ -20,7 +20,21 @@
     </div>
   </div>
   <div class="chart-container">
-    <div ref="chart" class="chart"></div>
+    <div v-if="!chartPath && !useBackendRendering" class="no-chart">
+      <p>请配置图表参数以生成图表</p>
+    </div>
+    <iframe 
+      v-else-if="chartPath" 
+      :src="chartPath" 
+      width="100%" 
+      height="100%" 
+      frameborder="0" 
+      @load="onChartLoaded"
+    ></iframe>
+    <div v-else-if="useBackendRendering && loading" class="loading">
+      <p>正在生成图表...</p>
+    </div>
+    <div v-else ref="chart" class="chart"></div>
   </div>
 
   <!-- 图表配置浮窗 -->
@@ -99,6 +113,34 @@
             </div>
           </div>
         </div>
+        
+        <div class="config-section">
+          <h4>渲染模式</h4>
+          <div class="render-mode-options">
+            <div class="style-option">
+              <label>
+                <input
+                  type="radio"
+                  v-model="renderMode"
+                  value="frontend"
+                  @change="switchRenderMode"
+                />
+                前端渲染
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="radio"
+                  v-model="renderMode"
+                  value="backend"
+                  @change="switchRenderMode"
+                />
+                后端渲染
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -120,6 +162,8 @@ export default {
       chart: null,
       xAxisColumn: '',
       yAxisColumn: '',
+      chartPath: null,
+      useBackendRendering: false,
       loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
@@ -137,6 +181,7 @@ export default {
         showGrid: true,
         horizontal: false
       },
+      renderMode: 'frontend', // 'frontend' 或 'backend'
       resizeObserver: null
     };
   },
@@ -173,10 +218,10 @@ export default {
       immediate: true
     },
     xAxisColumn() {
-      this.drawChart();
+      this.onConfigChange();
     },
     yAxisColumn() {
-      this.drawChart();
+      this.onConfigChange();
     }
   },
   methods: {
@@ -216,7 +261,11 @@ export default {
         }
 
         this.$nextTick(() => {
-          this.drawChart();
+          if (this.renderMode === 'frontend') {
+            this.drawChart();
+          } else {
+            this.generateBackendChart();
+          }
         });
       });
     },
@@ -240,7 +289,118 @@ export default {
       }
     },
     
+    onConfigChange() {
+      // 当配置改变时，发送事件到父组件
+      this.$emit('chart-config-updated', this.getChartConfig());
+      
+      // 根据渲染模式决定如何处理
+      if (this.renderMode === 'frontend') {
+        this.drawChart();
+      } else {
+        this.generateBackendChart();
+      }
+    },
+    
+    getChartConfig() {
+      // 返回当前图表配置
+      return {
+        data_id: this.datasetDetails.data_id || 'default',
+        x_axis_column: this.xAxisColumn,
+        y_axis_column: this.yAxisColumn,
+        chart_title: this.chartTitle,
+        chart_styles: this.chartStyles,
+        color_scheme: this.currentColorScheme,
+        custom_colors: this.customColors,
+        chart_type: 'bar',
+        render_mode: this.renderMode
+      };
+    },
+    
+    selectColorScheme(index) {
+      this.currentColorScheme = index;
+      this.onConfigChange();
+    },
+    
+    getColorSchemeName(index) {
+      const names = ['默认', '深色', '明亮', '柔和'];
+      return names[index] || `方案${index + 1}`;
+    },
+    
+    applyCustomColors() {
+      // 使用自定义颜色更新配色方案
+      this.colorSchemes[0][0] = this.customColors.bar;
+      this.currentColorScheme = 0; // 切换到自定义配色方案
+      this.onConfigChange();
+    },
+    
+    applyStyleChanges() {
+      this.onConfigChange();
+    },
+
+    onTitleChange() {
+      this.onConfigChange();
+    },
+    
+    onChartLoaded() {
+      // 图表加载完成后的回调
+      console.log('图表加载完成');
+    },
+    
+    // 后端图表生成方法
+    async generateBackendChart() {
+      if (this.renderMode !== 'backend') {
+        return;
+      }
+      
+      try {
+        this.loading = true;
+        this.useBackendRendering = true;
+        this.chartPath = null;
+        
+        const response = await fetch('/charts/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...this.getChartConfig(),
+            chart_type: 'bar'
+          }),
+          credentials: 'include'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          this.chartPath = result.chart_path;
+          // 如果前端图表实例存在，销毁它
+          if (this.chart) {
+            this.chart.dispose();
+            this.chart = null;
+          }
+        } else {
+          console.error('生成图表失败:', result.error);
+          this.useBackendRendering = false;
+          this.loading = false;
+          // 重新初始化前端图表
+          this.initChart();
+        }
+      } catch (error) {
+        console.error('请求生成图表时出错:', error);
+        this.useBackendRendering = false;
+        this.loading = false;
+        // 重新初始化前端图表
+        this.initChart();
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    // 前端图表绘制方法
     drawChart() {
+      if (this.renderMode !== 'frontend') {
+        return;
+      }
+      
       // 检查必要条件是否满足
       if (!this.chart || !this.xAxisColumn || !this.yAxisColumn || 
           !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
@@ -389,31 +549,13 @@ export default {
       }
     },
     
-    selectColorScheme(index) {
-      this.currentColorScheme = index;
-      this.$nextTick(() => {
+    switchRenderMode() {
+      if (this.renderMode === 'backend') {
+        this.generateBackendChart();
+      } else {
         this.drawChart();
-      });
-    },
-    
-    getColorSchemeName(index) {
-      const names = ['默认', '深色', '明亮', '柔和'];
-      return names[index] || `方案${index + 1}`;
-    },
-    
-    applyCustomColors() {
-      // 使用自定义颜色更新配色方案
-      this.colorSchemes[0][0] = this.customColors.bar;
-      this.currentColorScheme = 0; // 切换到自定义配色方案
-      this.drawChart();
-    },
-    
-    applyStyleChanges() {
-      this.drawChart();
-    },
-
-    onTitleChange() {
-      this.drawChart();
+      }
+      this.onConfigChange();
     }
   },
   
@@ -442,6 +584,26 @@ export default {
   width: 100%;
   height: 500px;
   margin-bottom: 20px;
+}
+
+.no-chart {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  color: #909399;
+  font-size: 14px;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  color: #666;
+  font-size: 16px;
 }
 
 .chart {
@@ -611,6 +773,12 @@ export default {
   font-size: 14px;
   color: #606266;
   cursor: pointer;
+}
+
+.render-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .title-input input {
