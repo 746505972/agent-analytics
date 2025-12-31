@@ -17,7 +17,7 @@ from routers.data import load_csv_file
 
 # 导入pyecharts相关模块
 from pyecharts import options as opts
-from pyecharts.charts import Line, Bar, Pie
+from pyecharts.charts import Line, Bar, Pie, Scatter, Boxplot
 from pyecharts.globals import ThemeType
 
 
@@ -117,8 +117,8 @@ async def generate_chart(request: Request, config: ChartConfig):
             chart = create_scatter_chart(df, config, valid_y_axis_columns)
         elif config.chart_type == 'pie':
             chart = create_pie_chart(df, config)
-        elif config.chart_type == 'histogram':
-            chart = create_histogram_chart(df, config, valid_y_axis_columns)
+        # elif config.chart_type == 'histogram':
+        #     chart = create_histogram_chart(df, config, valid_y_axis_columns)
         elif config.chart_type == 'boxplot':
             chart = create_boxplot_chart(df, config, valid_y_axis_columns)
         else:
@@ -258,8 +258,6 @@ def create_scatter_chart(df, config, y_axis_columns):
     # 获取颜色方案
     colors = color_schemes[config.color_scheme % len(color_schemes)]
 
-    # 创建散点图实例
-    from pyecharts.charts import Scatter
     scatter = Scatter(init_opts=opts.InitOpts(theme=ThemeType.WHITE, width="100%", height="500px"))
     
     # 设置全局配置
@@ -359,3 +357,76 @@ def create_pie_chart(df, config):
     ).set_colors(colors)
 
     return pie
+
+
+def create_boxplot_chart(df, config, y_axis_columns):
+    """创建箱线图"""
+    # 获取颜色方案
+    colors = color_schemes[config.color_scheme % len(color_schemes)]
+    
+    # 创建箱线图实例
+    boxplot = Boxplot(init_opts=opts.InitOpts(theme=ThemeType.WHITE, width="100%", height="480px"))
+    
+    # 准备箱线图数据
+    # 箱线图需要分组数据，按分类字段分组，计算每组的统计值
+    category_data = df[config.x_axis_column].tolist()
+    value_data = df[y_axis_columns[0] if y_axis_columns else config.x_axis_column].tolist()
+    
+    # 按分类字段对数据进行分组
+    grouped_data = {}
+    for i in range(len(category_data)):
+        category = category_data[i]
+        value = value_data[i]
+        
+        # 过滤无效值
+        if pd.notna(category) and pd.notna(value):
+            category_str = str(category)
+            if category_str not in grouped_data:
+                grouped_data[category_str] = []
+            grouped_data[category_str].append(float(value))
+
+    # 准备X轴数据（分类标签）和Y轴数据（分组的值列表）
+    x_data = list(grouped_data.keys())
+    y_data = list(grouped_data.values())
+    
+    # 设置全局配置
+    boxplot.set_global_opts(
+        title_opts=opts.TitleOpts(title=config.chart_title),
+        tooltip_opts=opts.TooltipOpts(trigger="item", axis_pointer_type="shadow"),
+        legend_opts=opts.LegendOpts(is_show=config.chart_styles.get("showLegend", True)),
+        toolbox_opts=opts.ToolboxOpts(is_show=config.chart_styles.get("showToolbox", True), 
+                                    feature=opts.ToolBoxFeatureOpts(
+                                        magic_type=opts.ToolBoxFeatureMagicTypeOpts(is_show=False),
+                                        data_view=opts.ToolBoxFeatureDataViewOpts(is_show=False),
+                                    )
+        ),
+        xaxis_opts=opts.AxisOpts(
+            type_="category",
+            name=config.x_axis_column,
+            axislabel_opts=opts.LabelOpts(rotate=config.chart_styles.get("xAxisLabelRotate", 0)),
+            splitline_opts=opts.SplitLineOpts(is_show=config.chart_styles.get("showGrid", True))
+        ),
+        yaxis_opts=opts.AxisOpts(
+            type_="value",
+            min_=config.chart_styles.get("yAxisMin"),
+            max_=config.chart_styles.get("yAxisMax"),
+            splitline_opts=opts.SplitLineOpts(is_show=config.chart_styles.get("showGrid", True))
+        ),
+        datazoom_opts=[
+            opts.DataZoomOpts(type_="inside"),
+            opts.DataZoomOpts(type_="slider"),
+        ]
+    )
+    
+    # 添加X轴数据和箱线图数据
+    boxplot.add_xaxis(xaxis_data=x_data)
+    boxplot.add_yaxis(
+        series_name=y_axis_columns[0] if y_axis_columns else "箱线图",
+        y_axis=boxplot.prepare_data(y_data),  # 使用prepare_data方法处理数据
+        itemstyle_opts=opts.ItemStyleOpts(
+            border_color=colors[0] if len(colors) > 0 else config.custom_colors.get("bar", "#5470c6")
+        ),
+        label_opts=opts.LabelOpts(is_show=config.chart_styles.get("showLabel", False))
+    )
+    
+    return boxplot
