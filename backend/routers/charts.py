@@ -1,5 +1,6 @@
 import os
 import sys
+import pandas as pd
 
 # 添加项目根目录到sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -16,7 +17,7 @@ from routers.data import load_csv_file
 
 # 导入pyecharts相关模块
 from pyecharts import options as opts
-from pyecharts.charts import Line, Bar
+from pyecharts.charts import Line, Bar, Pie
 from pyecharts.globals import ThemeType
 
 
@@ -56,7 +57,9 @@ class ChartConfig(BaseModel):
         "symbolSize": 10,    # 散点大小
         "xAxisMin": None,    # X轴最小值
         "xAxisMax": None,    # X轴最大值
-        "showValue": False   # 是否显示数值标签
+        "showValue": False,  # 是否显示数值标签,没用了
+        # 饼图特定配置
+        "donutStyle": False  # 是否使用环形图样式
     }
     color_scheme: int = 0
     custom_colors: Dict[str, str] = {"line": "#5470c6", "bar": "#5470c6", "scatter": "#5470c6"}
@@ -88,12 +91,13 @@ async def generate_chart(request: Request, config: ChartConfig):
                 content={"success": False, "error": "X轴字段不能为空"}
             )
         
-        # 检查Y轴字段是否为空
-        if not valid_y_axis_columns:
-            return JSONResponse(
-                status_code=400,
-                content={"success": False, "error": "至少需要一个有效的Y轴字段"}
-            )
+        # 对于饼图，不需要Y轴字段
+        if config.chart_type != 'pie':
+            if not valid_y_axis_columns:
+                return JSONResponse(
+                    status_code=400,
+                    content={"success": False, "error": "至少需要一个有效的Y轴字段"}
+                )
 
         # 创建保存目录
         save_dir = f'data/{session_id}'
@@ -112,7 +116,7 @@ async def generate_chart(request: Request, config: ChartConfig):
         elif config.chart_type == 'scatter':
             chart = create_scatter_chart(df, config, valid_y_axis_columns)
         elif config.chart_type == 'pie':
-            chart = create_pie_chart(df, config, valid_y_axis_columns)
+            chart = create_pie_chart(df, config)
         elif config.chart_type == 'histogram':
             chart = create_histogram_chart(df, config, valid_y_axis_columns)
         elif config.chart_type == 'boxplot':
@@ -306,3 +310,52 @@ def create_scatter_chart(df, config, y_axis_columns):
         )
 
     return scatter
+
+
+def create_pie_chart(df, config):
+    """创建饼图"""
+    # 获取颜色方案
+    colors = color_schemes[config.color_scheme % len(color_schemes)]
+
+    # 创建饼图实例
+    pie = Pie(init_opts=opts.InitOpts(theme=ThemeType.WHITE, width="100%", height="450px"))
+    
+    # 获取分类字段的数据
+    category_data = df[config.x_axis_column].tolist()
+    
+    # 统计各分类的数量
+    category_count = {}
+    for item in category_data:
+        if pd.notna(item):  # 忽略空值
+            category_count[item] = category_count.get(item, 0) + 1
+    
+    # 准备饼图数据
+    pie_data = [(str(k), v) for k, v in category_count.items()]
+    
+    # 设置全局配置
+    pie.set_global_opts(
+        title_opts=opts.TitleOpts(title=config.chart_title),
+        tooltip_opts=opts.TooltipOpts(trigger="item", formatter="{a} <br/>{b}: {c} ({d}%)", axis_pointer_type="cross"),
+        legend_opts=opts.LegendOpts(is_show=config.chart_styles.get("showLegend", True), orient="vertical", pos_top="middle", pos_left="left"),
+        toolbox_opts=opts.ToolboxOpts(is_show=config.chart_styles.get("showToolbox", True), 
+                                    feature=opts.ToolBoxFeatureOpts(
+                                        magic_type=opts.ToolBoxFeatureMagicTypeOpts(is_show=False),
+                                        data_zoom=opts.ToolBoxFeatureDataZoomOpts(is_show=False),
+                                    )
+        )
+    )
+
+    # 添加数据
+    radius = ["50%", "70%"] if config.chart_styles.get("donutStyle", False) else ["0%", "70%"]
+    
+    pie.add(
+        series_name="数量",
+        data_pair=pie_data,
+        radius=radius,
+        center=["50%", "50%"],
+        label_opts=opts.LabelOpts(is_show=config.chart_styles.get("showLabel", True), 
+                                 formatter="{b}: {d}%",
+                                 position="outside" if config.chart_styles.get("showLabel", True) else "center"),
+    ).set_colors(colors)
+
+    return pie

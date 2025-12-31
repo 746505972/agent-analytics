@@ -2,7 +2,7 @@
   <div class="controls">
     <div class="control-group">
       <label>分类字段:</label>
-      <select v-model="categoryColumn" @change="drawChart">
+      <select v-model="categoryColumn" @change="onConfigChange">
         <option v-for="col in availableColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
@@ -13,9 +13,11 @@
       </button>
     </div>
   </div>
-  <div class="chart-container">
-    <div ref="chart" class="chart"></div>
-  </div>
+
+  <BackendChartResult
+    :chart-path="chartPath"
+    :loading="loading"
+  />
 
   <!-- 图表配置浮窗 -->
   <div v-if="showConfigPopup" class="config-popup-overlay" @click.self="showConfigPopup = false">
@@ -89,6 +91,16 @@
                 环形图样式
               </label>
             </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showToolbox"
+                  @change="applyStyleChanges"
+                />
+                显示工具箱
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -97,10 +109,11 @@
 </template>
 
 <script>
-import * as echarts from 'echarts';
+import BackendChartResult from "@/components/Charts/BackendChartResult.vue";
 
 export default {
   name: "PieChartResult",
+  components: {BackendChartResult},
   props: {
     datasetDetails: {
       type: Object,
@@ -109,8 +122,9 @@ export default {
   },
   data() {
     return {
-      chart: null,
       categoryColumn: '',
+      chartPath: null,
+      loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
       chartTitle: '饼图',
@@ -123,21 +137,12 @@ export default {
       chartStyles: {
         showLabel: true,
         showLegend: true,
-        donutStyle: false
-      },
-      resizeObserver: null
+        donutStyle: false,
+        showToolbox: true
+      }
     };
   },
   computed: {
-    numericColumns() {
-      // 从数据集中提取数值型列
-      if (this.datasetDetails && this.datasetDetails.column_info) {
-        return Object.keys(this.datasetDetails.column_info).filter(col => 
-          this.datasetDetails.column_info[col].dtype === 'numeric'
-        );
-      }
-      return [];
-    },
     availableColumns() {
       // 获取所有可用列（包括数值型、分类型、日期时间型等）
       if (this.datasetDetails && this.datasetDetails.column_info) {
@@ -153,198 +158,38 @@ export default {
   watch: {
     datasetDetails: {
       handler(newVal) {
-        if (newVal && newVal.data && newVal.data.length > 0) {
-          this.initChart();
+        if (newVal && newVal.column_info) {
+          this.generateBackendChart();
         }
       },
       deep: true,
       immediate: true
-    },
-    categoryColumn() {
-      this.drawChart();
-    },
-
+    }
   },
   methods: {
-    initChart() {
-      // 确保DOM已经更新
-      this.$nextTick(() => {
-        if (!this.$refs.chart) {
-          console.warn('Chart container not found');
-          return;
-        }
-
-        // 如果已有图表实例，先销毁
-        if (this.chart) {
-          this.chart.dispose();
-          this.chart = null;
-        }
-
-        // 初始化ECharts实例
-        this.chart = echarts.init(this.$refs.chart);
-        
-        // 添加resize监听
-        this.setupResizeObserver();
-
-        // 设置默认字段
-        if (!this.categoryColumn) {
-          // 分类轴优先选择分类型列
-          const categoricalColumns = this.availableColumns.filter(col => 
-            this.datasetDetails.column_info[col].dtype === 'categorical');
-            
-          if (categoricalColumns.length >= 1) {
-            this.categoryColumn = categoricalColumns[0];
-          } else if (this.availableColumns.length >= 1) {
-            this.categoryColumn = this.availableColumns[0];
-          }
-        }
-
-        this.$nextTick(() => {
-          this.drawChart();
-        });
-      });
-    },
-    
-    setupResizeObserver() {
-      // 清除之前的监听器
-      if (this.resizeObserver) {
-        this.resizeObserver.disconnect();
-      }
-      
-      // 创建新的ResizeObserver
-      this.resizeObserver = new ResizeObserver(() => {
-        if (this.chart) {
-          this.chart.resize();
-        }
-      });
-      
-      // 监听图表容器变化
-      if (this.$refs.chart) {
-        this.resizeObserver.observe(this.$refs.chart);
+    onConfigChange() {
+      if (this.categoryColumn.length > 0){
+        this.generateBackendChart();
       }
     },
     
-    processData() {
-      if (!this.categoryColumn || !this.datasetDetails || !this.datasetDetails.data) {
-        return [];
-      }
-      
-      // 按分类字段统计数量
-      const countedData = {};
-      
-      this.datasetDetails.data.forEach(row => {
-        const category = row[this.categoryColumn];
-        
-        // 跳过无效值
-        if (category === null || category === undefined) {
-          return;
-        }
-        
-        if (!countedData[category]) {
-          countedData[category] = 0;
-        }
-        
-        countedData[category] += 1;
-      });
-      
-      // 转换为数组格式
-      return Object.keys(countedData).map(category => ({
-        name: category,
-        value: countedData[category]
-      }));
-    },
-    
-    drawChart() {
-      // 检查必要条件是否满足
-      if (!this.chart || !this.categoryColumn || 
-          !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
-        return;
-      }
-      
-      try {
-        const pieData = this.processData();
-        
-        if (pieData.length === 0) {
-          return;
-        }
-        
-        // 获取当前配色方案
-        const colorScheme = this.colorSchemes[this.currentColorScheme] || this.colorSchemes[0];
-        
-        const option = {
-          title: {
-            text: this.chartTitle,
-            left: 'center',
-            textStyle: {
-              color: '#666',
-              fontSize: 16
-            }
-          },
-          tooltip: {
-            trigger: 'item',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            textStyle: {
-              color: '#fff'
-            },
-            formatter: '{a} <br/>{b}: {c} (占比 {d}%)'
-          },
-          legend: {
-            show: this.chartStyles.showLegend,
-            type: 'scroll',
-            orient: 'vertical',
-            right: 10,
-            top: '10%',
-            bottom: 20,
-            textStyle: {
-              color: '#666'
-            }
-          },
-          toolbox: {
-            show: true,
-            feature: {
-              dataView: { readOnly: false },
-              restore: {},
-              saveAsImage: {}
-            }
-          },
-          series: [
-            {
-              name: '数量',
-              type: 'pie',
-              radius: this.chartStyles.donutStyle ? ['40%', '70%'] : '70%',
-              center: ['50%', '50%'],
-              data: pieData,
-              label: {
-                show: this.chartStyles.showLabel,
-                formatter: '{b}: {c} (占比 {d}%)'
-              },
-              labelLine: {
-                show: this.chartStyles.showLabel
-              },
-              itemStyle: {
-                borderRadius: 2,
-                borderColor: '#fff',
-                borderWidth: 1
-              },
-              color: colorScheme
-            }
-          ]
-        };
-
-        // 先清空图表再重新设置选项
-        this.chart.clear();
-        this.chart.setOption(option, true);
-
-      } catch (error) {
-        console.error('绘制图表失败:', error);
-      }
+    getChartConfig() {
+      // 返回当前图表配置
+      return {
+        data_id: this.datasetDetails.data_id || 'default',
+        x_axis_column: this.categoryColumn,
+        y_axis_columns: [], // 饼图不需要Y轴字段
+        chart_title: this.chartTitle,
+        chart_styles: this.chartStyles,
+        color_scheme: this.currentColorScheme,
+        custom_colors: {}, // 饼图不需要自定义颜色
+        chart_type: 'pie'
+      };
     },
     
     selectColorScheme(index) {
       this.currentColorScheme = index;
-      this.$nextTick(() => {
-        this.drawChart();
-      });
+      this.onConfigChange();
     },
     
     getColorSchemeName(index) {
@@ -353,29 +198,52 @@ export default {
     },
     
     applyStyleChanges() {
-      this.drawChart();
+      this.onConfigChange();
     },
 
     onTitleChange() {
-      this.drawChart();
+      this.onConfigChange();
+    },
+    
+    // 后端图表生成方法
+    async generateBackendChart() {
+      try {
+        this.loading = true;
+        this.chartPath = null;
+        
+        const response = await fetch('/charts/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...this.getChartConfig(),
+            chart_type: 'pie'
+          }),
+          credentials: 'include'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          this.chartPath = result.chart_path;
+        } else {
+          console.error('生成图表失败:', result.error);
+        }
+      } catch (error) {
+        console.error('请求生成图表时出错:', error);
+      } finally {
+        this.loading = false;
+      }
     }
   },
   
   mounted() {
-    this.initChart();
-  },
-  
-  beforeUnmount() {
-    // 组件销毁前清理资源
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-      this.resizeObserver = null;
+    // 设置默认字段
+    if (this.availableColumns.length > 0) {
+      this.categoryColumn = this.availableColumns[0];
     }
-    
-    if (this.chart) {
-      this.chart.dispose();
-      this.chart = null;
-    }
+    // 初始化后端图表生成
+    this.generateBackendChart();
   }
 };
 </script>
@@ -445,9 +313,9 @@ export default {
 
 .config-popup {
   background-color: white;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 600px;
   max-width: 90vw;
   max-height: 90vh;
   display: flex;
@@ -455,7 +323,7 @@ export default {
 }
 
 .popup-header {
-  padding: 12px 15px;
+  padding: 16px 20px;
   background-color: #f5f7fa;
   display: flex;
   justify-content: space-between;
@@ -463,6 +331,8 @@ export default {
   font-weight: bold;
   color: #606266;
   border-bottom: 1px solid #dcdfe6;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 }
 
 .close-btn {
@@ -478,62 +348,97 @@ export default {
 }
 
 .popup-content {
-  padding: 15px;
+  padding: 20px;
   overflow-y: auto;
 }
 
 .config-section {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #e4e7ed;
 }
 
 .config-section:last-child {
   margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .config-section h4 {
-  margin: 0 0 10px 0;
-  color: #606266;
-  font-size: 14px;
+  margin: 5px 0 5px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.config-section h4::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: #409eff;
+  margin-right: 10px;
+  border-radius: 2px;
 }
 
 .color-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .color-scheme-option {
   cursor: pointer;
   border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 8px;
-  width: 100px;
+  border-radius: 6px;
+  padding: 12px 8px;
   text-align: center;
   transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .color-scheme-option:hover,
 .color-scheme-option.active {
   border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  box-shadow: 0 4px 8px rgba(64, 158, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .color-preview {
   display: flex;
-  height: 20px;
-  margin-bottom: 5px;
-  border-radius: 2px;
+  height: 24px;
+  margin-bottom: 8px;
+  border-radius: 3px;
   overflow: hidden;
+  width: 100%;
 }
 
 .color-item {
   flex: 1;
 }
 
-.style-options {
+.custom-color-picker {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.custom-color-picker label {
+  font-size: 14px;
+  color: #606266;
+  min-width: 80px;
+}
+
+.style-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin-top: 10px;
 }
 
 .style-option label {
@@ -543,7 +448,83 @@ export default {
   font-size: 14px;
   color: #606266;
   cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
+
+.style-option label:hover {
+  background-color: #f5f7fa;
+}
+
+.axis-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.axis-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.axis-option label {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 2px;
+}
+
+.axis-option input[type="range"] {
+  width: 100%;
+}
+
+.axis-option input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.y-axis-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.y-axis-field {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.remove-field-btn {
+  background-color: #f56565;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.add-field-btn {
+  margin-top: 5px;
+  padding: 4px 8px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
 .title-input input {
   width: 100%;
   padding: 8px 12px;
