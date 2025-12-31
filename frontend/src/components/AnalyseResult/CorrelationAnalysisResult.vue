@@ -8,52 +8,6 @@
       </button>
     </div>
     
-    <!-- 配色方案选择弹窗 -->
-    <div v-if="showColorSchemeModal" class="modal-overlay" @click="showColorSchemeModal = false">
-      <div class="color-scheme-modal" @click.stop>
-        <div class="modal-header">
-          <h3>选择配色方案</h3>
-          <button class="close-button" @click="showColorSchemeModal = false">×</button>
-        </div>
-        <div class="color-schemes">
-          <div 
-            v-for="(scheme, key) in colorSchemes" 
-            :key="key" 
-            class="color-scheme-option" 
-            :class="{ active: colorScheme === key }"
-            @click="selectColorScheme(key)"
-          >
-            <div class="color-preview">
-              <div 
-                v-for="color in scheme.colors" 
-                :key="color" 
-                class="color-item" 
-                :style="{ backgroundColor: color }"
-              ></div>
-            </div>
-            <div class="scheme-name">{{ scheme.name }}</div>
-          </div>
-          
-          <!-- 自定义配色选项 -->
-          <div 
-            class="color-scheme-option custom-option" 
-            :class="{ active: colorScheme === 'custom' }"
-            @click="openCustomColorModal"
-          >
-            <div class="color-preview">
-              <div 
-                v-for="color in customColors" 
-                :key="color" 
-                class="color-item" 
-                :style="{ backgroundColor: color }"
-              ></div>
-            </div>
-            <div class="scheme-name">自定义</div>
-          </div>
-        </div>
-      </div>
-    </div>
-    
     <!-- 自定义配色弹窗 -->
     <div v-if="showCustomColorModal" class="modal-overlay" @click="showCustomColorModal = false">
       <div class="custom-color-modal" @click.stop>
@@ -175,10 +129,48 @@
                 </label>
               </div>
             </div>
-            <div class="tool-options">
-              <button class="tool-button" @click="openColorSchemeModal">切换配色</button>
+            <!-- 配色方案 -->
+            <div class="config-section">
+              <h4>选择配色方案</h4>
+            </div>
+            <div class="color-schemes">
+              <div
+                v-for="(scheme, key) in colorSchemes"
+                :key="key"
+                class="color-scheme-option"
+                :class="{ active: colorScheme === key }"
+                @click="selectColorScheme(key)"
+              >
+                <div class="color-preview">
+                  <div
+                    v-for="color in scheme.colors"
+                    :key="color"
+                    class="color-item"
+                    :style="{ backgroundColor: color }"
+                  ></div>
+                </div>
+                <div class="scheme-name">{{ scheme.name }}</div>
+              </div>
+
+              <!-- 自定义配色选项 -->
+              <div
+                class="color-scheme-option custom-option"
+                :class="{ active: colorScheme === 'custom' }"
+                @click="openCustomColorModal"
+              >
+                <div class="color-preview">
+                  <div
+                    v-for="color in customColors"
+                    :key="color"
+                    class="color-item"
+                    :style="{ backgroundColor: color }"
+                  ></div>
+                </div>
+                <div class="scheme-name">自定义</div>
+              </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>
@@ -458,7 +450,7 @@ export default {
     },
     
     openCustomColorModal() {
-      this.showColorSchemeModal = false;
+      this.showConfigPopup = false;
       this.showCustomColorModal = true;
     },
     
@@ -715,10 +707,6 @@ export default {
       }
       this.showConfigPopup = false;
     },
-    openColorSchemeModal() {
-      this.showConfigPopup = false;
-      this.showColorSchemeModal = true;
-    }
   }
 }
 </script>
@@ -847,12 +835,6 @@ export default {
   font-size: 14px;
 }
 
-.tool-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .config-options {
   margin: 15px 0;
 }
@@ -875,21 +857,6 @@ export default {
   width: 16px;
   height: 16px;
   cursor: pointer;
-}
-
-.tool-button {
-  padding: 8px 12px;
-  background-color: #f4f4f5;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-  color: #606266;
-  text-align: left;
-}
-
-.tool-button:hover {
-  background-color: #e9e9eb;
 }
 
 .table-header {
@@ -1006,15 +973,6 @@ export default {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-}
-
-.color-scheme-modal {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 15px;
-  width: 450px;
-  max-width: 90%;
 }
 
 .modal-header {

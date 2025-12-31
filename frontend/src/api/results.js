@@ -3,7 +3,7 @@
  * 根据不同的分析方法调用相应的后端接口
  */
 export async function fetchResult(dataId, method, options = {}){
-  if(method === 'line_chart' || method === 'data_visualization'){
+  if(method === 'data_visualization'){
     return await fetchCompleteData(dataId);
   }else{
     return await fetchAnalysisResult(dataId, method, options);
@@ -13,6 +13,7 @@ export async function fetchResult(dataId, method, options = {}){
  * 获取完整数据
  * @param {string} dataId - 数据文件ID
  * @returns {Promise<Object|null>} 完整数据或null（如果失败）
+ * 该方法现已更改，只传回列信息
  */
 export async function fetchCompleteData(dataId) {
   try {

@@ -67,10 +67,8 @@
     </div>
     
     <!-- 加载状态 -->
-    <div v-else-if="loadingDetails" class="analysis-section">
-      <div class="loading-spinner">加载分析结果中...</div>
-    </div>
-    
+    <Waiting v-else-if="isWaitingForResponse"/>
+
     <!-- 错误状态 -->
     <div v-else class="analysis-section">
       <p>无法加载分析结果</p>
@@ -91,10 +89,12 @@ import FTestResult from "@/components/AnalyseResult/FTestResult.vue";
 import ChiSquareTestResult from "@/components/AnalyseResult/ChiSquareTestResult.vue";
 import NonParametricTestResult from "@/components/AnalyseResult/NonParametricTestResult.vue";
 import LinearRegressionResult from "@/components/AnalyseResult/LinearRegressionResult.vue";
+import Waiting from "@/components/Waiting.vue";
 
 export default {
   name: "ResultContent",
   components: {
+    Waiting,
     ChiSquareTestResult,
     FTestResult,
     SentimentAnalysisResult,
@@ -117,7 +117,7 @@ export default {
       type: Object,
       default: null
     },
-    loadingDetails: {
+    isWaitingForResponse: {
       type: Boolean,
       default: false
     }
@@ -136,10 +136,4 @@ export default {
   min-height: 500px;
 }
 
-.loading-spinner {
-  text-align: center;
-  padding: 50px;
-  color: #409eff;
-  font-size: 16px;
-}
 </style>

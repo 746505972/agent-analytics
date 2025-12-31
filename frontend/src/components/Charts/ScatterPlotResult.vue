@@ -2,15 +2,21 @@
   <div class="controls">
     <div class="control-group">
       <label>X轴字段:</label>
-      <select v-model="xAxisColumn" @change="drawChart">
+      <select v-model="xAxisColumn" @change="onConfigChange">
         <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
     <div class="control-group">
       <label>Y轴字段:</label>
-      <select v-model="yAxisColumn" @change="drawChart">
-        <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
-      </select>
+      <div class="y-axis-fields">
+        <div v-for="(field, index) in yAxisColumns" :key="index" class="y-axis-field">
+          <select v-model="yAxisColumns[index]" @change="onConfigChange">
+            <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
+          </select>
+          <button v-if="yAxisColumns.length > 1" @click="removeYAxisField(index)" class="remove-field-btn">×</button>
+        </div>
+        <button @click="addYAxisField" class="add-field-btn">+ 添加Y轴字段</button>
+      </div>
     </div>
     <!-- 图表配置按钮 -->
     <div class="control-group">
@@ -19,9 +25,11 @@
       </button>
     </div>
   </div>
-  <div class="chart-container">
-    <div ref="chart" class="chart"></div>
-  </div>
+
+  <BackendChartResult
+    :chart-path="chartPath"
+    :loading="loading"
+  />
 
   <!-- 图表配置浮窗 -->
   <div v-if="showConfigPopup" class="config-popup-overlay" @click.self="showConfigPopup = false">
@@ -60,9 +68,6 @@
               <span>{{ getColorSchemeName(index) }}</span>
             </div>
           </div>
-        </div>
-
-        <div class="config-section">
           <h4>自定义颜色</h4>
           <div class="custom-color-picker">
             <label>散点颜色:</label>
@@ -91,11 +96,83 @@
               <label>
                 <input
                   type="checkbox"
-                  v-model="chartStyles.showRegressionLine"
+                  v-model="chartStyles.showLabel"
                   @change="applyStyleChanges"
                 />
-                显示回归线
+                显示数据标签
               </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showLegend"
+                  @change="applyStyleChanges"
+                />
+                显示图例
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showToolbox"
+                  @change="applyStyleChanges"
+                />
+                显示工具箱
+              </label>
+            </div>
+          </div>
+          
+          <h4>散点大小</h4>
+          <div class="slider-option">
+            <input
+              type="range"
+              min="1"
+              max="30"
+              v-model="chartStyles.symbolSize"
+              @change="applyStyleChanges"
+            />
+            <span>{{ chartStyles.symbolSize }}</span>
+          </div>
+          
+          <h4>坐标轴范围</h4>
+          <div class="range-options">
+            <div class="range-input">
+              <label>X轴最小值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.xAxisMin"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
+            </div>
+            <div class="range-input">
+              <label>X轴最大值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.xAxisMax"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
+            </div>
+            <div class="range-input">
+              <label>Y轴最小值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.yAxisMin"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
+            </div>
+            <div class="range-input">
+              <label>Y轴最大值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.yAxisMax"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
             </div>
           </div>
         </div>
@@ -105,10 +182,11 @@
 </template>
 
 <script>
-import * as echarts from 'echarts';
+import BackendChartResult from "@/components/Charts/BackendChartResult.vue";
 
 export default {
   name: "ScatterPlotResult",
+  components: {BackendChartResult},
   props: {
     datasetDetails: {
       type: Object,
@@ -117,9 +195,9 @@ export default {
   },
   data() {
     return {
-      chart: null,
       xAxisColumn: '',
-      yAxisColumn: '',
+      yAxisColumns: [''],
+      chartPath: null,
       loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
@@ -135,9 +213,16 @@ export default {
       },
       chartStyles: {
         showGrid: true,
-        showRegressionLine: false
-      },
-      resizeObserver: null
+        showLabel: false,
+        showLegend: true,
+        showToolbox: true,
+        showValue: false,
+        symbolSize: 10,
+        xAxisMin: null,
+        xAxisMax: null,
+        yAxisMin: null,
+        yAxisMax: null
+      }
     };
   },
   computed: {
@@ -154,294 +239,48 @@ export default {
   watch: {
     datasetDetails: {
       handler(newVal) {
-        if (newVal && newVal.data && newVal.data.length > 0) {
-          this.initChart();
+        if (newVal && newVal.column_info) {
+          this.generateBackendChart();
         }
       },
       deep: true,
       immediate: true
-    },
-    xAxisColumn() {
-      this.drawChart();
-    },
-    yAxisColumn() {
-      this.drawChart();
     }
   },
   methods: {
-    initChart() {
-      // 确保DOM已经更新
-      this.$nextTick(() => {
-        if (!this.$refs.chart) {
-          console.warn('Chart container not found');
-          return;
-        }
-
-        // 如果已有图表实例，先销毁
-        if (this.chart) {
-          this.chart.dispose();
-          this.chart = null;
-        }
-
-        // 初始化ECharts实例
-        this.chart = echarts.init(this.$refs.chart);
-        
-        // 添加resize监听
-        this.setupResizeObserver();
-
-        // 设置默认字段
-        if (!this.xAxisColumn && !this.yAxisColumn) {
-          // 散点图需要两个数值型字段
-          if (this.numericColumns.length >= 2) {
-            this.xAxisColumn = this.numericColumns[0];
-            this.yAxisColumn = this.numericColumns[1];
-          } else if (this.numericColumns.length >= 1) {
-            this.xAxisColumn = this.numericColumns[0];
-            this.yAxisColumn = this.numericColumns[0];
-          }
-        }
-
-        this.$nextTick(() => {
-          this.drawChart();
-        });
-      });
+    addYAxisField() {
+      this.yAxisColumns.push('');
+      this.onConfigChange();
     },
     
-    setupResizeObserver() {
-      // 清除之前的监听器
-      if (this.resizeObserver) {
-        this.resizeObserver.disconnect();
-      }
-      
-      // 创建新的ResizeObserver
-      this.resizeObserver = new ResizeObserver(() => {
-        if (this.chart) {
-          this.chart.resize();
-        }
-      });
-      
-      // 监听图表容器变化
-      if (this.$refs.chart) {
-        this.resizeObserver.observe(this.$refs.chart);
+    removeYAxisField(index) {
+      this.yAxisColumns.splice(index, 1);
+      this.onConfigChange();
+    },
+    
+    onConfigChange() {
+      if (this.xAxisColumn.length > 0 && this.yAxisColumns.length > 0){
+        this.generateBackendChart();
       }
     },
     
-    calculateLinearRegression(seriesData) {
-      if (!seriesData || seriesData.length < 2) {
-        return null;
-      }
-      
-      // 计算回归线的系数
-      let n = seriesData.length;
-      let sumX = 0;
-      let sumY = 0;
-      let sumXY = 0;
-      let sumXX = 0;
-      
-      for (let i = 0; i < n; i++) {
-        let x = seriesData[i][0];
-        let y = seriesData[i][1];
-        sumX += x;
-        sumY += y;
-        sumXY += x * y;
-        sumXX += x * x;
-      }
-      
-      // 计算斜率和截距
-      let slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-      let intercept = (sumY - slope * sumX) / n;
-      
-      // 返回回归函数
-      return function(x) {
-        return slope * x + intercept;
+    getChartConfig() {
+      // 返回当前图表配置
+      return {
+        data_id: this.datasetDetails.data_id || 'default',
+        x_axis_column: this.xAxisColumn,
+        y_axis_columns: this.yAxisColumns.filter(col => col !== ''),
+        chart_title: this.chartTitle,
+        chart_styles: this.chartStyles,
+        color_scheme: this.currentColorScheme,
+        custom_colors: this.customColors,
+        chart_type: 'scatter'
       };
-    },
-    
-    drawChart() {
-      // 检查必要条件是否满足
-      if (!this.chart || !this.xAxisColumn || !this.yAxisColumn || 
-          !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
-        return;
-      }
-      
-      try {
-        // 直接从传入的数据中提取数据
-        const data = this.datasetDetails.data;
-        
-        // 提取X轴和Y轴数据
-        const xAxisData = data.map(row => row[this.xAxisColumn]);
-        const yAxisData = data.map(row => row[this.yAxisColumn]);
-        
-        // 准备系列数据
-        const seriesData = data.map((row, index) => [row[this.xAxisColumn], row[this.yAxisColumn]]);
-        
-        const option = {
-          title: {
-            text: this.chartTitle,
-            left: 'center',
-            textStyle: {
-              color: '#666',
-              fontSize: 16
-            }
-          },
-          tooltip: {
-            trigger: 'item',
-            axisPointer: {
-              type: 'cross'
-            },
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            textStyle: {
-              color: '#fff'
-            },
-            formatter: (params) => {
-              return `${this.xAxisColumn}: ${params.data[0]}<br/>${this.yAxisColumn}: ${params.data[1]}`;
-            }
-          },
-          toolbox: {
-            show: true,
-            feature: {
-              dataView: { readOnly: false },
-              restore: {},
-              saveAsImage: {}
-            }
-          },
-          grid: {
-            top: '20%',
-            bottom: '15%',
-            left: '10%',
-            right: '10%',
-            containLabel: true
-          },
-          xAxis: {
-            type: 'value',
-            name: this.xAxisColumn,
-            axisLabel: {
-              color: '#666'
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            splitLine: {
-              lineStyle: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            min: 'dataMin',
-            max: 'dataMax'
-          },
-          yAxis: {
-            type: 'value',
-            name: this.yAxisColumn,
-            axisLabel: {
-              color: '#666'
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            splitLine: {
-              lineStyle: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            },
-            min: 'dataMin',
-            max: 'dataMax'
-          },
-          series: [{
-            name: '散点',
-            type: 'scatter',
-            data: seriesData,
-            itemStyle: {
-              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.scatter
-            },
-            symbolSize: 8,
-            emphasis: {
-              focus: 'series'
-            }
-          }],
-          dataZoom: [
-            {
-              type: 'inside',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
-            },
-            {
-              type: 'slider',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-            },
-            {
-              type: 'inside',
-              xAxisIndex: false,
-              yAxisIndex: [0],
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
-            },
-            {
-              type: 'slider',
-              xAxisIndex: false,
-              yAxisIndex: [0],
-            }
-          ]
-        };
-        
-        // 如果需要显示回归线
-        if (this.chartStyles.showRegressionLine) {
-          // 计算回归线
-          const regressionFunc = this.calculateLinearRegression(seriesData);
-          
-          if (regressionFunc) {
-            // 生成回归线数据点
-            const minX = Math.min(...xAxisData);
-            const maxX = Math.max(...xAxisData);
-            const regressionPoints = [
-              [minX, regressionFunc(minX)],
-              [maxX, regressionFunc(maxX)]
-            ];
-            
-            option.series.push({
-              name: '回归线',
-              type: 'line',
-              data: regressionPoints,
-              smooth: false,
-              symbol: 'none',
-              lineStyle: {
-                color: this.colorSchemes[this.currentColorScheme][1] || '#ff7f0e',
-                width: 2,
-                type: 'solid'
-              },
-              emphasis: {
-                focus: 'series'
-              }
-            });
-          }
-        }
-        
-        // 如果不显示网格线
-        if (!this.chartStyles.showGrid) {
-          option.xAxis.splitLine = { show: false };
-          option.yAxis.splitLine = { show: false };
-        }
-
-        // 先清空图表再重新设置选项，确保坐标系正确初始化
-        this.chart.clear();
-        this.chart.setOption(option, true);
-
-      } catch (error) {
-        console.error('绘制图表失败:', error);
-      }
     },
     
     selectColorScheme(index) {
       this.currentColorScheme = index;
-      this.$nextTick(() => {
-        this.drawChart();
-      });
+      this.onConfigChange();
     },
     
     getColorSchemeName(index) {
@@ -453,52 +292,58 @@ export default {
       // 使用自定义颜色更新配色方案
       this.colorSchemes[0][0] = this.customColors.scatter;
       this.currentColorScheme = 0; // 切换到自定义配色方案
-      this.drawChart();
+      this.onConfigChange();
     },
     
     applyStyleChanges() {
-      this.drawChart();
+      this.onConfigChange();
     },
 
     onTitleChange() {
-      this.drawChart();
+      this.onConfigChange();
+    },
+    // 后端图表生成方法
+    async generateBackendChart() {
+      try {
+        this.loading = true;
+        this.chartPath = null;
+        
+        const response = await fetch('/charts/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...this.getChartConfig(),
+            chart_type: 'scatter'
+          }),
+          credentials: 'include'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          this.chartPath = result.chart_path;
+        } else {
+          console.error('生成图表失败:', result.error);
+        }
+      } catch (error) {
+        console.error('请求生成图表时出错:', error);
+      } finally {
+        this.loading = false;
+      }
     }
   },
   
   mounted() {
-    this.initChart();
-  },
-  
-  beforeUnmount() {
-    // 组件销毁前清理资源
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-      this.resizeObserver = null;
-    }
-    
-    if (this.chart) {
-      this.chart.dispose();
-      this.chart = null;
-    }
+    this.xAxisColumn = this.numericColumns[0];
+    this.yAxisColumns = [this.numericColumns[1]];
+    // 初始化后端图表生成
+    this.generateBackendChart();
   }
 };
 </script>
 
 <style scoped>
-.scatter-plot-result {
-  padding: 20px;
-}
-
-.chart-container {
-  width: 100%;
-  height: 500px;
-  margin-bottom: 20px;
-}
-
-.chart {
-  width: 100%;
-  height: 100%;
-}
 
 .controls {
   display: flex;
@@ -553,9 +398,9 @@ export default {
 
 .config-popup {
   background-color: white;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 600px;
   max-width: 90vw;
   max-height: 90vh;
   display: flex;
@@ -563,7 +408,7 @@ export default {
 }
 
 .popup-header {
-  padding: 12px 15px;
+  padding: 16px 20px;
   background-color: #f5f7fa;
   display: flex;
   justify-content: space-between;
@@ -571,6 +416,8 @@ export default {
   font-weight: bold;
   color: #606266;
   border-bottom: 1px solid #dcdfe6;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 }
 
 .close-btn {
@@ -586,52 +433,110 @@ export default {
 }
 
 .popup-content {
-  padding: 15px;
+  padding: 20px;
   overflow-y: auto;
 }
 
 .config-section {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #e4e7ed;
 }
 
 .config-section:last-child {
   margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .config-section h4 {
-  margin: 0 0 10px 0;
-  color: #606266;
-  font-size: 14px;
+  margin: 5px 0 5px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.config-section h4::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: #409eff;
+  margin-right: 10px;
+  border-radius: 2px;
+}
+
+.slider-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.slider-option input[type="range"] {
+  flex: 1;
+}
+
+.range-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.range-input {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.range-input label {
+  font-size: 12px;
+  color: #909399;
+}
+
+.range-input input {
+  padding: 4px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 .color-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .color-scheme-option {
   cursor: pointer;
   border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 8px;
-  width: 100px;
+  border-radius: 6px;
+  padding: 12px 8px;
   text-align: center;
   transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .color-scheme-option:hover,
 .color-scheme-option.active {
   border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  box-shadow: 0 4px 8px rgba(64, 158, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .color-preview {
   display: flex;
-  height: 20px;
-  margin-bottom: 5px;
-  border-radius: 2px;
+  height: 24px;
+  margin-bottom: 8px;
+  border-radius: 3px;
   overflow: hidden;
+  width: 100%;
 }
 
 .color-item {
@@ -641,18 +546,20 @@ export default {
 .custom-color-picker {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
+  margin-top: 10px;
 }
 
 .custom-color-picker label {
   font-size: 14px;
   color: #606266;
+  min-width: 80px;
 }
 
 .style-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin-top: 10px;
 }
 
 .style-option label {
@@ -662,7 +569,52 @@ export default {
   font-size: 14px;
   color: #606266;
   cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
+
+.style-option label:hover {
+  background-color: #f5f7fa;
+}
+
+.y-axis-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.y-axis-field {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.remove-field-btn {
+  background-color: #f56565;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.add-field-btn {
+  margin-top: 5px;
+  padding: 4px 8px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
 .title-input input {
   width: 100%;
   padding: 8px 12px;

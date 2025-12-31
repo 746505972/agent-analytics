@@ -543,34 +543,6 @@ async def get_complete_data(request: Request, data_id: str):
                     "error": "数据文件为空"
                 }
             )
-
-        # 处理NaN值，将其替换为None以便JSON序列化
-        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
-
-        # 确保所有的数据都可以被JSON序列化
-        for col in df.columns:
-            def convert_value(x):
-                if pd.isna(x) or x is None:
-                    return None
-                # 处理特殊浮点值
-                if isinstance(x, float):
-                    if np.isnan(x) or np.isinf(x):
-                        return None
-                if hasattr(x, 'item'):  # numpy标量类型
-                    try:
-                        val = x.item()
-                        # 再次检查特殊值
-                        if isinstance(val, float) and (np.isnan(val) or np.isinf(val)):
-                            return None
-                        return val
-                    except (ValueError, OverflowError):
-                        return str(x)
-                return x
-
-            df[col] = df[col].apply(convert_value)
-            
-        # 在最终转换为dict之前，再做一次全局替换以确保没有遗漏的NaN值
-        df = df.replace({pd.NA: None, pd.NaT: None, np.nan: None})
         
         # 构建列信息
         column_info = {}
@@ -584,8 +556,11 @@ async def get_complete_data(request: Request, data_id: str):
 
         return JSONResponse(content={
             "success": True,
-            "data": {"data": df.to_dict('records'),
-                    "column_info": column_info}
+            "data": {
+                "data_id": data_id,
+                "column_info": column_info,
+                "columns": list(df.columns)
+            }
         })
     except Exception as e:
         logger.error(f"获取完整数据时出错: {str(e)}")

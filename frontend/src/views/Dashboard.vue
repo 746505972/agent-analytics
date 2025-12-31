@@ -48,7 +48,7 @@
           <ResultContent
             :current-method="currentMethod"
             :dataset-details="datasetDetails"
-            :loading-details="loadingDetails"
+            :is-waiting-for-response="isWaitingForResponse"
           />
         </div>
         <!-- 参数配置区 -->
@@ -212,13 +212,10 @@ export default {
       // 添加标题行相关数据
       newColumnNames: [],
       headerEditMode: 'add',
-      // 分析历史相关数据
       analysisHistory: [],
-      // 控制中间区域显示内容的状态
       middleSectionView: 'config', // 'config' 表示参数配置区，'result' 表示结果渲染区
       // 数据集详情
       datasetDetails: null,
-      loadingDetails: false,
       // 无效样本参数
       removeDuplicates: false,
       removeDuplicatesCols: false,
@@ -408,6 +405,11 @@ export default {
         } else {
           console.error('删除失败:', result.error);
         }
+
+        // 自动选择剩下的第一个文件
+        if (this.files.length > 0) {
+          await this.selectFile(this.files[0].data_id);
+        }
       } catch (error) {
         console.error('删除文件时发生错误:', error);
       }
@@ -475,7 +477,6 @@ export default {
       localStorage.setItem('dashboardChatMessages', JSON.stringify(this.chatMessages));
       
       // 直接调用API获取分析结果
-      this.loadingDetails = true;
       this.isWaitingForResponse = true;
       try {
         const result = await fetchResult(this.selectedFile, this.currentMethod, {
@@ -484,11 +485,7 @@ export default {
         
         if (result) {
           // 将结果保存到历史记录中
-          if (['line_chart', 'data_visualization'].includes(this.currentMethod)){
-            this.addToHistory(this.selectedFile, this.currentMethod, null);
-          } else {
-            this.addToHistory(this.selectedFile, this.currentMethod, result);
-          }
+          this.addToHistory(this.selectedFile, this.currentMethod, result);
           // 设置分析结果数据
           this.datasetDetails = result;
           // 切换到结果视图
@@ -497,7 +494,6 @@ export default {
       } catch (error) {
         alert("获取分析结果失败: " + error.message);
       } finally {
-        this.loadingDetails = false;
         this.isWaitingForResponse = false;
       }
     },

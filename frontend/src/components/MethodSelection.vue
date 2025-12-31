@@ -122,11 +122,14 @@ export default {
   border: 1px solid #dcdfe6;
   border-radius: 10px;
   box-sizing: border-box;
+  outline: none;
+  transition: .3s ease;
 }
 
-.search-input:focus {
+.search-input:focus, .search-input:hover {
   outline: none;
   border-color: #409eff;
+  box-shadow: 0 0 0 4px rgba(122, 204, 233, 0.09);
 }
 
 .method-selection-section h3 {

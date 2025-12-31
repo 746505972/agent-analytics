@@ -2,13 +2,13 @@
   <div class="controls">
     <div class="control-group">
       <label>分类字段:</label>
-      <select v-model="categoryColumn" @change="drawChart">
+      <select v-model="categoryColumn" @change="onConfigChange">
         <option v-for="col in categoricalColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
     <div class="control-group">
       <label>数值字段:</label>
-      <select v-model="valueColumn" @change="drawChart">
+      <select v-model="valueColumn" @change="onConfigChange">
         <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
@@ -19,9 +19,11 @@
       </button>
     </div>
   </div>
-  <div class="chart-container">
-    <div ref="chart" class="chart"></div>
-  </div>
+
+  <BackendChartResult
+    :chart-path="chartPath"
+    :loading="loading"
+  />
 
   <!-- 图表配置浮窗 -->
   <div v-if="showConfigPopup" class="config-popup-overlay" @click.self="showConfigPopup = false">
@@ -60,6 +62,15 @@
               <span>{{ getColorSchemeName(index) }}</span>
             </div>
           </div>
+          <h4>自定义颜色</h4>
+          <div class="custom-color-picker">
+            <label>箱体颜色:</label>
+            <input
+              type="color"
+              v-model="customColors.bar"
+              @change="applyCustomColors"
+            />
+          </div>
         </div>
 
         <div class="config-section">
@@ -75,6 +86,72 @@
                 显示网格线
               </label>
             </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showLabel"
+                  @change="applyStyleChanges"
+                />
+                显示数据标签
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showLegend"
+                  @change="applyStyleChanges"
+                />
+                显示图例
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showToolbox"
+                  @change="applyStyleChanges"
+                />
+                显示工具箱
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="config-section">
+          <h4>坐标轴设置</h4>
+          <div class="axis-options">
+            <div class="axis-option">
+              <label>X轴标签旋转角度:</label>
+              <input
+                type="range"
+                v-model="chartStyles.xAxisLabelRotate"
+                @change="applyStyleChanges"
+                min="0"
+                max="90"
+                step="5"
+              />
+              <span>{{ chartStyles.xAxisLabelRotate }}°</span>
+            </div>
+            <div class="axis-option">
+              <label>Y轴最小值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.yAxisMin"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
+            </div>
+            <div class="axis-option">
+              <label>Y轴最大值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.yAxisMax"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -83,10 +160,11 @@
 </template>
 
 <script>
-import * as echarts from 'echarts';
+import BackendChartResult from "@/components/Charts/BackendChartResult.vue";
 
 export default {
   name: "BoxPlotResult",
+  components: {BackendChartResult},
   props: {
     datasetDetails: {
       type: Object,
@@ -95,24 +173,31 @@ export default {
   },
   data() {
     return {
-      chart: null,
       categoryColumn: '',
       valueColumn: '',
+      chartPath: null,
       loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
       chartTitle: '箱线图',
       colorSchemes: [
-        ['#ffffff', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
+        ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de', '#3ba272', '#fc8452', '#9a60b4', '#ea7ccc'],
         ['#c23531', '#2f4554', '#61a0a8', '#d48265', '#91c7ae', '#749f83', '#ca8622', '#bda29a', '#6e7074'],
         ['#37A2DA', '#32C5E9', '#67E0E3', '#9FE6B8', '#FFDB5C', '#ff9f7f', '#fb7293', '#E062AE', '#E690D1'],
         ['#dd6b66', '#759aa0', '#e69d87', '#8dc1a9', '#ea7e53', '#eedd78', '#73a373', '#73b9bc', '#7289ab']
       ],
+      customColors: {
+        bar: '#5470c6'
+      },
       chartStyles: {
         showGrid: true,
-        showOutliers: true
-      },
-      resizeObserver: null
+        showLabel: false,
+        showLegend: true,
+        xAxisLabelRotate: 0,
+        yAxisMin: null,
+        yAxisMax: null,
+        showToolbox: true
+      }
     };
   },
   computed: {
@@ -140,251 +225,38 @@ export default {
   watch: {
     datasetDetails: {
       handler(newVal) {
-        if (newVal && newVal.data && newVal.data.length > 0) {
-          this.initChart();
+        if (newVal && newVal.column_info) {
+          this.generateBackendChart();
         }
       },
       deep: true,
       immediate: true
-    },
-    categoryColumn() {
-      this.drawChart();
-    },
-    valueColumn() {
-      this.drawChart();
     }
   },
   methods: {
-    initChart() {
-      // 确保DOM已经更新
-      this.$nextTick(() => {
-        if (!this.$refs.chart) {
-          console.warn('Chart container not found');
-          return;
-        }
-
-        // 如果已有图表实例，先销毁
-        if (this.chart) {
-          this.chart.dispose();
-          this.chart = null;
-        }
-
-        // 初始化ECharts实例
-        this.chart = echarts.init(this.$refs.chart);
-
-        // 添加resize监听
-        this.setupResizeObserver();
-
-        // 设置默认字段
-        if (!this.categoryColumn && !this.valueColumn) {
-          // 分类字段选择分类列
-          if (this.categoricalColumns.length >= 1) {
-            this.categoryColumn = this.categoricalColumns[0];
-          }
-
-          // 数值字段选择数值列
-          if (this.numericColumns.length >= 1) {
-            this.valueColumn = this.numericColumns[0];
-          } else if (this.numericColumns.length >= 1) {
-            this.valueColumn = this.numericColumns[0];
-          }
-        }
-
-        this.$nextTick(() => {
-          this.drawChart();
-        });
-      });
-    },
-
-    setupResizeObserver() {
-      // 清除之前的监听器
-      if (this.resizeObserver) {
-        this.resizeObserver.disconnect();
-      }
-
-      // 创建新的ResizeObserver
-      this.resizeObserver = new ResizeObserver(() => {
-        if (this.chart) {
-          this.chart.resize();
-        }
-      });
-
-      // 监听图表容器变化
-      if (this.$refs.chart) {
-        this.resizeObserver.observe(this.$refs.chart);
+    onConfigChange() {
+      if (this.categoryColumn.length > 0 && this.valueColumn.length > 0){
+        this.generateBackendChart();
       }
     },
-
-    processDataForBoxplot() {
-      // 处理数据以适应箱线图
-      if (!this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
-        return [];
-      }
-
-      const data = this.datasetDetails.data;
-
-      // 按照分类字段分组数据
-      const groupedData = {};
-
-      data.forEach(row => {
-        const category = row[this.categoryColumn];
-        const value = row[this.valueColumn];
-
-        // 过滤掉无效值
-        if (category !== undefined && value !== undefined && value !== null && !isNaN(value)) {
-          if (!groupedData[category]) {
-            groupedData[category] = [];
-          }
-          groupedData[category].push(parseFloat(value));
-        }
-      });
-
-      // 转换为ECharts箱线图所需格式
-      const result = [];
-      Object.keys(groupedData).forEach(category => {
-        result.push(groupedData[category]);
-      });
-
-      return result;
-    },
-    drawChart() {
-      // 检查必要条件是否满足
-      if (!this.chart || !this.categoryColumn || !this.valueColumn ||
-          !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
-        return;
-      }
-
-      try {
-        // 处理数据以适应箱线图
-        const seriesData = this.processDataForBoxplot();
-
-        const option = {
-          title: {
-            text: this.chartTitle,
-            left: 'center',
-            textStyle: {
-              color: '#666',
-              fontSize: 16
-            }
-          },
-          tooltip: {
-            trigger: 'item',
-            axisPointer: {
-              type: 'shadow'
-            },
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            textStyle: {
-              color: '#fff'
-            }
-          },
-          toolbox: {
-            show: true,
-            feature: {
-              dataView: { readOnly: false },
-              restore: {},
-              saveAsImage: {}
-            }
-          },
-          legend: {
-            top: '10%'
-          },
-          grid: {
-            top: '20%',
-            bottom: '15%',
-            left: '10%',
-            right: '10%',
-            containLabel: true
-          },
-          xAxis: {
-            type: 'category',
-            name: this.categoryColumn,
-            boundaryGap: true,
-            axisLabel: {
-              color: '#666',
-              rotate: 0,
-              interval: 'auto'
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            splitLine: {
-              show: false
-            }
-          },
-          yAxis: {
-            type: 'value',
-            name: this.valueColumn,
-            axisLabel: {
-              color: '#666'
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            splitLine: {
-              lineStyle: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            }
-          },
-          series: [
-            {
-              name: 'boxplot',
-              type: 'boxplot',
-              datasetIndex: 1
-            },
-            {
-              name: 'outlier',
-              type: 'scatter',
-              datasetIndex: 2
-            }
-          ],
-          dataset: [
-            {
-              source: seriesData
-            },
-            {
-              transform: {
-                type: 'boxplot',
-                config: { itemNameFormatter: '{value}'}
-              }
-            },
-            {
-              fromDatasetIndex: 1,
-              fromTransformResult: 1
-            }
-          ],
-        };
-        
-        // 应用配色方案
-        const selectedColors = this.colorSchemes[this.currentColorScheme];
-        if (selectedColors && selectedColors.length >= 2) {
-          option.series[0].itemStyle = { color: selectedColors[0] };
-          option.series[1].itemStyle = { color: selectedColors[1] };
-        }
-
-        // 如果不显示网格线
-        if (!this.chartStyles.showGrid) {
-          option.yAxis.splitLine = { show: false };
-        }
-
-        // 先清空图表再重新设置选项，确保坐标系正确初始化
-        this.chart.clear();
-        this.chart.setOption(option, true);
-
-      } catch (error) {
-        console.error('绘制图表失败:', error);
-      }
+    
+    getChartConfig() {
+      // 返回当前图表配置
+      return {
+        data_id: this.datasetDetails.data_id || 'default',
+        x_axis_column: this.categoryColumn,
+        y_axis_columns: [this.valueColumn], // 箱线图只需要一个Y轴字段
+        chart_title: this.chartTitle,
+        chart_styles: this.chartStyles,
+        color_scheme: this.currentColorScheme,
+        custom_colors: this.customColors,
+        chart_type: 'boxplot'
+      };
     },
     
     selectColorScheme(index) {
       this.currentColorScheme = index;
-      this.$nextTick(() => {
-        this.drawChart();
-      });
+      this.onConfigChange();
     },
     
     getColorSchemeName(index) {
@@ -392,30 +264,62 @@ export default {
       return names[index] || `方案${index + 1}`;
     },
     
-    applyStyleChanges() {
-      this.drawChart();
+    applyCustomColors() {
+      // 使用自定义颜色更新配色方案
+      this.colorSchemes[0][0] = this.customColors.bar;
+      this.currentColorScheme = 0; // 切换到自定义配色方案
+      this.onConfigChange();
     },
     
+    applyStyleChanges() {
+      this.onConfigChange();
+    },
+
     onTitleChange() {
-      this.drawChart();
+      this.onConfigChange();
+    },
+    // 后端图表生成方法
+    async generateBackendChart() {
+      try {
+        this.loading = true;
+        this.chartPath = null;
+        
+        const response = await fetch('/charts/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...this.getChartConfig(),
+            chart_type: 'boxplot'
+          }),
+          credentials: 'include'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          this.chartPath = result.chart_path;
+        } else {
+          console.error('生成图表失败:', result.error);
+        }
+      } catch (error) {
+        console.error('请求生成图表时出错:', error);
+      } finally {
+        this.loading = false;
+      }
     }
   },
   
   mounted() {
-    this.initChart();
-  },
-  
-  beforeUnmount() {
-    // 组件销毁前清理资源
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-      this.resizeObserver = null;
+    // 初始化字段选择
+    if (this.categoricalColumns.length > 0) {
+      this.categoryColumn = this.categoricalColumns[0];
     }
-    
-    if (this.chart) {
-      this.chart.dispose();
-      this.chart = null;
+    if (this.numericColumns.length > 0) {
+      this.valueColumn = this.numericColumns[0];
     }
+    // 初始化后端图表生成
+    this.generateBackendChart();
   }
 };
 </script>
@@ -486,9 +390,9 @@ export default {
 
 .config-popup {
   background-color: white;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 600px;
   max-width: 90vw;
   max-height: 90vh;
   display: flex;
@@ -496,7 +400,7 @@ export default {
 }
 
 .popup-header {
-  padding: 12px 15px;
+  padding: 16px 20px;
   background-color: #f5f7fa;
   display: flex;
   justify-content: space-between;
@@ -504,6 +408,8 @@ export default {
   font-weight: bold;
   color: #606266;
   border-bottom: 1px solid #dcdfe6;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 }
 
 .close-btn {
@@ -519,62 +425,97 @@ export default {
 }
 
 .popup-content {
-  padding: 15px;
+  padding: 20px;
   overflow-y: auto;
 }
 
 .config-section {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #e4e7ed;
 }
 
 .config-section:last-child {
   margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .config-section h4 {
-  margin: 0 0 10px 0;
-  color: #606266;
-  font-size: 14px;
+  margin: 5px 0 5px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.config-section h4::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: #409eff;
+  margin-right: 10px;
+  border-radius: 2px;
 }
 
 .color-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .color-scheme-option {
   cursor: pointer;
   border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 8px;
-  width: 100px;
+  border-radius: 6px;
+  padding: 12px 8px;
   text-align: center;
   transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .color-scheme-option:hover,
 .color-scheme-option.active {
   border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  box-shadow: 0 4px 8px rgba(64, 158, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .color-preview {
   display: flex;
-  height: 20px;
-  margin-bottom: 5px;
-  border-radius: 2px;
+  height: 24px;
+  margin-bottom: 8px;
+  border-radius: 3px;
   overflow: hidden;
+  width: 100%;
 }
 
 .color-item {
   flex: 1;
 }
 
-.style-options {
+.custom-color-picker {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 15px;
+  margin-top: 10px;
+}
+
+.custom-color-picker label {
+  font-size: 14px;
+  color: #606266;
+  min-width: 80px;
+}
+
+.style-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin-top: 10px;
 }
 
 .style-option label {
@@ -584,6 +525,81 @@ export default {
   font-size: 14px;
   color: #606266;
   cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.style-option label:hover {
+  background-color: #f5f7fa;
+}
+
+.axis-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.axis-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.axis-option label {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 2px;
+}
+
+.axis-option input[type="range"] {
+  width: 100%;
+}
+
+.axis-option input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.y-axis-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.y-axis-field {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.remove-field-btn {
+  background-color: #f56565;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.add-field-btn {
+  margin-top: 5px;
+  padding: 4px 8px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-start;
 }
 
 .title-input input {
@@ -599,7 +615,6 @@ export default {
   outline: none;
   border-color: #409eff;
 }
-
 @media (max-width: 768px) {
   .controls {
     flex-direction: column;

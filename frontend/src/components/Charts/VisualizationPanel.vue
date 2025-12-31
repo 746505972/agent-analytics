@@ -11,13 +11,11 @@
     </select>
   </div>
 
-  <div class="chart-container">
-    <component
-      :is="currentChartComponent"
-      :dataset-details="datasetDetails"
-      @chart-rendered="onChartRendered"
-    />
-  </div>
+  <component
+    :is="currentChartComponent"
+    :dataset-details="datasetDetails"
+  />
+
 </template>
 
 <script>
@@ -75,10 +73,6 @@ export default {
       // 触发图表重新渲染
       this.$forceUpdate();
     },
-    onChartRendered() {
-      // 图表渲染完成后的回调
-      console.log('Chart rendered');
-    }
   }
 };
 </script>
@@ -86,6 +80,7 @@ export default {
 <style scoped>
 
 .chart-selector {
+  display: flex;
   margin-bottom: 20px;
 }
 
@@ -100,8 +95,4 @@ export default {
   border: 1px solid #dcdfe6;
 }
 
-.chart-container {
-  width: 100%;
-  height: 500px;
-}
 </style>
