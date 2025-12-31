@@ -5,7 +5,7 @@
       <option value="line">折线图</option>
       <option value="bar">柱状图</option>
       <option value="scatter">散点图</option>
-      <option value="histogram">直方图</option>
+<!--      <option value="histogram">直方图</option>-->
       <option value="pie">饼图</option>
       <option value="boxplot">箱线图</option>
     </select>
