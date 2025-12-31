@@ -8,9 +8,15 @@
     </div>
     <div class="control-group">
       <label>Y轴字段:</label>
-      <select v-model="yAxisColumn" @change="onConfigChange">
-        <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
-      </select>
+      <div class="y-axis-fields">
+        <div v-for="(field, index) in yAxisColumns" :key="index" class="y-axis-field">
+          <select v-model="yAxisColumns[index]" @change="onConfigChange">
+            <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
+          </select>
+          <button v-if="yAxisColumns.length > 1" @click="removeYAxisField(index)" class="remove-field-btn">×</button>
+        </div>
+        <button @click="addYAxisField" class="add-field-btn">+ 添加Y轴字段</button>
+      </div>
     </div>
     <!-- 图表配置按钮 -->
     <div class="control-group">
@@ -19,23 +25,11 @@
       </button>
     </div>
   </div>
-  <div class="chart-container">
-    <div v-if="!chartPath && !useBackendRendering" class="no-chart">
-      <p>请配置图表参数以生成图表</p>
-    </div>
-    <iframe 
-      v-else-if="chartPath" 
-      :src="chartPath" 
-      width="100%" 
-      height="100%" 
-      frameborder="0" 
-      @load="onChartLoaded"
-    ></iframe>
-    <div v-else-if="useBackendRendering && loading" class="loading">
-      <p>正在生成图表...</p>
-    </div>
-    <div v-else ref="chart" class="chart"></div>
-  </div>
+
+  <BackendChartResult
+    :chart-path="chartPath"
+    :loading="loading"
+  />
 
   <!-- 图表配置浮窗 -->
   <div v-if="showConfigPopup" class="config-popup-overlay" @click.self="showConfigPopup = false">
@@ -74,9 +68,6 @@
               <span>{{ getColorSchemeName(index) }}</span>
             </div>
           </div>
-        </div>
-
-        <div class="config-section">
           <h4>自定义颜色</h4>
           <div class="custom-color-picker">
             <label>柱体颜色:</label>
@@ -105,39 +96,77 @@
               <label>
                 <input
                   type="checkbox"
-                  v-model="chartStyles.horizontal"
+                  v-model="chartStyles.showLabel"
                   @change="applyStyleChanges"
                 />
-                横向柱状图
+                显示数据标签
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showLegend"
+                  @change="applyStyleChanges"
+                />
+                显示图例
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.stack"
+                  @change="applyStyleChanges"
+                />
+                堆叠显示
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showToolbox"
+                  @change="applyStyleChanges"
+                />
+                显示工具箱
               </label>
             </div>
           </div>
         </div>
         
         <div class="config-section">
-          <h4>渲染模式</h4>
-          <div class="render-mode-options">
-            <div class="style-option">
-              <label>
-                <input
-                  type="radio"
-                  v-model="renderMode"
-                  value="frontend"
-                  @change="switchRenderMode"
-                />
-                前端渲染
-              </label>
+          <h4>坐标轴设置</h4>
+          <div class="axis-options">
+            <div class="axis-option">
+              <label>X轴标签旋转角度:</label>
+              <input
+                type="range"
+                v-model="chartStyles.xAxisLabelRotate"
+                @change="applyStyleChanges"
+                min="0"
+                max="90"
+                step="5"
+              />
+              <span>{{ chartStyles.xAxisLabelRotate }}°</span>
             </div>
-            <div class="style-option">
-              <label>
-                <input
-                  type="radio"
-                  v-model="renderMode"
-                  value="backend"
-                  @change="switchRenderMode"
-                />
-                后端渲染
-              </label>
+            <div class="axis-option">
+              <label>Y轴最小值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.yAxisMin"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
+            </div>
+            <div class="axis-option">
+              <label>Y轴最大值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.yAxisMax"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
             </div>
           </div>
         </div>
@@ -147,10 +176,11 @@
 </template>
 
 <script>
-import * as echarts from 'echarts';
+import BackendChartResult from "@/components/Charts/BackendChartResult.vue";
 
 export default {
   name: "BarChartResult",
+  components: {BackendChartResult},
   props: {
     datasetDetails: {
       type: Object,
@@ -159,11 +189,9 @@ export default {
   },
   data() {
     return {
-      chart: null,
       xAxisColumn: '',
-      yAxisColumn: '',
+      yAxisColumns: [''],
       chartPath: null,
-      useBackendRendering: false,
       loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
@@ -179,10 +207,14 @@ export default {
       },
       chartStyles: {
         showGrid: true,
-        horizontal: false
-      },
-      renderMode: 'frontend', // 'frontend' 或 'backend'
-      resizeObserver: null
+        showLabel: false,
+        showLegend: true,
+        xAxisLabelRotate: 0,
+        yAxisMin: null,
+        yAxisMax: null,
+        stack: false,
+        showToolbox: true
+      }
     };
   },
   computed: {
@@ -210,93 +242,27 @@ export default {
   watch: {
     datasetDetails: {
       handler(newVal) {
-        if (newVal && newVal.data && newVal.data.length > 0) {
-          this.initChart();
+        if (newVal && newVal.column_info) {
+          this.generateBackendChart();
         }
       },
       deep: true,
       immediate: true
-    },
-    xAxisColumn() {
-      this.onConfigChange();
-    },
-    yAxisColumn() {
-      this.onConfigChange();
     }
   },
   methods: {
-    initChart() {
-      // 确保DOM已经更新
-      this.$nextTick(() => {
-        if (!this.$refs.chart) {
-          console.warn('Chart container not found');
-          return;
-        }
-
-        // 如果已有图表实例，先销毁
-        if (this.chart) {
-          this.chart.dispose();
-          this.chart = null;
-        }
-
-        // 初始化ECharts实例
-        this.chart = echarts.init(this.$refs.chart);
-        
-        // 添加resize监听
-        this.setupResizeObserver();
-
-        // 设置默认字段
-        if (!this.xAxisColumn && !this.yAxisColumn) {
-          // X轴可以选择任何支持的类型
-          if (this.availableColumns.length >= 1) {
-            this.xAxisColumn = this.availableColumns[0];
-          }
-          
-          // Y轴优先选择数值型列
-          if (this.numericColumns.length >= 1) {
-            this.yAxisColumn = this.numericColumns[0];
-          } else if (this.availableColumns.length >= 2) {
-            this.yAxisColumn = this.availableColumns[1];
-          }
-        }
-
-        this.$nextTick(() => {
-          if (this.renderMode === 'frontend') {
-            this.drawChart();
-          } else {
-            this.generateBackendChart();
-          }
-        });
-      });
+    addYAxisField() {
+      this.yAxisColumns.push('');
+      this.onConfigChange();
     },
     
-    setupResizeObserver() {
-      // 清除之前的监听器
-      if (this.resizeObserver) {
-        this.resizeObserver.disconnect();
-      }
-      
-      // 创建新的ResizeObserver
-      this.resizeObserver = new ResizeObserver(() => {
-        if (this.chart) {
-          this.chart.resize();
-        }
-      });
-      
-      // 监听图表容器变化
-      if (this.$refs.chart) {
-        this.resizeObserver.observe(this.$refs.chart);
-      }
+    removeYAxisField(index) {
+      this.yAxisColumns.splice(index, 1);
+      this.onConfigChange();
     },
     
     onConfigChange() {
-      // 当配置改变时，发送事件到父组件
-      this.$emit('chart-config-updated', this.getChartConfig());
-      
-      // 根据渲染模式决定如何处理
-      if (this.renderMode === 'frontend') {
-        this.drawChart();
-      } else {
+      if (this.xAxisColumn.length > 0 && this.yAxisColumns.length > 0){
         this.generateBackendChart();
       }
     },
@@ -306,13 +272,12 @@ export default {
       return {
         data_id: this.datasetDetails.data_id || 'default',
         x_axis_column: this.xAxisColumn,
-        y_axis_column: this.yAxisColumn,
+        y_axis_columns: this.yAxisColumns.filter(col => col !== ''),
         chart_title: this.chartTitle,
         chart_styles: this.chartStyles,
         color_scheme: this.currentColorScheme,
         custom_colors: this.customColors,
-        chart_type: 'bar',
-        render_mode: this.renderMode
+        chart_type: 'bar'
       };
     },
     
@@ -340,21 +305,10 @@ export default {
     onTitleChange() {
       this.onConfigChange();
     },
-    
-    onChartLoaded() {
-      // 图表加载完成后的回调
-      console.log('图表加载完成');
-    },
-    
     // 后端图表生成方法
     async generateBackendChart() {
-      if (this.renderMode !== 'backend') {
-        return;
-      }
-      
       try {
         this.loading = true;
-        this.useBackendRendering = true;
         this.chartPath = null;
         
         const response = await fetch('/charts/generate', {
@@ -372,244 +326,27 @@ export default {
         const result = await response.json();
         if (result.success) {
           this.chartPath = result.chart_path;
-          // 如果前端图表实例存在，销毁它
-          if (this.chart) {
-            this.chart.dispose();
-            this.chart = null;
-          }
         } else {
           console.error('生成图表失败:', result.error);
-          this.useBackendRendering = false;
-          this.loading = false;
-          // 重新初始化前端图表
-          this.initChart();
         }
       } catch (error) {
         console.error('请求生成图表时出错:', error);
-        this.useBackendRendering = false;
-        this.loading = false;
-        // 重新初始化前端图表
-        this.initChart();
       } finally {
         this.loading = false;
       }
-    },
-    
-    // 前端图表绘制方法
-    drawChart() {
-      if (this.renderMode !== 'frontend') {
-        return;
-      }
-      
-      // 检查必要条件是否满足
-      if (!this.chart || !this.xAxisColumn || !this.yAxisColumn || 
-          !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
-        return;
-      }
-      
-      try {
-        // 直接从传入的数据中提取数据
-        const data = this.datasetDetails.data;
-        
-        // 提取X轴和Y轴数据
-        const xAxisData = data.map(row => row[this.xAxisColumn]);
-        const yAxisData = data.map(row => row[this.yAxisColumn]);
-        
-        // 根据X轴数据类型确定X轴类型
-        const xColumnType = this.datasetDetails.column_info[this.xAxisColumn]?.dtype || 'category';
-        const xAxisType = ['numeric', 'datetime'].includes(xColumnType) ? 'value' : 'category';
-        
-        // Y轴通常应该是数值型的
-        const yColumnType = this.datasetDetails.column_info[this.yAxisColumn]?.dtype || 'value';
-        const yAxisType = yColumnType === 'datetime' ? 'time' : 
-                         yColumnType === 'numeric' ? 'value' : 'category';
-        
-        // 准备系列数据
-        let seriesData;
-        if (xAxisType === 'category') {
-          seriesData = yAxisData;
-        } else {
-          // 对于数值型或时间型X轴，需要组合XY数据
-          seriesData = data.map((row, index) => [row[this.xAxisColumn], row[this.yAxisColumn]]);
-        }
-        
-        const option = {
-          title: {
-            text: this.chartTitle,
-            left: 'center',
-            textStyle: {
-              color: '#666',
-              fontSize: 16
-            }
-          },
-          tooltip: {
-            trigger: 'axis',
-            axisPointer: {
-              type: 'shadow'
-            },
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            textStyle: {
-              color: '#fff'
-            },
-          },
-          toolbox: {
-            show: true,
-            feature: {
-              dataView: { readOnly: false },
-              restore: {},
-              saveAsImage: {}
-            }
-          },
-          grid: {
-            top: '20%',
-            bottom: '15%',
-            left: '10%',
-            right: '10%',
-            containLabel: true
-          },
-          xAxis: {
-            type: this.chartStyles.horizontal ? yAxisType : xAxisType,
-            name: this.chartStyles.horizontal ? this.yAxisColumn : this.xAxisColumn,
-            data: (!this.chartStyles.horizontal && xAxisType === 'category') ? xAxisData : undefined,
-            axisLabel: {
-              color: '#666',
-              rotate: 0,
-              interval: 'auto'
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            boundaryGap: true,
-            min: 'dataMin',
-            max: 'dataMax'
-          },
-          yAxis: {
-            type: this.chartStyles.horizontal ? xAxisType : yAxisType,
-            name: this.chartStyles.horizontal ? this.xAxisColumn : this.yAxisColumn,
-            data: (this.chartStyles.horizontal && xAxisType === 'category') ? xAxisData : undefined,
-            axisLabel: {
-              color: '#666',
-              formatter: yAxisType === 'value' ? '{value}' : undefined
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            splitLine: {
-              lineStyle: {
-                color: 'rgba(0, 0, 0, 0.05)'
-              }
-            }
-          },
-          series: [{
-            name: this.yAxisColumn,
-            type: 'bar',
-            data: this.chartStyles.horizontal ? seriesData.map(item => [item[1], item[0]]) : seriesData,
-            itemStyle: {
-              color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.bar
-            },
-            barWidth: '60%',
-            emphasis: {
-              focus: 'series'
-            }
-          }],
-          dataZoom: [
-            {
-              type: 'inside',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-              zoomOnMouseWheel: true,
-              moveOnMouseMove: true
-            },
-            {
-              type: 'slider',
-              xAxisIndex: [0],
-              yAxisIndex: false,
-              start: 0,
-              end: 100
-            }
-          ]
-        };
-        
-        // 如果不显示网格线
-        if (!this.chartStyles.showGrid) {
-          option.xAxis.splitLine = { show: false };
-          option.yAxis.splitLine = { show: false };
-        }
-
-        // 先清空图表再重新设置选项，确保坐标系正确初始化
-        this.chart.clear();
-        this.chart.setOption(option, true);
-
-      } catch (error) {
-        console.error('绘制图表失败:', error);
-      }
-    },
-    
-    switchRenderMode() {
-      if (this.renderMode === 'backend') {
-        this.generateBackendChart();
-      } else {
-        this.drawChart();
-      }
-      this.onConfigChange();
     }
   },
   
   mounted() {
-    this.initChart();
-  },
-  
-  beforeUnmount() {
-    // 组件销毁前清理资源
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-      this.resizeObserver = null;
-    }
-    
-    if (this.chart) {
-      this.chart.dispose();
-      this.chart = null;
-    }
+    this.xAxisColumn = this.availableColumns[0];
+    this.yAxisColumns = [this.numericColumns[0]];
+    // 初始化后端图表生成
+    this.generateBackendChart();
   }
 };
 </script>
 
 <style scoped>
-
-.chart-container {
-  width: 100%;
-  height: 500px;
-  margin-bottom: 20px;
-}
-
-.no-chart {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-  color: #909399;
-  font-size: 14px;
-}
-
-.loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100%;
-  width: 100%;
-  color: #666;
-  font-size: 16px;
-}
-
-.chart {
-  width: 100%;
-  height: 100%;
-}
 
 .controls {
   display: flex;
@@ -664,9 +401,9 @@ export default {
 
 .config-popup {
   background-color: white;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 600px;
   max-width: 90vw;
   max-height: 90vh;
   display: flex;
@@ -674,7 +411,7 @@ export default {
 }
 
 .popup-header {
-  padding: 12px 15px;
+  padding: 16px 20px;
   background-color: #f5f7fa;
   display: flex;
   justify-content: space-between;
@@ -682,6 +419,8 @@ export default {
   font-weight: bold;
   color: #606266;
   border-bottom: 1px solid #dcdfe6;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 }
 
 .close-btn {
@@ -697,52 +436,74 @@ export default {
 }
 
 .popup-content {
-  padding: 15px;
+  padding: 20px;
   overflow-y: auto;
 }
 
 .config-section {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #e4e7ed;
 }
 
 .config-section:last-child {
   margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .config-section h4 {
-  margin: 0 0 10px 0;
-  color: #606266;
-  font-size: 14px;
+  margin: 5px 0 5px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.config-section h4::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: #409eff;
+  margin-right: 10px;
+  border-radius: 2px;
 }
 
 .color-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .color-scheme-option {
   cursor: pointer;
   border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 8px;
-  width: 100px;
+  border-radius: 6px;
+  padding: 12px 8px;
   text-align: center;
   transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .color-scheme-option:hover,
 .color-scheme-option.active {
   border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  box-shadow: 0 4px 8px rgba(64, 158, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .color-preview {
   display: flex;
-  height: 20px;
-  margin-bottom: 5px;
-  border-radius: 2px;
+  height: 24px;
+  margin-bottom: 8px;
+  border-radius: 3px;
   overflow: hidden;
+  width: 100%;
 }
 
 .color-item {
@@ -752,18 +513,20 @@ export default {
 .custom-color-picker {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
+  margin-top: 10px;
 }
 
 .custom-color-picker label {
   font-size: 14px;
   color: #606266;
+  min-width: 80px;
 }
 
 .style-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin-top: 10px;
 }
 
 .style-option label {
@@ -773,12 +536,81 @@ export default {
   font-size: 14px;
   color: #606266;
   cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
 
-.render-mode-options {
+.style-option label:hover {
+  background-color: #f5f7fa;
+}
+
+.axis-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.axis-option {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
+}
+
+.axis-option label {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 2px;
+}
+
+.axis-option input[type="range"] {
+  width: 100%;
+}
+
+.axis-option input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.y-axis-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.y-axis-field {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.remove-field-btn {
+  background-color: #f56565;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.add-field-btn {
+  margin-top: 5px;
+  padding: 4px 8px;
+  background-color: #409eff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-start;
 }
 
 .title-input input {
