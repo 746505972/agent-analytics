@@ -94,6 +94,12 @@ project/
 
 ## 快速开始
 
+### 现已推出ELectron本地测试版
+
+https://github.com/746505972/agent-analytics/releases/latest
+
+---
+
 ### 后端启动
 
 1. 安装依赖：

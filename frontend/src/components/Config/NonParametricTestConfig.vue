@@ -313,36 +313,32 @@ export default {
 }
 
 .method-description {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
+  background-color: #f5f5f5;
   border-left: 4px solid #409eff;
+  padding: 10px;
+  margin-bottom: 15px;
+  font-size: 14px;
+  color: #666;
 }
 
 .method-description h4 {
   margin-top: 0;
+  margin-bottom: 10px;
   color: #303133;
 }
 
 .method-description p {
-  line-height: 1.6;
-  color: #606266;
+  margin: 0 0 5px 0;
 }
 
-.formula {
-  font-family: 'Courier New', monospace;
-  background-color: #e6f7ff;
-  padding: 2px 4px;
-  border-radius: 3px;
-  font-size: 14px;
-  color: #1890ff;
+.method-description .formula {
+  font-family: 'Cambria Math', 'Arial Unicode MS', serif;
+  margin: 5px 0;
 }
 
-.formula-desc {
+.method-description .formula-desc {
   font-size: 12px;
-  color: #8c8c8c;
-  margin-top: 5px;
-  font-style: italic;
+  color: #888;
+  margin: 0;
 }
 </style>
