@@ -2,7 +2,7 @@
   <div class="controls">
     <div class="control-group">
       <label>选择字段:</label>
-      <select v-model="selectedColumn" @change="drawChart">
+      <select v-model="selectedColumn" @change="onConfigChange">
         <option v-for="col in numericColumns" :key="col" :value="col">{{ col }}</option>
       </select>
     </div>
@@ -12,10 +12,10 @@
         type="range" 
         min="5" 
         max="50" 
-        v-model="binCount" 
-        @change="drawChart"
+        v-model="chartStyles.bin_count"
+        @change="onConfigChange"
       />
-      <span>{{ binCount }}</span>
+      <span>{{ chartStyles.bin_count }}</span>
     </div>
     <!-- 图表配置按钮 -->
     <div class="control-group">
@@ -24,9 +24,11 @@
       </button>
     </div>
   </div>
-  <div class="chart-container">
-    <div ref="chart" class="chart"></div>
-  </div>
+
+  <BackendChartResult
+    :chart-path="chartPath"
+    :loading="loading"
+  />
 
   <!-- 图表配置浮窗 -->
   <div v-if="showConfigPopup" class="config-popup-overlay" @click.self="showConfigPopup = false">
@@ -65,9 +67,6 @@
               <span>{{ getColorSchemeName(index) }}</span>
             </div>
           </div>
-        </div>
-
-        <div class="config-section">
           <h4>自定义颜色</h4>
           <div class="custom-color-picker">
             <label>柱体颜色:</label>
@@ -93,14 +92,70 @@
               </label>
             </div>
             <div class="style-option">
-<!--              <label>-->
-<!--                <input-->
-<!--                  type="checkbox"-->
-<!--                  v-model="chartStyles.showDensity"-->
-<!--                  @change="applyStyleChanges"-->
-<!--                />-->
-<!--                显示密度曲线-->
-<!--              </label>-->
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showLabel"
+                  @change="applyStyleChanges"
+                />
+                显示数据标签
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showLegend"
+                  @change="applyStyleChanges"
+                />
+                显示图例
+              </label>
+            </div>
+            <div class="style-option">
+              <label>
+                <input
+                  type="checkbox"
+                  v-model="chartStyles.showToolbox"
+                  @change="applyStyleChanges"
+                />
+                显示工具箱
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="config-section">
+          <h4>坐标轴设置</h4>
+          <div class="axis-options">
+            <div class="axis-option">
+              <label>X轴标签旋转角度:</label>
+              <input
+                type="range"
+                v-model="chartStyles.xAxisLabelRotate"
+                @change="applyStyleChanges"
+                min="0"
+                max="90"
+                step="5"
+              />
+              <span>{{ chartStyles.xAxisLabelRotate }}°</span>
+            </div>
+            <div class="axis-option">
+              <label>Y轴最小值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.yAxisMin"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
+            </div>
+            <div class="axis-option">
+              <label>Y轴最大值:</label>
+              <input
+                type="number"
+                v-model="chartStyles.yAxisMax"
+                @change="applyStyleChanges"
+                placeholder="自动"
+              />
             </div>
           </div>
         </div>
@@ -110,10 +165,11 @@
 </template>
 
 <script>
-import * as echarts from 'echarts';
+import BackendChartResult from "@/components/Charts/BackendChartResult.vue";
 
 export default {
   name: "HistogramChartResult",
+  components: {BackendChartResult},
   props: {
     datasetDetails: {
       type: Object,
@@ -122,10 +178,9 @@ export default {
   },
   data() {
     return {
-      chart: null,
       selectedColumn: '',
-      binCount: 20,
-      binCountWatcher: 0,
+      chartPath: null,
+      loading: false,
       showConfigPopup: false,
       currentColorScheme: 0,
       chartTitle: '直方图',
@@ -140,9 +195,14 @@ export default {
       },
       chartStyles: {
         showGrid: true,
-        showDensity: false
-      },
-      resizeObserver: null
+        showLabel: false,
+        showLegend: true,
+        xAxisLabelRotate: 0,
+        yAxisMin: null,
+        yAxisMax: null,
+        showToolbox: true,
+        bin_count: 20  // 添加分箱数配置
+      }
     };
   },
   computed: {
@@ -159,331 +219,38 @@ export default {
   watch: {
     datasetDetails: {
       handler(newVal) {
-        if (newVal && newVal.data && newVal.data.length > 0) {
-          this.initChart();
+        if (newVal && newVal.column_info) {
+          this.generateBackendChart();
         }
       },
       deep: true,
       immediate: true
-    },
-    selectedColumn() {
-      this.drawChart();
-    },
-    binCount: {
-      handler() {
-        this.drawChart();
-      }
     }
   },
   methods: {
-    initChart() {
-      // 确保DOM已经更新
-      this.$nextTick(() => {
-        if (!this.$refs.chart) {
-          console.warn('Chart container not found');
-          return;
-        }
-
-        // 如果已有图表实例，先销毁
-        if (this.chart) {
-          this.chart.dispose();
-          this.chart = null;
-        }
-
-        // 初始化ECharts实例
-        this.chart = echarts.init(this.$refs.chart);
-        
-        // 添加resize监听
-        this.setupResizeObserver();
-
-        // 设置默认字段
-        if (!this.selectedColumn && this.numericColumns.length > 0) {
-          this.selectedColumn = this.numericColumns[0];
-        }
-
-        this.$nextTick(() => {
-          this.drawChart();
-        });
-      });
-    },
-    
-    setupResizeObserver() {
-      // 清除之前的监听器
-      if (this.resizeObserver) {
-        this.resizeObserver.disconnect();
-      }
-      
-      // 创建新的ResizeObserver
-      this.resizeObserver = new ResizeObserver(() => {
-        if (this.chart) {
-          this.chart.resize();
-        }
-      });
-      
-      // 监听图表容器变化
-      if (this.$refs.chart) {
-        this.resizeObserver.observe(this.$refs.chart);
+    onConfigChange() {
+      if (this.selectedColumn) {
+        this.generateBackendChart();
       }
     },
     
-    calculateHistogramData() {
-      if (!this.selectedColumn || !this.datasetDetails || !this.datasetDetails.data) {
-        return { bins: [], counts: [] };
-      }
-      
-      // 提取选定列的数据
-      const rawData = this.datasetDetails.data
-        .map(row => row[this.selectedColumn]);
-      
-      // 过滤掉无效值并转换为数字
-      const data = rawData
-        .filter(val => val !== null && val !== undefined && val !== '' && !isNaN(parseFloat(val)))
-        .map(val => parseFloat(val));
-      
-      if (data.length === 0) {
-        return { bins: [], counts: [] };
-      }
-      
-      // 计算最小值和最大值
-      const min = Math.min(...data);
-      const max = Math.max(...data);
-      
-      // 如果所有值都相同
-      if (min === max) {
-        return {
-          bins: [min, min],
-          counts: [data.length]
-        };
-      }
-      
-      // 确保分箱数不超过数据点数
-      const actualBinCount = Math.min(this.binCount, data.length);
-      
-      // 计算分箱
-      const binWidth = (max - min) / actualBinCount;
-      const bins = [];
-      const counts = new Array(actualBinCount).fill(0);
-      
-      // 创建分箱边界
-      for (let i = 0; i <= actualBinCount; i++) {
-        bins.push(min + i * binWidth);
-      }
-      
-      // 统计每个分箱中的数据数量
-      data.forEach(value => {
-        // 特殊处理最大值，确保它被分配到最后一个分箱
-        let binIndex;
-        if (value === max) {
-          binIndex = actualBinCount - 1;
-        } else {
-          binIndex = Math.min(Math.floor((value - min) / binWidth), actualBinCount - 1);
-        }
-        counts[binIndex]++;
-      });
-      
-      return { bins, counts };
-    },
-    
-    drawChart() {
-      // 检查必要条件是否满足
-      if (!this.chart || !this.selectedColumn || 
-          !this.datasetDetails || !this.datasetDetails.data || this.datasetDetails.data.length === 0) {
-        return;
-      }
-      
-      try {
-        const histData = this.calculateHistogramData();
-        
-        if (histData.bins.length === 0) {
-          return;
-        }
-        
-        // 准备直方图系列数据
-        const seriesData = histData.bins.slice(0, -1).map((binStart, index) => {
-          return {
-            name: binStart.toFixed(2) + ' - ' + histData.bins[index + 1].toFixed(2),
-            value: histData.counts[index] || 0
-          };
-        });
-        
-        // 准备密度曲线数据（如果启用）
-        let densitySeries = [];
-        if (this.chartStyles.showDensity) {
-          // 计算密度数据 - 简化的核密度估计
-          const totalCount = histData.counts.reduce((sum, count) => sum + count, 0);
-          const binWidth = histData.bins.length > 1 ? (histData.bins[1] - histData.bins[0]) : 1;
-          
-          const densityData = histData.bins.slice(0, -1).map((binStart, index) => {
-            // 计算概率密度 = 频率 / (总数量 * 分箱宽度)
-            const density = totalCount > 0 && binWidth > 0 ? 
-              histData.counts[index] / (totalCount * binWidth) : 0;
-            // 使用分箱中点作为X坐标
-            const xCoord = binStart + binWidth / 2;
-            return [xCoord, density];
-          });
-          
-          densitySeries = [{
-            name: '密度曲线',
-            type: 'line',
-            smooth: true,
-            data: densityData,
-            yAxisIndex: 1,
-            itemStyle: {
-              color: this.colorSchemes[this.currentColorScheme][1] || '#ff7f0e'
-            },
-            lineStyle: {
-              width: 2
-            },
-            emphasis: {
-              focus: 'series'
-            }
-          }];
-        }
-        
-        const option = {
-          title: {
-            text: this.chartTitle,
-            left: 'center',
-            textStyle: {
-              color: '#666',
-              fontSize: 16
-            }
-          },
-          tooltip: {
-            trigger: 'item',
-            axisPointer: {
-              type: 'shadow'
-            },
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            textStyle: {
-              color: '#fff'
-            },
-            formatter: (params) => {
-              // 如果是直方图系列
-              if (params.seriesName === '频率') {
-                if (!params.data || params.data.value === undefined) {
-                  return `${params.name}<br/>计数: 0`;
-                }
-                return `${params.name}<br/>计数: ${params.data.value}`;
-              } 
-              // 如果是密度曲线系列
-              else if (params.seriesName === '密度曲线') {
-                if (!params.data || params.data[1] === undefined) {
-                  return `${params.name}<br/>密度: 0`;
-                }
-                return `${params.axisValue !== undefined ? params.axisValue.toFixed(2) : params.name}<br/>密度: ${params.data[1].toExponential(2)}`;
-              }
-              return params.name;
-            }
-          },
-          toolbox: {
-            show: true,
-            feature: {
-              dataView: { readOnly: false },
-              restore: {},
-              saveAsImage: {}
-            }
-          },
-          grid: {
-            top: '20%',
-            bottom: '15%',
-            left: '10%',
-            right: '10%',
-            containLabel: true
-          },
-          xAxis: {
-            type: 'category',
-            data: histData.bins.slice(0, -1).map((bin, index) => 
-              bin.toFixed(2) + ' - ' + histData.bins[index + 1].toFixed(2)),
-            axisLabel: {
-              color: '#666',
-              rotate: 45
-            },
-            axisLine: {
-              lineStyle: {
-                color: '#ccc'
-              }
-            },
-            name: this.selectedColumn,
-            nameLocation: 'middle',
-            nameGap: 30
-          },
-          yAxis: [
-            {
-              type: 'value',
-              name: '频率',
-              axisLabel: {
-                color: '#666'
-              },
-              axisLine: {
-                lineStyle: {
-                  color: '#ccc'
-                }
-              },
-              splitLine: {
-                lineStyle: {
-                  color: 'rgba(0, 0, 0, 0.05)'
-                }
-              }
-            },
-            {
-              type: 'value',
-              name: '密度',
-              position: 'right',
-              axisLabel: {
-                color: '#666',
-                formatter: (value) => {
-                  // 格式化密度值，保留合适的位数
-                  return value.toExponential(2);
-                }
-              },
-              axisLine: {
-                lineStyle: {
-                  color: '#ccc'
-                }
-              },
-              splitLine: {
-                show: false
-              }
-            }
-          ],
-          series: [
-            {
-              name: '频率',
-              type: 'bar',
-              data: seriesData,
-              itemStyle: {
-                color: this.colorSchemes[this.currentColorScheme][0] || this.customColors.histogram
-              },
-              barWidth: '90%',
-              emphasis: {
-                focus: 'series'
-              }
-            },
-            ...densitySeries
-          ]
-        };
-        
-        // 如果不显示网格线
-        if (!this.chartStyles.showGrid) {
-          option.xAxis.splitLine = { show: false };
-          option.yAxis[0].splitLine = { show: false };
-        }
-
-        // 先清空图表再重新设置选项，确保坐标系正确初始化
-        this.chart.clear();
-        this.chart.setOption(option, true);
-
-      } catch (error) {
-        console.error('绘制图表失败:', error);
-      }
+    getChartConfig() {
+      // 返回当前图表配置
+      return {
+        data_id: this.datasetDetails.data_id || 'default',
+        x_axis_column: this.selectedColumn,
+        y_axis_columns: [], // 直方图不需要Y轴字段
+        chart_title: this.chartTitle,
+        chart_styles: this.chartStyles,
+        color_scheme: this.currentColorScheme,
+        custom_colors: this.customColors,
+        chart_type: 'histogram',
+      };
     },
     
     selectColorScheme(index) {
       this.currentColorScheme = index;
-      this.$nextTick(() => {
-        this.drawChart();
-      });
+      this.onConfigChange();
     },
     
     getColorSchemeName(index) {
@@ -495,49 +262,57 @@ export default {
       // 使用自定义颜色更新配色方案
       this.colorSchemes[0][0] = this.customColors.histogram;
       this.currentColorScheme = 0; // 切换到自定义配色方案
-      this.drawChart();
+      this.onConfigChange();
     },
     
     applyStyleChanges() {
-      this.drawChart();
+      this.onConfigChange();
     },
 
     onTitleChange() {
-      this.drawChart();
+      this.onConfigChange();
+    },
+    // 后端图表生成方法
+    async generateBackendChart() {
+      try {
+        this.loading = true;
+        this.chartPath = null;
+        
+        const response = await fetch('/charts/generate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ...this.getChartConfig(),
+            chart_type: 'histogram'
+          }),
+          credentials: 'include'
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          this.chartPath = result.chart_path;
+        } else {
+          console.error('生成图表失败:', result.error);
+        }
+      } catch (error) {
+        console.error('请求生成图表时出错:', error);
+      } finally {
+        this.loading = false;
+      }
     }
   },
   
   mounted() {
-    this.initChart();
-  },
-  
-  beforeUnmount() {
-    // 组件销毁前清理资源
-    if (this.resizeObserver) {
-      this.resizeObserver.disconnect();
-      this.resizeObserver = null;
-    }
-    
-    if (this.chart) {
-      this.chart.dispose();
-      this.chart = null;
-    }
+    this.selectedColumn = this.numericColumns[0];
+    // 初始化后端图表生成
+    this.generateBackendChart();
   }
 };
 </script>
 
 <style scoped>
-.chart-container {
-  width: 100%;
-  height: 500px;
-  margin-bottom: 20px;
-}
-
-.chart {
-  width: 100%;
-  height: 100%;
-}
-
 .controls {
   display: flex;
   gap: 20px;
@@ -596,9 +371,9 @@ export default {
 
 .config-popup {
   background-color: white;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  width: 500px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  width: 600px;
   max-width: 90vw;
   max-height: 90vh;
   display: flex;
@@ -606,7 +381,7 @@ export default {
 }
 
 .popup-header {
-  padding: 12px 15px;
+  padding: 16px 20px;
   background-color: #f5f7fa;
   display: flex;
   justify-content: space-between;
@@ -614,6 +389,8 @@ export default {
   font-weight: bold;
   color: #606266;
   border-bottom: 1px solid #dcdfe6;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 }
 
 .close-btn {
@@ -629,52 +406,74 @@ export default {
 }
 
 .popup-content {
-  padding: 15px;
+  padding: 20px;
   overflow-y: auto;
 }
 
 .config-section {
-  margin-bottom: 20px;
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px dashed #e4e7ed;
 }
 
 .config-section:last-child {
   margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .config-section h4 {
-  margin: 0 0 10px 0;
-  color: #606266;
-  font-size: 14px;
+  margin: 5px 0 5px 0;
+  color: #303133;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+.config-section h4::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: #409eff;
+  margin-right: 10px;
+  border-radius: 2px;
 }
 
 .color-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
 }
 
 .color-scheme-option {
   cursor: pointer;
   border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  padding: 8px;
-  width: 100px;
+  border-radius: 6px;
+  padding: 12px 8px;
   text-align: center;
   transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .color-scheme-option:hover,
 .color-scheme-option.active {
   border-color: #409eff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+  box-shadow: 0 4px 8px rgba(64, 158, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .color-preview {
   display: flex;
-  height: 20px;
-  margin-bottom: 5px;
-  border-radius: 2px;
+  height: 24px;
+  margin-bottom: 8px;
+  border-radius: 3px;
   overflow: hidden;
+  width: 100%;
 }
 
 .color-item {
@@ -684,18 +483,20 @@ export default {
 .custom-color-picker {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 15px;
+  margin-top: 10px;
 }
 
 .custom-color-picker label {
   font-size: 14px;
   color: #606266;
+  min-width: 80px;
 }
 
 .style-options {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  margin-top: 10px;
 }
 
 .style-option label {
@@ -705,7 +506,46 @@ export default {
   font-size: 14px;
   color: #606266;
   cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
+
+.style-option label:hover {
+  background-color: #f5f7fa;
+}
+
+.axis-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.axis-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.axis-option label {
+  font-size: 14px;
+  color: #606266;
+  margin-bottom: 2px;
+}
+
+.axis-option input[type="range"] {
+  width: 100%;
+}
+
+.axis-option input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
 .title-input input {
   width: 100%;
   padding: 8px 12px;

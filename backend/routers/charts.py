@@ -59,7 +59,9 @@ class ChartConfig(BaseModel):
         "xAxisMax": None,    # X轴最大值
         "showValue": False,  # 是否显示数值标签,没用了
         # 饼图特定配置
-        "donutStyle": False  # 是否使用环形图样式
+        "donutStyle": False,  # 是否使用环形图样式
+        # 箱线图特定配置
+        'bin_count': 20
     }
     color_scheme: int = 0
     custom_colors: Dict[str, str] = {"line": "#5470c6", "bar": "#5470c6", "scatter": "#5470c6"}
@@ -92,7 +94,7 @@ async def generate_chart(request: Request, config: ChartConfig):
             )
         
         # 对于饼图，不需要Y轴字段
-        if config.chart_type != 'pie':
+        if config.chart_type not in ['pie','histogram']:
             if not valid_y_axis_columns:
                 return JSONResponse(
                     status_code=400,
@@ -117,8 +119,8 @@ async def generate_chart(request: Request, config: ChartConfig):
             chart = create_scatter_chart(df, config, valid_y_axis_columns)
         elif config.chart_type == 'pie':
             chart = create_pie_chart(df, config)
-        # elif config.chart_type == 'histogram':
-        #     chart = create_histogram_chart(df, config, valid_y_axis_columns)
+        elif config.chart_type == 'histogram':
+            chart = create_histogram_chart(df, config)
         elif config.chart_type == 'boxplot':
             chart = create_boxplot_chart(df, config, valid_y_axis_columns)
         else:
@@ -358,6 +360,119 @@ def create_pie_chart(df, config):
 
     return pie
 
+
+def create_histogram_chart(df, config):
+    """创建直方图 - 使用柱状图实现"""
+    # 获取颜色方案
+    colors = color_schemes[config.color_scheme % len(color_schemes)]
+
+    # 选择要绘制的列数据
+    column_data = df[config.x_axis_column].tolist()
+    
+    # 过滤掉无效值并转换为数字
+    numeric_data = []
+    for val in column_data:
+        try:
+            num_val = float(val)
+            if not (num_val != num_val):  # 检查NaN
+                numeric_data.append(num_val)
+        except (TypeError, ValueError):
+            continue
+    
+    if len(numeric_data) == 0:
+        # 如果没有有效数据，创建空图表
+        bar = Bar(init_opts=opts.InitOpts(theme=ThemeType.WHITE, width="100%", height="500px"))
+        bar.set_global_opts(
+            title_opts=opts.TitleOpts(title=config.chart_title),
+            tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="shadow"),
+            legend_opts=opts.LegendOpts(is_show=config.chart_styles.get("showLegend", True)),
+        )
+        return bar
+
+    # 计算最小值和最大值
+    min_val = min(numeric_data)
+    max_val = max(numeric_data)
+    
+    # 如果所有值都相同
+    if min_val == max_val:
+        # 创建只有一个分箱的直方图
+        bins = [min_val, min_val]
+        counts = [len(numeric_data)]
+        x_axis_labels = [f"{min_val:.2f} - {min_val:.2f}"]
+    else:
+        # 确定分箱数 - 从配置中获取或使用默认值
+        bin_count = int(config.chart_styles.get('bin_count', 20))  # 默认20个分箱
+        logger.info(f"Using bin_count: {bin_count}")
+        bin_count = max(5, min(bin_count, 50))  # 限制在5-50之间
+        
+        # 计算分箱
+        bin_width = (max_val - min_val) / bin_count
+        bins = []
+        counts = [0] * bin_count
+        
+        # 创建分箱边界
+        for i in range(bin_count + 1):
+            bins.append(min_val + i * bin_width)
+        
+        # 统计每个分箱中的数据数量
+        for value in numeric_data:
+            # 特殊处理最大值，确保它被分配到最后一个分箱
+            if value == max_val:
+                bin_index = bin_count - 1
+            else:
+                bin_index = min(int((value - min_val) / bin_width), bin_count - 1)
+            counts[bin_index] += 1
+        
+        # 创建X轴标签（分箱范围）
+        x_axis_labels = []
+        for i in range(len(bins) - 1):
+            x_axis_labels.append(f"{bins[i]:.2f} - {bins[i+1]:.2f}")
+
+    # 创建柱状图实例来模拟直方图
+    bar = Bar(init_opts=opts.InitOpts(theme=ThemeType.WHITE, width="100%", height="500px"))
+    
+    # 设置全局配置
+    bar.set_global_opts(
+        title_opts=opts.TitleOpts(title=config.chart_title),
+        tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="shadow"),
+        legend_opts=opts.LegendOpts(is_show=config.chart_styles.get("showLegend", True)),
+        toolbox_opts=opts.ToolboxOpts(is_show=config.chart_styles.get("showToolbox", True), 
+                                    feature=opts.ToolBoxFeatureOpts(
+                                        save_as_image=opts.ToolBoxFeatureSaveAsImageOpts(is_show=True)
+                                    )),
+        xaxis_opts=opts.AxisOpts(
+            type_="category",
+            name=config.x_axis_column,
+            axislabel_opts=opts.LabelOpts(rotate=config.chart_styles.get("xAxisLabelRotate", 0)),
+            splitline_opts=opts.SplitLineOpts(is_show=config.chart_styles.get("showGrid", True))
+        ),
+        yaxis_opts=opts.AxisOpts(
+            type_="value",
+            name="频率",
+            min_=config.chart_styles.get("yAxisMin"),
+            max_=config.chart_styles.get("yAxisMax"),
+            splitline_opts=opts.SplitLineOpts(is_show=config.chart_styles.get("showGrid", True))
+        ),
+        # 禁用Y轴的datazoom功能以避免渲染错误
+        datazoom_opts=[
+            opts.DataZoomOpts(type_="inside", range_start=0, range_end=100, is_zoom_lock=False),
+            opts.DataZoomOpts(type_="slider", range_start=0, range_end=100),
+        ]
+    )
+
+    # 添加X轴数据
+    bar.add_xaxis(xaxis_data=x_axis_labels)
+
+    # 添加Y轴系列（频率）
+    color = colors[0] if len(colors) > 0 else config.custom_colors.get("bar", "#5470c6")
+    bar.add_yaxis(
+        series_name="频率",
+        y_axis=counts,
+        label_opts=opts.LabelOpts(is_show=config.chart_styles.get("showLabel", False)),
+        itemstyle_opts=opts.ItemStyleOpts(color=color),
+    )
+
+    return bar
 
 def create_boxplot_chart(df, config, y_axis_columns):
     """创建箱线图"""
