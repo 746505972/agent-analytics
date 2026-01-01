@@ -287,15 +287,16 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       }
       const requestBody = {
         column: selectedColumns[0],
+        // pyecharts词云图参数
+        shape: configs.wordcloudConfig.shape || "circle",
+        word_gap: configs.wordcloudConfig.wordGap || 20,
+        word_size_range: [configs.wordcloudConfig.minFontSize || 12, configs.wordcloudConfig.maxFontSize || 60],
+        rotate_step: configs.wordcloudConfig.rotateStep || 45,
+        width: configs.wordcloudConfig.width || 630,
+        height: configs.wordcloudConfig.height || 450,
         color: configs.wordcloudConfig.color || ['#FF274B'],
         max_words: configs.wordcloudConfig.maxWords || 200,
-        width: configs.wordcloudConfig.width || 1600,
-        height: configs.wordcloudConfig.height || 900,
-        background_color: configs.wordcloudConfig.backgroundColor || "#ffffff",
-        max_font_size: configs.wordcloudConfig.maxFontSize || 200,
-        min_font_size: configs.wordcloudConfig.minFontSize || 10,
-        stopwords: configs.wordcloudConfig.stopwords || [],
-        mask_shape: configs.wordcloudConfig.maskShape || "default"
+        stopwords: configs.wordcloudConfig.stopwords || []
       };
 
       const response = await fetch(`${backendBaseUrl}/nlp/${dataId}/wordcloud`, {

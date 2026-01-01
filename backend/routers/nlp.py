@@ -28,15 +28,15 @@ class WordCloudRequest(BaseModel):
     词云生成请求模型
     """
     column: str  # 需要生成词云的列名
-    stopwords: Optional[List[str]] = []  # 自定义停用词列表
-    max_words: Optional[int] = 200  # 最大词数
+    shape: Optional[str] = "circle"  # 词云形状
+    word_gap: Optional[int] = 20  # 单词间隔
+    word_size_range: Optional[List[int]] = [12, 60]  # 字体大小范围
+    rotate_step: Optional[int] = 45  # 旋转步长
     width: Optional[int] = 1600  # 图片宽度
     height: Optional[int] = 900  # 图片高度
-    background_color: Optional[str] = "white"  # 背景颜色
-    max_font_size: Optional[int] = 200  # 最大字体大小
-    min_font_size: Optional[int] = 10  # 最小字体大小
-    mask_shape: Optional[str] = "default"  # 蒙版形状
     color: Optional[List[str]] = ["#FF274B"]  # 词云颜色列表
+    max_words: Optional[int] = 200  # 最大词数
+    stopwords: Optional[List[str]] = []  # 自定义停用词列表
 
 
 class SentimentAnalysisRequest(BaseModel):
@@ -115,22 +115,22 @@ async def generate_wordcloud_endpoint(request: Request, data_id: str, body: Word
             file_path=file_path,
             column=body.column,
             session_id=session_id,
-            stopwords=body.stopwords,
-            max_words=body.max_words,
+            shape=body.shape,
+            word_gap=body.word_gap,
+            word_size_range=body.word_size_range,
+            rotate_step=body.rotate_step,
             width=body.width,
             height=body.height,
-            background_color=body.background_color,
-            max_font_size=body.max_font_size,
-            min_font_size=body.min_font_size,
-            mask_shape=body.mask_shape,
-            color_list=body.color
+            color=body.color,
+            max_words=body.max_words,
+            stopwords=body.stopwords
         )
 
         # 准备返回结果
         result_data = {
             "data_id": data_id,
             "column": body.column,
-            "image_path": wordcloud_result["image_path"],
+            "chart_path": wordcloud_result["chart_path"],  # 返回HTML文件路径
             "top_words": wordcloud_result["top_words"],
             "total_words": wordcloud_result["total_words"]
         }
