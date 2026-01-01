@@ -5,6 +5,7 @@ Pandas API 模块
 import os
 import sys
 from typing import Any, List
+from tools import tool_error_handler
 
 # 添加项目根目录到sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,6 +21,7 @@ from utils.pandas_tool import dimensionless_processing, scientific_calculation, 
 
 # 注册去除无效样本工具
 @tool
+@tool_error_handler
 def remove_invalid_samples_tool(file_path: str, session_id: str = None,
                                 remove_duplicates: bool = False,
                                 remove_duplicate_cols: bool = False,
@@ -45,6 +47,7 @@ def remove_invalid_samples_tool(file_path: str, session_id: str = None,
 
 # 注册处理缺失值工具
 @tool
+@tool_error_handler
 def handle_missing_values_tool(file_path: str, session_id: str = None,
                                specified_columns: List[str] = None,
                                interpolation_method: str = "linear",
@@ -65,6 +68,7 @@ def handle_missing_values_tool(file_path: str, session_id: str = None,
 
 # 注册量纲处理工具
 @tool
+@tool_error_handler
 def dimensionless_processing_tool(
     file_path: str, session_id: str = None,
     columns: List[str] = None,
@@ -99,6 +103,7 @@ def dimensionless_processing_tool(
 
 # 注册科学计算工具
 @tool
+@tool_error_handler
 def scientific_calculation_tool(
     file_path: str, session_id: str = None,
     columns: List[str] = None,
@@ -119,6 +124,7 @@ def scientific_calculation_tool(
 
 # 注册独热编码工具
 @tool
+@tool_error_handler
 def one_hot_encoding_tool(
     file_path: str, session_id: str = None,
     columns: List[str] = None,
@@ -137,6 +143,7 @@ def one_hot_encoding_tool(
 
 # 注册统计摘要工具
 @tool
+@tool_error_handler
 def statistical_summary_tool(
     file_path: str, session_id: str = None,
     columns: List[str] = None
@@ -154,6 +161,7 @@ def statistical_summary_tool(
 
 # 注册文本转换工具
 @tool
+@tool_error_handler
 def text_to_numeric_or_datetime_tool(
     file_path: str,
     columns: List[str],
@@ -177,6 +185,7 @@ def text_to_numeric_or_datetime_tool(
 
 # 注册相关性分析工具
 @tool
+@tool_error_handler
 def correlation_analysis_tool(
     file_path: str, session_id: str = None,
     columns: List[str] = None,
@@ -196,6 +205,7 @@ def correlation_analysis_tool(
 
 # 注册正态性检验工具
 @tool
+@tool_error_handler
 def normality_test_tool(file_path: str, columns: List[str], session_id: str = None,
         method: str = "shapiro", alpha: float = 0.05, group_by: str = None) -> dict:
     """
@@ -214,6 +224,7 @@ def normality_test_tool(file_path: str, columns: List[str], session_id: str = No
 
 # 注册T检验工具
 @tool
+@tool_error_handler
 def t_test_tool(file_path: str, columns: List[str], test_type: str = "one_sample",
         session_id: str = None, **kwargs) -> dict:
     """
@@ -243,6 +254,7 @@ def t_test_tool(file_path: str, columns: List[str], test_type: str = "one_sample
 
 # 注册F检验工具
 @tool
+@tool_error_handler
 def f_test_tool(file_path: str, columns: List[str], session_id: str = None, 
                 group_by: str = None, alpha: float = 0.05) -> dict:
     """
@@ -264,6 +276,7 @@ def f_test_tool(file_path: str, columns: List[str], session_id: str = None,
 
 # 注册卡方检验工具
 @tool
+@tool_error_handler
 def chi_square_test_tool(file_path: str, columns: List[str], session_id: str = None,
                          group_by: str = None, alpha: float = 0.05) -> dict:
     """
@@ -285,6 +298,7 @@ def chi_square_test_tool(file_path: str, columns: List[str], session_id: str = N
 
 # 注册非参数检验工具
 @tool
+@tool_error_handler
 def non_parametric_test_tool(file_path: str, columns: List[str], test_type: str = "mannwhitney",
                             session_id: str = None, group_by: str = None, alpha: float = 0.05, **kwargs) -> dict:
     """
@@ -314,6 +328,7 @@ def non_parametric_test_tool(file_path: str, columns: List[str], test_type: str 
 
 # 注册线性回归工具
 @tool
+@tool_error_handler
 def linear_regression_tool(file_path: str, x_columns: List[str], y_column: str, 
                          method: str = "ols", session_id: str = None, 
                          alpha: float = 1.0, l1_ratio: float = 0.5, **kwargs) -> dict:

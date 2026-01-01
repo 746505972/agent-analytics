@@ -3,6 +3,24 @@
     <h3>词云配置</h3>
     
     <div class="config-item">
+      <label>词云形状：</label>
+      <select 
+        v-model="shape" 
+        @change="onConfigChange"
+        class="shape-select"
+      >
+        <option value="circle">圆形</option>
+        <option value="cardioid">心形</option>
+        <option value="diamond">菱形</option>
+        <option value="triangle-forward">前向三角形</option>
+        <option value="triangle">三角形</option>
+        <option value="pentagon">五边形</option>
+        <option value="star">星形</option>
+      </select>
+      <p class="help-text">词云图的整体轮廓形状</p>
+    </div>
+    
+    <div class="config-item">
       <label>最大词数：</label>
       <input 
         type="number" 
@@ -15,7 +33,57 @@
     </div>
     
     <div class="config-item">
-      <label>图片宽度：</label>
+      <label>单词间隔：</label>
+      <input 
+        type="number" 
+        v-model.number="wordGap" 
+        @change="onConfigChange"
+        min="0" 
+        max="100" 
+        class="number-input"
+      />
+      <p class="help-text">单词之间的间隔大小</p>
+    </div>
+    
+    <div class="config-item">
+      <label>最小字体大小：</label>
+      <input
+        type="number"
+        v-model.number="minFontSize"
+        @change="onConfigChange"
+        min="1"
+        max="100"
+        class="number-input"
+      />
+    </div>
+    
+    <div class="config-item">
+      <label>最大字体大小：</label>
+      <input
+        type="number"
+        v-model.number="maxFontSize"
+        @change="onConfigChange"
+        min="10"
+        max="200"
+        class="number-input"
+      />
+    </div>
+    
+    <div class="config-item">
+      <label>旋转步长：</label>
+      <input
+        type="number"
+        v-model.number="rotateStep"
+        @change="onConfigChange"
+        min="0"
+        max="90"
+        class="number-input"
+      />
+      <p class="help-text">单词旋转的角度步长</p>
+    </div>
+    
+    <div class="config-item">
+      <label>词云宽度：</label>
       <input 
         type="number" 
         v-model.number="width" 
@@ -28,7 +96,7 @@
     </div>
     
     <div class="config-item">
-      <label>图片高度：</label>
+      <label>词云高度：</label>
       <input 
         type="number" 
         v-model.number="height" 
@@ -38,16 +106,6 @@
         class="number-input"
       />
       <p class="help-text">词云图片的高度（像素）</p>
-    </div>
-    
-    <div class="config-item">
-      <label>背景颜色：</label>
-      <input 
-        type="color" 
-        v-model="backgroundColor" 
-        @change="onConfigChange"
-        class="color-picker"
-      />
     </div>
     
     <div class="config-item">
@@ -86,45 +144,6 @@
       ></textarea>
       <p class="help-text">这些词语将在生成词云时被忽略</p>
     </div>
-    
-    <div class="config-item">
-      <label>蒙版形状：</label>
-      <select 
-        v-model="maskShape" 
-        @change="onConfigChange"
-        class="shape-select"
-      >
-        <option value="default">默认</option>
-        <option value="circle">圆形</option>
-        <option value="heart">心形</option>
-        <option value="star">星形</option>
-        <option value="cloud">云朵形</option>
-      </select>
-    </div>
-
-    <div class="config-item">
-      <label>最大字体大小：</label>
-      <input
-        type="number"
-        v-model.number="maxFontSize"
-        @change="onConfigChange"
-        min="10"
-        max="500"
-        class="number-input"
-      />
-    </div>
-
-    <div class="config-item">
-      <label>最小字体大小：</label>
-      <input
-        type="number"
-        v-model.number="minFontSize"
-        @change="onConfigChange"
-        min="1"
-        max="100"
-        class="number-input"
-      />
-    </div>
   </div>
 </template>
 
@@ -140,15 +159,16 @@ export default {
       type: Object,
       default: () => ({
         column: "",
-        color:['#FF274B'],
+        color: ['#FF274B'],
         maxWords: 200,
         width: 1600,
         height: 900,
-        backgroundColor: "#ffffff",
-        maxFontSize: 200,
-        minFontSize: 10,
-        stopwords: [],
-        maskShape: "default"
+        minFontSize: 12,
+        maxFontSize: 60,
+        wordGap: 20,
+        rotateStep: 45,
+        shape: "circle",
+        stopwords: []
       })
     }
   },
@@ -160,11 +180,12 @@ export default {
       maxWords: this.wordcloudConfig.maxWords || 200,
       width: this.wordcloudConfig.width || 1600,
       height: this.wordcloudConfig.height || 900,
-      backgroundColor: this.wordcloudConfig.backgroundColor || "#ffffff",
-      maxFontSize: this.wordcloudConfig.maxFontSize || 200,
-      minFontSize: this.wordcloudConfig.minFontSize || 10,
-      stopwordsText: this.wordcloudConfig.stopwords ? this.wordcloudConfig.stopwords.join('\n') : "",
-      maskShape: this.wordcloudConfig.maskShape || "default"
+      minFontSize: this.wordcloudConfig.minFontSize || 12,
+      maxFontSize: this.wordcloudConfig.maxFontSize || 60,
+      wordGap: this.wordcloudConfig.wordGap || 20,
+      rotateStep: this.wordcloudConfig.rotateStep || 45,
+      shape: this.wordcloudConfig.shape || "circle",
+      stopwordsText: this.wordcloudConfig.stopwords ? this.wordcloudConfig.stopwords.join('\n') : ""
     };
   },
   computed: {
@@ -186,11 +207,12 @@ export default {
         maxWords: this.maxWords,
         width: this.width,
         height: this.height,
-        backgroundColor: this.backgroundColor,
-        maxFontSize: this.maxFontSize,
         minFontSize: this.minFontSize,
+        maxFontSize: this.maxFontSize,
+        wordGap: this.wordGap,
+        rotateStep: this.rotateStep,
+        shape: this.shape,
         stopwords: this.stopwordsText ? this.stopwordsText.split('\n').filter(w => w.trim() !== '') : [],
-        maskShape: this.maskShape,
         color: [...this.color]
       };
       this.$emit("update:wordcloudConfig", config);
@@ -215,11 +237,12 @@ export default {
         this.maxWords = newConfig.maxWords || 200;
         this.width = newConfig.width || 1600;
         this.height = newConfig.height || 900;
-        this.backgroundColor = newConfig.backgroundColor || "#ffffff";
-        this.maxFontSize = newConfig.maxFontSize || 200;
-        this.minFontSize = newConfig.minFontSize || 10;
+        this.minFontSize = newConfig.minFontSize || 12;
+        this.maxFontSize = newConfig.maxFontSize || 60;
+        this.wordGap = newConfig.wordGap || 20;
+        this.rotateStep = newConfig.rotateStep || 45;
+        this.shape = newConfig.shape || "circle";
         this.stopwordsText = newConfig.stopwords ? newConfig.stopwords.join('\n') : "";
-        this.maskShape = newConfig.maskShape || "default";
       },
       deep: true
     }

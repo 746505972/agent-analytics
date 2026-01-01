@@ -21,6 +21,8 @@ Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据�
 
 ## 应用展示
 
+[👉示例展示](example.md)
+
 #### Agent对话
 ![img.png](images/img.png)
 
@@ -145,10 +147,10 @@ npm run server
 - [ ] 添加用户认证和权限管理
 
 ## Languages
-Total : 89 files, 18316 codes, 1683 comments, 2403 blanks, all 22402 lines
+Total : 101 files,  21342 codes, 1973 comments, 2796 blanks, all 26111 lines
 
 | language   | files |   code | comment | blank |  total |
 |:-----------|------:|-------:|--------:|------:|-------:|
-| vue        |    44 | 14,556 |     112 | 1,571 | 16,239 |
-| Python     |    19 |  2,862 |   1,453 |   706 |  5,021 |
-| JavaScript |     9 |    577 |     110 |    79 |    766 |
+| vue        |    52 | 16,430 |     134 | 1,738 | 18,302 |
+| Python     |    21 |  3,785 |   1,709 |   891 |  6,385 |
+| JavaScript |    10 |    697 |     121 |    91 |    909 |
