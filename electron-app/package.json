@@ -1,6 +1,6 @@
 {
   "name": "agent-analytics",
-  "version": "1.0.0",
+  "version": "0.2.0",
   "description": "数据分析系统桌面应用",
   "main": "main.js",
   "type": "commonjs",
@@ -20,7 +20,7 @@
     "data",
     "visualization"
   ],
-  "author": "Your Name",
+  "author": "github.com/746505972",
   "license": "MIT",
   "devDependencies": {
     "electron": "^33.2.1",
