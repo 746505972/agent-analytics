@@ -131,7 +131,7 @@ export default {
   background: white;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   border-radius: 4px;
-  z-index: 100;
+  z-index: 200;
   padding: 10px;
 }
 

@@ -3,13 +3,14 @@ export const getDefaultConfigs = () => ({
   wordcloudConfig: {
     color: ['#FF274B'],
     maxWords: 200,
-    width: 1600,
-    height: 900,
-    backgroundColor: "#ffffff",
-    maxFontSize: 200,
-    minFontSize: 10,
-    stopwords: [],
-    maskShape: "default"
+    width: 630,
+    height: 450,
+    minFontSize: 12,
+    maxFontSize: 60,
+    wordGap: 20,
+    rotateStep: 45,
+    shape: "circle",
+    stopwords: []
   },
   sentimentConfig: {
     stopwords: [],

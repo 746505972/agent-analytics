@@ -1,24 +1,15 @@
 <template>
   <div class="wordcloud-result">
     <div v-if="wordcloudData" class="result-content">
-      <div class="wordcloud-image-container">
-        <div class="image-header">
-          <h3>词云图像</h3>
-          <button @click="downloadImage" class="download-button">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
-                <path fill="none" d="M0 0h24v24H0z"></path>
-                <path fill="currentColor" d="M1 14.5a6.496 6.496 0 0 1 3.064-5.519 8.001 8.001 0 0 1 15.872 0 6.5 6.5 0 0 1-2.936 12L7 21c-3.356-.274-6-3.078-6-6.5zm15.848 4.487a4.5 4.5 0 0 0 2.03-8.309l-.807-.503-.12-.942a6.001 6.001 0 0 0-11.903 0l-.12.942-.805.503a4.5 4.5 0 0 0 2.029 8.309l.173.013h9.35l.173-.013zM13 12h3l-4 5-4-5h3V8h2v4z"></path>
-              </svg>
-            下载图片
-          </button>
-        </div>
-        <img 
-          :src="getImageUrlWithTimestamp(wordcloudData.image_path)" 
-          :alt="`词云分析 - ${wordcloudData.column}`"
-          class="wordcloud-image"
-          ref="wordcloudImage"
+      <!-- 图表显示在上方 -->
+      <div class="chart-container">
+        <BackendChartResult
+          :chartPath="wordcloudData.chart_path"
+          ref="backendChartResult"
         />
       </div>
+
+      <!-- 信息面板在下方 -->
       <div class="wordcloud-info">
         <h3>分析信息</h3>
         <div class="info-card">
@@ -51,8 +42,13 @@
 </template>
 
 <script>
+import BackendChartResult from "../Charts/BackendChartResult.vue";
+
 export default {
   name: "WordCloudResult",
+  components: {
+    BackendChartResult
+  },
   props: {
     datasetDetails: {
       type: Object,
@@ -68,30 +64,18 @@ export default {
     }
   },
   methods: {
-    getImageUrl(imagePath) {
-      // 确保图片路径正确，去除开头的斜杠（如果有的话）
-      if (imagePath.startsWith('/')) {
-        return imagePath;
-      }
-      return '/' + imagePath;
-    },
-
-    getImageUrlWithTimestamp(imagePath) {
-      if (!imagePath) return '';
-      // 添加时间戳以避免浏览器缓存
-      const timestamp = Date.now();
-      const url = this.getImageUrl(imagePath);
-      return `${url}?t=${timestamp}`;
-    },
-
     downloadImage() {
-      const imageUrl = this.getImageUrlWithTimestamp(this.wordcloudData.image_path);
-      const link = document.createElement('a');
-      link.href = imageUrl;
-      link.download = `wordcloud-${this.wordcloudData.column}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // 对于pyecharts生成的图表，我们可能需要通过后端API获取图片
+      // 或者使用html2canvas等库将图表转换为图片下载
+      if (this.wordcloudData?.chart_path) {
+        // 尝试直接下载图表HTML文件或通过后端API下载图片
+        const link = document.createElement('a');
+        link.href = this.wordcloudData.chart_path;
+        link.download = `wordcloud-${this.wordcloudData.column}.html`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     }
   },
   computed: {
@@ -144,17 +128,13 @@ export default {
 
 .result-content {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column; /* 改为垂直布局 */
   gap: 30px;
 }
 
-.wordcloud-image-container {
+.chart-container {
   flex: 1;
-  min-width: 300px;
-  background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  width: 100%; /* 确保宽度占满容器 */
 }
 
 .image-header {
@@ -186,16 +166,14 @@ export default {
   background-color: #66b1ff;
 }
 
-.wordcloud-image {
-  max-width: 100%;
-  height: auto;
-  border-radius: 6px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.chart-container .chart-container {
+  height: 500px;
 }
 
 .wordcloud-info {
   flex: 1;
   min-width: 300px;
+  width: 100%; /* 确保宽度占满容器 */
 }
 
 .info-card {
@@ -274,7 +252,7 @@ export default {
     flex-direction: column;
   }
   
-  .wordcloud-image-container,
+  .chart-container,
   .wordcloud-info {
     min-width: 100%;
   }

@@ -113,8 +113,6 @@ async def generate_chart(request: Request, config: ChartConfig):
             chart = create_line_chart(df, config, valid_y_axis_columns)
         elif config.chart_type == 'bar':
             chart = create_bar_chart(df, config, valid_y_axis_columns)
-        elif config.chart_type == 'bar':
-            chart = create_bar_chart(df, config, valid_y_axis_columns)
         elif config.chart_type == 'scatter':
             chart = create_scatter_chart(df, config, valid_y_axis_columns)
         elif config.chart_type == 'pie':
