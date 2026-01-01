@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 开题/
+electron-app/backend-server/
+electron-app/frontend/
 
 # C extensions
 *.so
