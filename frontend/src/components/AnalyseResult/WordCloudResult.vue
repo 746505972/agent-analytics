@@ -64,19 +64,6 @@ export default {
     }
   },
   methods: {
-    downloadImage() {
-      // 对于pyecharts生成的图表，我们可能需要通过后端API获取图片
-      // 或者使用html2canvas等库将图表转换为图片下载
-      if (this.wordcloudData?.chart_path) {
-        // 尝试直接下载图表HTML文件或通过后端API下载图片
-        const link = document.createElement('a');
-        link.href = this.wordcloudData.chart_path;
-        link.download = `wordcloud-${this.wordcloudData.column}.html`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    }
   },
   computed: {
     wordcloudData() {

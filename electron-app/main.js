@@ -93,7 +93,13 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.js'),
+      // 启用 webSecurity 以确保安全，但确保不影响正常的输入功能
+      webSecurity: true,
+      // 启用实验性功能以支持现代Web特性
+      enableRemoteModule: false,
+      // 允许输入框和其他交互元素正常工作
+      spellcheck: false // 关闭拼写检查以避免潜在的输入问题
     },
     icon: fs.existsSync(path.join(__dirname, 'icon.png')) ? path.join(__dirname, 'icon.png') : null
   });

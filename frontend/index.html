@@ -9,5 +9,23 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.js"></script>
+    <!-- 添加Electron环境下的特殊配置 -->
+    <script>
+      // 在Electron环境下添加输入框修复
+      if (window.process && window.process.type === 'renderer') {
+        // 针对Electron的输入框修复
+        document.addEventListener('DOMContentLoaded', function() {
+          // 确保输入框能够正确获得焦点
+          document.body.addEventListener('focusin', function(e) {
+            if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+              // 确保输入框可以正常聚焦
+              setTimeout(() => {
+                e.target.focus();
+              }, 10);
+            }
+          });
+        });
+      }
+    </script>
   </body>
 </html>
