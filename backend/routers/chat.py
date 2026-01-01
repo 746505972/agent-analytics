@@ -104,8 +104,8 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     yield f"data: {json.dumps({'tool_calls': response_chunk['data']})}\n\n"
                 elif response_chunk['type'] == 'content':
                     yield f"data: {json.dumps({'content': response_chunk['data']})}\n\n"
-                elif response_chunk['type'] == 'error':
-                    yield f"data: {json.dumps({'error': response_chunk['data']})}\n\n"
+                # elif response_chunk['type'] == 'error':
+                #     yield f"data: {json.dumps({'error': response_chunk['data']})}\n\n"
                 elif response_chunk['type'] == 'end':
                     yield "data: [DONE]\n\n"
                     break
