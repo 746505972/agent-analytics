@@ -119,6 +119,7 @@ function getBackendExecutablePath() {
   logMessage('开始查找后端可执行文件...');
   
   // 尝试标准路径 - process.resourcesPath 指向 Electron 应用的 resources 目录
+  // 对于多文件打包，可执行文件在 backend-server 目录下
   const standardPath = path.join(resourcePath, 'backend-server', exeName);
   console.log(`标准后端路径: ${standardPath}`);
   logMessage(`标准后端路径: ${standardPath}`);
@@ -244,31 +245,89 @@ async function startBackend() {
     logMessage('后端进程已创建，正在监听输出...');
 
     backendProcess.stdout.on('data', (data) => {
-      console.log(`Backend stdout: ${data}`);
+      const output = data.toString();
+      console.log(`Backend stdout: ${output}`);
+      
       // 检查是否后端服务已完全启动
-      if (data.toString().includes('Uvicorn running on')) {
+      if (output.includes('Uvicorn running on')) {
         console.log('后端服务已成功启动');
+        logMessage('后端服务已成功启动');
       }
     });
 
     backendProcess.stderr.on('data', (data) => {
       console.error(`Backend stderr: ${data}`);
+      logMessage(`Backend stderr: ${data}`);
     });
 
     backendProcess.on('close', (code) => {
       console.log(`Backend process exited with code ${code}`);
+      logMessage(`后端进程退出，退出码: ${code}`);
+      
       // 如果后端意外退出，可以选择重启
       // setTimeout(() => startBackend(), 2000);
     });
     
     backendProcess.on('error', (err) => {
       console.error(`Backend process error: ${err}`);
+      logMessage(`后端进程错误: ${err}`);
     });
     
     console.log('后端服务启动命令已发出');
   } catch (error) {
     console.error('启动后端服务失败:', error);
+    logMessage(`启动后端服务失败: ${error}`);
   }
+}
+
+// 检查后端服务是否完全启动
+function waitForBackend() {
+  return new Promise((resolve, reject) => {
+    const startTime = Date.now();
+    const timeout = 30000; // 30秒超时
+    
+    // 定期检查后端是否启动
+    const checkInterval = setInterval(() => {
+      // 尝试连接后端服务
+      const http = require('http');
+      
+      const request = http.request({
+        hostname: '127.0.0.1',
+        port: 8000,
+        path: '/',
+        method: 'GET',
+        timeout: 5000
+      }, (res) => {
+        console.log(`后端服务响应状态: ${res.statusCode}`);
+        if (res.statusCode === 200) {
+          clearInterval(checkInterval);
+          console.log('后端服务已完全启动并响应请求');
+          logMessage('后端服务已完全启动并响应请求');
+          resolve(true);
+        }
+      });
+      
+      request.on('error', (e) => {
+        // 如果连接失败，继续等待
+        console.log('尝试连接后端服务失败，继续等待...');
+      });
+      
+      request.on('timeout', () => {
+        request.destroy();
+        console.log('连接后端服务超时，继续等待...');
+      });
+      
+      request.end();
+      
+      // 检查是否超时
+      if (Date.now() - startTime > timeout) {
+        clearInterval(checkInterval);
+        console.error('等待后端启动超时');
+        logMessage('等待后端启动超时');
+        reject(new Error('后端服务启动超时'));
+      }
+    }, 1000); // 每秒检查一次
+  });
 }
 
 // 当Electron完成初始化时

@@ -6,7 +6,7 @@ import numpy as np
 import logging
 from pydantic import BaseModel
 from typing import Any, List, Dict, Optional, Union
-from backend.routers.data import load_csv_file
+from routers.data import load_csv_file
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)

@@ -38,8 +38,8 @@ async function buildBackend() {
     fs.ensureDirSync(distDir);
   }
   
-  // 构建后端命令
-  const pyInstallerCmd = `pyinstaller --onefile --name backend-server main.py ` +
+  // 构建后端命令 - 改为多文件形式
+  const pyInstallerCmd = `pyinstaller --onedir --name backend-server main.py ` +
     `-p . --collect-all fastapi --collect-all uvicorn --collect-all pydantic ` +
     `--collect-all jieba --collect-all dashscope --collect-all pandas --collect-all numpy ` +
     `--collect-all sklearn --collect-all scipy --collect-all statsmodels`;

@@ -2,7 +2,7 @@
   <div class="chart-container">
     <div v-if="chartPath" class="chart-content">
       <iframe 
-        :src="chartPath" 
+        :src="fullChartUrl" 
         width="100%"
         height="100%" 
         frameborder="0" 
@@ -20,6 +20,7 @@
 
 <script>
 import Waiting from "@/components/Waiting.vue";
+import { backendBaseUrl } from '@/api/apiConfig';
 
 export default {
   name: "BackendChartResult",
@@ -32,8 +33,25 @@ export default {
   },
   data() {
     return {
-      loading: false
+      loading: false,
+      backendBaseUrl: backendBaseUrl
     };
+  },
+  computed: {
+    fullChartUrl() {
+      if (!this.chartPath) {
+        return '';
+      }
+      
+      // 如果chartPath已经是完整URL，则直接返回
+      if (this.chartPath.startsWith('http')) {
+        return this.chartPath;
+      }
+      
+      // 如果chartPath是相对路径，添加后端基础URL
+      // 使用apiConfig中的后端基础URL
+      return `${this.backendBaseUrl}/${this.chartPath}`;
+    }
   },
   methods: {
     onChartLoaded() {

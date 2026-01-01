@@ -8,10 +8,12 @@
     "start": "electron .",
     "build": "node build-frontend.js && electron-builder --dir",
     "dist": "node build-frontend.js && electron-builder",
-    "pack": "node build-frontend.js && electron-builder --dir",
+    "pack": "electron-builder",
     "build-frontend": "node build-frontend.js",
     "build-backend": "node build-backend.js",
-    "build-all": "npm run build-backend && npm run build-frontend && electron-builder"
+    "build-backend-dir": "node build-backend-dir.js",
+    "build-all": "npm run build-backend && npm run build-frontend && electron-builder",
+    "build-all-dir": "npm run build-backend-dir && npm run build-frontend && electron-builder"
   },
   "keywords": [
     "analytics",

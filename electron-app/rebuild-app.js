@@ -1,6 +1,55 @@
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const path = require('path');
-const fs = require('fs-extra');
+const fs = require('fs');
+
+function runCommand(command, cwd) {
+  return new Promise((resolve, reject) => {
+    console.log(`执行命令: ${command}`);
+    const child = exec(command, { cwd }, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`执行失败: ${error}`);
+        reject(error);
+        return;
+      }
+      console.log(`命令执行成功: ${stdout}`);
+      resolve(stdout);
+    });
+
+    // 实时输出命令的进度
+    child.stdout.on('data', (data) => {
+      console.log(data.toString());
+    });
+
+    child.stderr.on('data', (data) => {
+      console.error(data.toString());
+    });
+  });
+}
+
+async function rebuildApp() {
+  console.log('开始重新构建应用...');
+
+  const backendPath = path.join(__dirname, '..', 'backend');
+  const frontendPath = path.join(__dirname, '..', 'frontend');
+  const electronPath = __dirname;
+
+  try {
+    // 构建后端（使用多文件形式）
+    console.log('构建后端服务...');
+    await runCommand('npm run build-backend-dir', electronPath);
+
+    // 构建前端
+    console.log('构建前端应用...');
+    await runCommand('npm run build', frontendPath);
+
+    console.log('应用构建完成！');
+  } catch (error) {
+    console.error('构建过程中出现错误:', error);
+    process.exit(1);
+  }
+}
+
+rebuildApp();
 
 // 构建完整的Electron应用
 async function buildFullApp() {

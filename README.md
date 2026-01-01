@@ -100,6 +100,41 @@ https://github.com/746505972/agent-analytics/releases/latest
 
 ---
 
+### Electron应用打包
+
+项目支持Electron桌面应用打包，提供了多文件打包方式以提高启动速度和监控后端启动状态：
+
+1. 安装依赖：
+```bash
+npm install
+```
+
+2. 构建后端（多文件形式）：
+```bash
+cd electron-app
+npm run build-backend-dir
+```
+
+3. 构建前端：
+```bash
+cd ../frontend
+npm run build
+```
+
+4. 打包Electron应用：
+```bash
+cd ../electron-app
+npm run dist
+```
+
+或者直接运行一键构建：
+```bash
+cd electron-app
+npm run build-all-dir
+```
+
+---
+
 ### 后端启动
 
 1. 安装依赖：

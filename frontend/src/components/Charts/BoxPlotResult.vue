@@ -161,6 +161,7 @@
 
 <script>
 import BackendChartResult from "@/components/Charts/BackendChartResult.vue";
+import {backendBaseUrl} from "@/api/apiConfig";
 
 export default {
   name: "BoxPlotResult",
@@ -284,7 +285,7 @@ export default {
         this.loading = true;
         this.chartPath = null;
         
-        const response = await fetch('/charts/generate', {
+        const response = await fetch(`${backendBaseUrl}/charts/generate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

@@ -61,7 +61,7 @@ app.include_router(analysis_router)
 app.include_router(nlp_router)
 app.include_router(charts_router)
 
-# 挂载静态文件目录，使生成的图片可以通过URL访问
+# 挂载静态文件目录，使生成的图片和HTML图表可以通过URL访问
 app.mount("/data", StaticFiles(directory="data"), name="data")
 
 # 存储定时任务的引用
