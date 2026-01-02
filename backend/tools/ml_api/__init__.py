@@ -4,9 +4,12 @@
 """
 
 from langchain_core.tools import tool
+from tools import tool_error_handler
+
 
 # SVM 实现
 @tool
+@tool_error_handler
 def support_vector_machine(df: dict, target_column: str) -> dict:
     """
     支持向量机分类/回归
@@ -27,6 +30,7 @@ def support_vector_machine(df: dict, target_column: str) -> dict:
 
 # 随机森林实现
 @tool
+@tool_error_handler
 def random_forest(df: dict, target_column: str, n_estimators: int = 100) -> dict:
     """
     随机森林分类/回归

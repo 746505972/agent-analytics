@@ -1,5 +1,6 @@
 from langgraph.prebuilt import create_react_agent
 import os
+from tools import tool_error_handler
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.tools import tool
@@ -75,6 +76,7 @@ class DataAnalysisAgent:
         
         # 注册文件读取工具
         @tool
+        @tool_error_handler
         def read_file(file_path: str,n : int = 10) -> dict:
             """
             读取文件的前n行数据
@@ -88,6 +90,7 @@ class DataAnalysisAgent:
         
         # 注册文件删除工具
         @tool
+        @tool_error_handler
         def delete_file_tool(data_id: str, session_id: str = None) -> None:
             """
             删除指定的数据文件
@@ -101,6 +104,7 @@ class DataAnalysisAgent:
         
         # 注册获取用户文件列表工具
         @tool
+        @tool_error_handler
         def list_user_files(session_id: str = None) -> list:
             """
             获取用户上传的文件列表
@@ -123,6 +127,7 @@ class DataAnalysisAgent:
         
         # 注册添加标题行工具
         @tool
+        @tool_error_handler
         def add_header_row_tool(file_path: str, column_names: list, session_id: str = None) -> dict:
             """
             为没有标题行的文件添加标题行并创建新文件
@@ -143,6 +148,7 @@ class DataAnalysisAgent:
         
         # 注册修改标题行工具
         @tool
+        @tool_error_handler
         def modify_header_row_tool(file_path: str, column_names: list, session_id: str = None) -> dict:
             """
             修改文件的现有标题行并创建新文件
@@ -163,6 +169,7 @@ class DataAnalysisAgent:
         
         # 注册删除首行工具
         @tool
+        @tool_error_handler
         def remove_first_row_tool(file_path: str, session_id: str = None) -> dict:
             """
             删除文件的第一行（通常是有问题的标题行）并创建新文件
@@ -182,6 +189,7 @@ class DataAnalysisAgent:
         
         # 注册删除列工具
         @tool
+        @tool_error_handler
         def delete_columns_tool(file_path: str, columns_to_delete: list, session_id: str = None) -> dict:
             """
             删除文件中的指定列并创建新文件
