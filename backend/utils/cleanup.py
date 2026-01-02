@@ -4,7 +4,6 @@ Session数据清理工具
 """
 
 import os
-import time
 import shutil
 from datetime import datetime, timedelta
 import logging
