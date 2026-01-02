@@ -213,7 +213,7 @@ class DataAnalysisAgent:
         # 注册各模块的工具
         register_pandas_tools(self)
         register_ml_tools(self)
-    
+    # TODO: 实现流式响应 & 添加分析结果上下文
     def process_query_stream(self, query: str, data_context=None, session_id=None):
         """
         流式处理用户查询
@@ -305,90 +305,7 @@ class DataAnalysisAgent:
                 'type': 'error',
                 'data': str(e)
             }
-    
-    def process_query(self, query: str, data_context=None, session_id=None):
-        """
-        处理用户查询 (兼容旧版非流式接口)
-        
-        Args:
-            query (str): 用户的自然语言查询
-            data_context: 当前数据上下文
-            session_id: 用户会话ID
-            
-        Returns:
-            dict: 处理结果和响应
-        """
-        try:
-            # 准备输入
-            messages = []
 
-            messages.append(SystemMessage(content=self.system_message))
-            
-            # 如果有数据上下文，则加入
-            if data_context:
-                # 构造更清晰的提示信息
-                context_info = f"""
-                    <数据上下文信息>
-                    文件ID(data_id): {data_context.get('data_id', '未知')}
-                    session_id: {session_id}
-                    文件路径:{data_context.get('file_path', '未知')}
-                    数据形状: {data_context.get('shape', '未知')} (行数, 列数)
-                    列名: {', '.join(data_context.get('columns', []))}
-                    数据类型: {data_context.get('dtypes', '未知')}
-                    示例数据: {data_context.get('sample_data', '无')}
-                    </数据上下文信息>
-                    """
-                # 移除了数据上下文信息的日志打印，以保护用户隐私
-                messages.append(HumanMessage(content=context_info))
-            
-            # 添加用户问题
-            messages.append(HumanMessage(content=f"<用户问题>{query}</用户问题>"))
-            
-            # 执行agent，传递session_id给工具
-            config = {"recursion_limit": 50}
-            if session_id:
-                config["session_id"] = session_id
-                
-            # 使用stream模式获取工具调用的详细信息
-            tool_calls_info = []
-            final_response = ""
-            
-            for chunk in self.agent.stream(
-                {"messages": messages}, 
-                config=config, 
-                stream_mode="updates"
-            ):
-                # 检查是否有工具调用信息
-                if "agent" in chunk and "messages" in chunk["agent"]:
-                    message = chunk["agent"]["messages"][0]
-                    if hasattr(message, 'tool_calls') and message.tool_calls:
-                        for tool_call in message.tool_calls:
-                            tool_calls_info.append({
-                                "name": tool_call["name"],
-                                "args": tool_call["args"]
-                            })
-                
-                # 收集最终响应
-                if "agent" in chunk and "messages" in chunk["agent"]:
-                    message = chunk["agent"]["messages"][0]
-                    if hasattr(message, 'content') and message.content:
-                        final_response += message.content
-            
-            return {
-                'query': query,
-                'result': final_response,
-                'tool_calls': tool_calls_info,
-                'status': 'success'
-            }
-        except Exception as e:
-            import traceback
-            print(f"处理查询时发生错误: {traceback.format_exc()}")
-            return {
-                'query': query,
-                'result': f"处理查询时发生错误: {str(e)}",
-                'tool_calls': [],
-                'status': 'error'
-            }
     
     def generate_report(self, analysis_results):
         """
