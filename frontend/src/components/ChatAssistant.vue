@@ -24,9 +24,9 @@
               @click="copyMessageText(message.content)"
               class="copy-button"
               :class="{ copied: message.copied }"
-              :title="message.copied ? '已复制' : '复制文本'"
+              :title="'复制文本'"
             >
-              {{ message.copied ? '✓ 已复制' : '复制' }}
+              <img src="@/assets/images/copy.svg" alt="复制" width="12px" height="12px"/>
             </button>
           </div>
         </div>
@@ -500,7 +500,7 @@ export default {
   background-color: rgba(255, 255, 255, 0.8);
   border: 1px solid #dcdfe6;
   border-radius: 4px;
-  padding: 2px 6px;
+  padding: 4px 4px;
   font-size: 12px;
   cursor: pointer;
   opacity: 0;
@@ -512,7 +512,7 @@ export default {
 }
 
 .copy-button:hover {
-  background-color: #409eff;
+  background-color: rgba(64, 158, 255, 0.7);
   color: white;
 }
 
