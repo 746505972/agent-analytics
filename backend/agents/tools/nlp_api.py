@@ -5,15 +5,16 @@
 
 from langchain_core.tools import tool
 
+
 # 文本分词功能
 @tool
 def tokenize_text(text: str) -> dict:
     """
     对文本进行分词处理
-    
+
     Args:
         text (str): 输入文本
-        
+
     Returns:
         dict: 分词结果
     """
@@ -31,10 +32,10 @@ def tokenize_text(text: str) -> dict:
 def sentiment_analysis(text: str) -> dict:
     """
     对文本进行情感分析
-    
+
     Args:
         text (str): 输入文本
-        
+
     Returns:
         dict: 情感分析结果
     """
@@ -47,11 +48,12 @@ def sentiment_analysis(text: str) -> dict:
         'status': 'placeholder'
     }
 
+
 # 将模块中的函数注册为工具
 def register_nlp_tools(agent):
     """
     将NLP工具注册到agent
-    
+
     Args:
         agent: DataAnalysisAgent实例
     """

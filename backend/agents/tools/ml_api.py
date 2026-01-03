@@ -4,8 +4,7 @@
 """
 
 from langchain_core.tools import tool
-from tools import tool_error_handler
-
+from .tool_error_handler import tool_error_handler
 
 # SVM 实现
 @tool
@@ -13,11 +12,11 @@ from tools import tool_error_handler
 def support_vector_machine(df: dict, target_column: str) -> dict:
     """
     支持向量机分类/回归
-    
+
     Args:
         df (dict): 输入数据（字典格式）
         target_column (str): 目标变量列名
-        
+
     Returns:
         dict: SVM 训练结果
     """
@@ -28,18 +27,19 @@ def support_vector_machine(df: dict, target_column: str) -> dict:
         'status': 'placeholder'
     }
 
+
 # 随机森林实现
 @tool
 @tool_error_handler
 def random_forest(df: dict, target_column: str, n_estimators: int = 100) -> dict:
     """
     随机森林分类/回归
-    
+
     Args:
         df (dict): 输入数据（字典格式）
         target_column (str): 目标变量列名
         n_estimators (int): 决策树数量
-        
+
     Returns:
         dict: 随机森林训练结果
     """
@@ -51,11 +51,12 @@ def random_forest(df: dict, target_column: str, n_estimators: int = 100) -> dict
         'status': 'placeholder'
     }
 
+
 # 将模块中的函数注册为工具
 def register_ml_tools(agent):
     """
     将机器学习工具注册到agent
-    
+
     Args:
         agent: DataAnalysisAgent实例
     """
