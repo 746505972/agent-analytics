@@ -6,26 +6,36 @@
       <!-- 列名列表区域 -->
       <div class="column-list-section">
         <div v-if="['missing_value_interpolation'].includes(currentMethod)">
-          <h3>选择需要处理的列</h3>
+          <div class="header">
+            <h3>选择需要处理的列</h3> <DeleteColumns @click="clearSelectedColumns" />
+          </div>
           <p>点击选择列，支持 Ctrl/Shift 多选</p>
           <p>不选则处理所有列</p>
         </div>
         <div v-else-if="['data_transformation','delete_columns'].includes(currentMethod)">
-          <h3>选择需要处理的列</h3>
+          <div class="header">
+            <h3>选择需要处理的列</h3> <DeleteColumns @click="clearSelectedColumns" />
+          </div>
           <p>点击选择列，支持 Ctrl/Shift 多选</p>
         </div>
         <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test','chi_square_test', 'non_parametric_test'].includes(currentMethod)">
-          <h3>选择需要分析的列</h3>
+          <div class="header">
+            <h3>选择需要分析的列</h3> <DeleteColumns @click="clearSelectedColumns" />
+          </div>
           <p>点击选择列，支持 Ctrl/Shift 多选</p>
           <p>不选则分析所有数值型列</p>
         </div>
         <div v-else-if="['linear_regression','logistic_regression'].includes(currentMethod)">
-          <h3>选择自变量 (X)</h3>
+          <div class="header">
+            <h3>选择自变量 (X)</h3> <DeleteColumns @click="clearSelectedColumns" />
+          </div>
           <p>点击选择列，支持 Ctrl/Shift 多选</p>
           <p>不选则使用所有数值型列</p>
         </div>
         <div v-else-if="['text_analysis', 'sentiment_analysis'].includes(currentMethod)">
-          <h3>选择需要分析的文本列</h3>
+          <div class="header">
+            <h3>选择需要处理的列</h3> <DeleteColumns @click="clearSelectedColumns" />
+          </div>
           <p>点击选择一列，用于分析文本数据</p>
           <p>多选则默认分析第一列</p>
         </div>
@@ -172,10 +182,12 @@ import LinearRegressionConfig from "@/components/Config/LinearRegressionConfig.v
 import { getDefaultConfigs } from '@/utils/configDefaults.js'
 import Waiting from "@/components/Waiting.vue";
 import LogisticRegressionConfig from "@/components/Config/LogisticRegressionConfig.vue";
+import DeleteColumns from "@/components/DeleteColumns.vue";
 
 export default {
   name: "MethodParameterConfig",
   components: {
+    DeleteColumns,
     Waiting,
     ChiSquareTestConfig,
     FTestConfig,
@@ -277,7 +289,8 @@ export default {
     'update:knnNeighbors',
     'update:newColumnNames',
     'update:dataTransformationConfig',
-    'toggleColumnSelection'
+    'toggleColumnSelection',
+    'clearSelectedColumns'
   ],
   data() {
     return {
@@ -316,6 +329,9 @@ export default {
     handleNewColumnNamesUpdate({ index, value }) {
       this.$emit('update:newColumnNames', { index, value });
     },
+    clearSelectedColumns(){
+      this.$emit('clearSelectedColumns');
+    }
   }
 }
 </script>
@@ -389,5 +405,10 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.header{
+  display: flex;
+  justify-content: space-between;
 }
 </style>
