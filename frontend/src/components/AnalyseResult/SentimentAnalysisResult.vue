@@ -1,5 +1,5 @@
 <template>
-  <div class="sentiment-analysis-result">
+  <div class="sentiment-analysis-result" v-if="datasetDetails.resultMethod === 'sentiment_analysis'">
     <div v-if="loading" class="loading">
       <div class="spinner"></div>
       <p>正在进行情感分析...</p>

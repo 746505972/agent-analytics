@@ -23,7 +23,10 @@ export async function fetchCompleteData(dataId) {
 
     const result = await response.json();
     if (result.success) {
-      return result.data;
+      return {
+        ...result.data,
+        resultMethod: method
+      };
     } else {
       throw new Error(result.error || "获取完整数据失败");
     }
@@ -54,7 +57,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取分析结果失败");
       }
@@ -76,7 +82,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取统计摘要失败");
       }
@@ -101,7 +110,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取相关性分析结果失败");
       }
@@ -140,7 +152,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取T检验结果失败");
       }
@@ -171,7 +186,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取F检验结果失败");
       }
@@ -202,7 +220,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取卡方检验结果失败");
       }
@@ -243,7 +264,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取非参数检验结果失败");
       }
@@ -275,7 +299,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取正态性检验结果失败");
       }
@@ -308,7 +335,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取词云分析结果失败");
       }
@@ -333,7 +363,10 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取情感分析结果失败");
       }
@@ -368,9 +401,51 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
 
       const result = await response.json();
       if (result.success) {
-        return result.data;
+        return {
+          ...result.data,
+          resultMethod: method
+        };
       } else {
         throw new Error(result.error || "获取线性回归结果失败");
+      }
+    } else if (method === 'logistic_regression') {
+      // 准备逻辑回归请求体
+      const requestBody = {
+        x_columns: selectedColumns || [],
+        y_column: configs.logisticRegressionConfig.y_column,
+        method: configs.logisticRegressionConfig.method || 'logistic',
+        solver: configs.logisticRegressionConfig.solver || 'lbfgs',
+        params: {
+          C: configs.logisticRegressionConfig.C || 1.0,
+          max_iter: configs.logisticRegressionConfig.params.max_iter || 1000,
+          tol: configs.logisticRegressionConfig.params.tol || 0.0001,
+          fit_intercept: configs.logisticRegressionConfig.params.fit_intercept !== undefined ? configs.logisticRegressionConfig.params.fit_intercept : true,
+          class_weight: configs.logisticRegressionConfig.params.class_weight || null
+        }
+      };
+
+      // 验证Y列是否已选择
+      if (!requestBody.y_column) {
+        throw new Error("请选择因变量(Y列)");
+      }
+
+      const response = await fetch(`/data/${dataId}/logistic_regression`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return {
+          ...result.data,
+          resultMethod: method
+        };
+      } else {
+        throw new Error(result.error || "获取逻辑回归结果失败");
       }
     }
     // 其他分析方法可以在这里添加

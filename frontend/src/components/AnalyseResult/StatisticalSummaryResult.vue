@@ -1,5 +1,5 @@
 <template>
-  <div class="statistical-summary-details">
+  <div class="statistical-summary-details" v-if="datasetDetails.resultMethod === 'statistical_summary'">
     <div class="table-header">
       <h3>统计摘要</h3>
       <button class="copy-button" @click="copyTable('upper')" title="复制表格">

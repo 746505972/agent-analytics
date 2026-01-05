@@ -494,3 +494,63 @@ async def get_linear_regression(request: Request, data_id: str, body: LinearRegr
                 "error": f"{str(e)}"
             }
         )
+
+
+class LogisticRegressionRequest(BaseModel):
+    x_columns: List[str]  # 自变量列
+    y_column: str         # 因变量列
+    method: str = "logistic"   # 回归方法
+    solver: str = "lbfgs" # 优化算法
+    params: Optional[Dict[str, Any]] = None  # 其他参数
+
+
+@router.post("/{data_id}/logistic_regression")
+async def get_logistic_regression(request: Request, data_id: str, body: LogisticRegressionRequest):
+    """
+    获取数据文件的逻辑回归分析结果接口，用于"逻辑回归"方法
+    """
+    try:
+        # 验证请求数据
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.x_columns)
+        if error_response:
+            return error_response
+
+        # 准备参数
+        kwargs = body.params if body.params else {}
+
+        # 调用工具函数处理逻辑回归
+        from utils.ml_tool import logistic_regression
+        regression_result = logistic_regression(
+            file_path, columns_to_process, body.y_column, body.method, session_id, 
+            body.solver, **kwargs)
+
+        # 准备返回结果
+        result_data = {
+            "data_id": data_id,
+            "method": regression_result["method"],
+            "x_columns": regression_result["x_columns"],
+            "y_column": regression_result["y_column"],
+            "coefficients": regression_result["coefficients"],
+            "intercept": regression_result["intercept"],
+            "evaluation_metrics": regression_result["evaluation_metrics"],
+            "sample_size": regression_result["sample_size"],
+            "n_classes": regression_result["n_classes"],
+            "class_labels": regression_result["class_labels"],
+            "confusion_matrix": regression_result["confusion_matrix"],
+            "model_params": regression_result["model_params"],
+        }
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取逻辑回归结果时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )

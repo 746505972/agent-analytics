@@ -53,18 +53,20 @@ project/
 ├── backend/
 │   ├── main.py              # FastAPI主程序
 │   ├── agents/              # Agent实现
+│   │   ├── tools/           # Agent工具API
+│   │   └── reports/         # 报告生成
 │   ├── routers/             # 路由定义
+│   │   ├── analysis.py      # 分析相关接口
+│   │   ├── charts.py        # 图表相关接口
 │   │   ├── chat.py          # 聊天相关接口
 │   │   ├── data.py          # 数据处理接口
-│   │   └── files.py         # 文件管理接口
-│   ├── tools/               # 工具API
-│   │   ├── ml_api/          # 机器学习API
-│   │   ├── nlp_api/         # 自然语言处理API
-│   │   └── pandas_api/      # 数据处理API
-│   ├── reports/             # 报告生成
+│   │   ├── files.py         # 文件管理接口
+│   │   └── nlp.py           # NLP相关接口
 │   └── utils/               # 工具函数
-│       ├── cleanup.py       # 清理工具
-│       └── file_manager.py  # 文件管理工具
+│       ├── file_manager.py  # 文件管理工具
+│       ├── ml_tool/         # 机器学习工具包
+│       ├── nlp_tool/        # NLP工具包
+│       └── pandas_tool/     # Pandas工具包
 ├── frontend/
 │   └── src/
 │       ├── views/

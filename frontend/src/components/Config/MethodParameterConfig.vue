@@ -19,7 +19,7 @@
           <p>点击选择列，支持 Ctrl/Shift 多选</p>
           <p>不选则分析所有数值型列</p>
         </div>
-        <div v-else-if="['linear_regression'].includes(currentMethod)">
+        <div v-else-if="['linear_regression','logistic_regression'].includes(currentMethod)">
           <h3>选择自变量 (X)</h3>
           <p>点击选择列，支持 Ctrl/Shift 多选</p>
           <p>不选则使用所有数值型列</p>
@@ -39,7 +39,7 @@
               class="column-item"
               :class="{
                 selected: isColumnSelected(column),
-                clickable: ['missing_value_interpolation','delete_columns', 'data_transformation', 'statistical_summary', 'correlation_analysis', 'text_analysis', 'sentiment_analysis', 't_test', 'normality_test', 'f_test','chi_square_test', 'non_parametric_test', 'linear_regression'].includes(currentMethod)
+                clickable: selectableMethods.includes(currentMethod)
               }"
               @click="toggleColumnSelection($event, column, index)"
           >
@@ -130,6 +130,12 @@
         :available-columns="selectedFileColumns"
       />
 
+      <LogisticRegressionConfig
+        v-else-if="currentMethod === 'logistic_regression'"
+        v-model:config="configs.logisticRegressionConfig"
+        :available-columns="selectedFileColumns"
+      />
+
       <WordCloudConfig
         v-else-if="currentMethod === 'text_analysis'"
         :selected-file-columns="selectedFileColumns"
@@ -165,6 +171,7 @@ import NonParametricTestConfig from "@/components/Config/NonParametricTestConfig
 import LinearRegressionConfig from "@/components/Config/LinearRegressionConfig.vue";
 import { getDefaultConfigs } from '@/utils/configDefaults.js'
 import Waiting from "@/components/Waiting.vue";
+import LogisticRegressionConfig from "@/components/Config/LogisticRegressionConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
@@ -181,6 +188,7 @@ export default {
     NormalityTestConfig,
     WordCloudConfig,
     SentimentAnalysisConfig,
+    LogisticRegressionConfig,
     NonParametricTestConfig,
     LinearRegressionConfig
   },
@@ -271,17 +279,12 @@ export default {
     'update:dataTransformationConfig',
     'toggleColumnSelection'
   ],
-  methods: {
-    isColumnSelected(column) {
-      return this.selectedColumns.includes(column);
-    },
-    
-    toggleColumnSelection(event, column, index) {
-      // 双重验证
-      const selectableMethods = [
-        'missing_value_interpolation', 
-        'delete_columns', 
-        'data_transformation', 
+  data() {
+    return {
+      selectableMethods: [
+        'missing_value_interpolation',
+        'delete_columns',
+        'data_transformation',
         'statistical_summary',
         'correlation_analysis',
         'text_analysis',
@@ -291,10 +294,19 @@ export default {
         'f_test',
         'chi_square_test',
         'non_parametric_test',
-        'linear_regression'
-      ];
-
-      if (!selectableMethods.includes(this.currentMethod)) {
+        'linear_regression',
+        'logistic_regression'
+      ]
+    };
+  },
+  methods: {
+    isColumnSelected(column) {
+      return this.selectedColumns.includes(column);
+    },
+    
+    toggleColumnSelection(event, column, index) {
+      // 双重验证
+      if (!this.selectableMethods.includes(this.currentMethod)) {
         return;
       }
       

@@ -54,5 +54,17 @@ export const getDefaultConfigs = () => ({
       tol: 0.0001,
       fit_intercept: true
     }
+  },
+  logisticRegressionConfig: {
+    y_column: '',
+    method: 'logistic',
+    solver: 'lbfgs',
+    params: {
+      C: 1.0,
+      max_iter: 1000,
+      tol: 0.0001,
+      fit_intercept: true,
+      class_weight: null
+    }
   }
 })

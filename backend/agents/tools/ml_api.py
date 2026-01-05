@@ -3,53 +3,43 @@
 提供基于 PyTorch 的机器学习算法，包括深度学习、SVM、随机森林等
 """
 
+from typing import List, Dict, Any
 from langchain_core.tools import tool
 from .tool_error_handler import tool_error_handler
 
-# SVM 实现
+# 注册逻辑回归工具
 @tool
 @tool_error_handler
-def support_vector_machine(df: dict, target_column: str) -> dict:
+def logistic_regression_tool(file_path: str, x_columns: List[str], y_column: str,
+                          method: str = "logistic", session_id: str = None,
+                          solver: str = 'lbfgs', **kwargs) -> Dict[str, Any]:
     """
-    支持向量机分类/回归
+    逻辑回归 - 使用逻辑回归进行分类任务
 
     Args:
-        df (dict): 输入数据（字典格式）
-        target_column (str): 目标变量列名
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列，分类标签）
+        method (str): 回归方法 (默认 "logistic")
+        session_id (str): 会话ID
+        solver (str): 优化算法
+            - "lbfgs": 拟牛顿法 (默认，适用于小数据集)
+            - "liblinear": 坐标下降法 (适用于小数据集)
+            - "newton-cg": 牛顿共轭梯度法 (适用于大数据集)
+            - "sag": 随机平均梯度下降 (适用于大数据集)
+            - "saga": 随机平均梯度下降加速版 (适用于大数据集)
+        **kwargs: 其他参数，用于特定回归方法的配置
+            - C (float): 正则化强度的倒数，值越小正则化越强 (默认1.0)
+            - max_iter (int): 最大迭代次数 (默认1000)
+            - tol: 收敛容差 (默认1e-4)
+            - fit_intercept: 是否拟合截距 (默认True)
+            - class_weight: 类别权重 ("balanced" 或 None)
 
     Returns:
-        dict: SVM 训练结果
+        Dict[str, Any]: 包含逻辑回归结果的字典
     """
-    # 占位函数，后续实现具体逻辑
-    return {
-        'algorithm': 'SVM',
-        'target': target_column,
-        'status': 'placeholder'
-    }
-
-
-# 随机森林实现
-@tool
-@tool_error_handler
-def random_forest(df: dict, target_column: str, n_estimators: int = 100) -> dict:
-    """
-    随机森林分类/回归
-
-    Args:
-        df (dict): 输入数据（字典格式）
-        target_column (str): 目标变量列名
-        n_estimators (int): 决策树数量
-
-    Returns:
-        dict: 随机森林训练结果
-    """
-    # 占位函数，后续实现具体逻辑
-    return {
-        'algorithm': 'Random Forest',
-        'target': target_column,
-        'n_estimators': n_estimators,
-        'status': 'placeholder'
-    }
+    from utils.ml_tool import logistic_regression
+    return logistic_regression(file_path, x_columns, y_column, method, session_id, solver, **kwargs)
 
 
 # 将模块中的函数注册为工具
@@ -60,6 +50,4 @@ def register_ml_tools(agent):
     Args:
         agent: DataAnalysisAgent实例
     """
-    # 已经使用装饰器注册为工具，这里只需要将它们添加到agent中
-    agent.tools.append(support_vector_machine)
-    agent.tools.append(random_forest)
+    agent.tools.append(logistic_regression_tool)
