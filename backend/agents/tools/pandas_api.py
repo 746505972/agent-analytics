@@ -1,6 +1,6 @@
 """
 Pandas API 模块
-提供统计建模方法，包括数据清洗、聚类、假设检验、回归分析等功能
+提供统计建模方法，包括数据清洗、假设检验、回归分析等功能
 """
 
 from typing import Any, List
@@ -8,7 +8,9 @@ from .tool_error_handler import tool_error_handler
 
 from langchain_core.tools import tool
 from utils.file_manager import remove_invalid_samples, handle_missing_values
-from utils.pandas_tool import dimensionless_processing, scientific_calculation, one_hot_encoding
+from utils.pandas_tool import dimensionless_processing, scientific_calculation, one_hot_encoding,\
+    statistical_summary, text_to_numeric_or_datetime, correlation_analysis, normality_test, \
+    t_test, f_test, chi_square_test, non_parametric_test, linear_regression
 
 
 # 注册去除无效样本工具
@@ -148,7 +150,6 @@ def statistical_summary_tool(
         session_id (str): session_id
         columns (List[str]): 需要处理的列名列表
     """
-    from utils.pandas_tool import statistical_summary
     return statistical_summary(file_path, columns, session_id)
 
 
@@ -172,7 +173,6 @@ def text_to_numeric_or_datetime_tool(
         session_id (str): 会话ID
         datetime_format (str): 时间格式(可选)，如转换为时间时可指定格式，例如 "%Y-%m-%d %H:%M:%S"
     """
-    from utils.pandas_tool import text_to_numeric_or_datetime
     return text_to_numeric_or_datetime(file_path, columns, convert_to, session_id, datetime_format)
 
 
@@ -193,7 +193,6 @@ def correlation_analysis_tool(
         columns (List[str]): 需要分析的列名列表
         method (str): 相关性计算方法 ("pearson", "spearman", "kendall")
     """
-    from utils.pandas_tool import correlation_analysis
     return correlation_analysis(file_path, columns, method, session_id)
 
 
@@ -213,7 +212,6 @@ def normality_test_tool(file_path: str, columns: List[str], session_id: str = No
         alpha (float): 显著性水平 (默认0.05)
         group_by (str): 分组列名，如果提供则按组进行正态性检验
     """
-    from utils.pandas_tool import normality_test
     return normality_test(file_path, columns, session_id, method, alpha, group_by)
 
 
@@ -243,7 +241,6 @@ def t_test_tool(file_path: str, columns: List[str], test_type: str = "one_sample
     Returns:
         Dict[str, Any]: 包含T检验结果和正态性检验结果的字典
     """
-    from utils.pandas_tool import t_test
     return t_test(file_path, columns, test_type, session_id, **kwargs)
 
 
@@ -265,7 +262,6 @@ def f_test_tool(file_path: str, columns: List[str], session_id: str = None,
     Returns:
         Dict[str, Any]: 包含F检验结果的字典
     """
-    from utils.pandas_tool import f_test
     return f_test(file_path, columns, session_id, group_by, alpha)
 
 
@@ -287,7 +283,6 @@ def chi_square_test_tool(file_path: str, columns: List[str], session_id: str = N
     Returns:
         Dict[str, Any]: 包含卡方检验结果的字典
     """
-    from utils.pandas_tool import chi_square_test
     return chi_square_test(file_path, columns, session_id, alpha, group_by)
 
 
@@ -317,7 +312,6 @@ def non_parametric_test_tool(file_path: str, columns: List[str], test_type: str 
     Returns:
         Dict[str, Any]: 包含非参数检验结果的字典
     """
-    from utils.pandas_tool import non_parametric_test
     return non_parametric_test(file_path, columns, test_type, session_id, group_by, alpha, **kwargs)
 
 
@@ -350,7 +344,6 @@ def linear_regression_tool(file_path: str, x_columns: List[str], y_column: str,
     Returns:
         Dict[str, Any]: 包含线性回归结果的字典
     """
-    from utils.pandas_tool import linear_regression
     return linear_regression(file_path, x_columns, y_column, method, session_id, alpha, l1_ratio, **kwargs)
 
 

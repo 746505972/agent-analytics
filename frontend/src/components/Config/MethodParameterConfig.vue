@@ -18,7 +18,7 @@
           </div>
           <p>点击选择列，支持 Ctrl/Shift 多选</p>
         </div>
-        <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test','chi_square_test', 'non_parametric_test'].includes(currentMethod)">
+        <div v-else-if="['statistical_summary','correlation_analysis', 't_test', 'normality_test','f_test','chi_square_test', 'non_parametric_test','clustering_analysis'].includes(currentMethod)">
           <div class="header">
             <h3>选择需要分析的列</h3> <DeleteColumns @click="clearSelectedColumns" />
           </div>
@@ -146,6 +146,12 @@
         :available-columns="selectedFileColumns"
       />
 
+      <ClusteringConfig
+        v-else-if="currentMethod === 'clustering_analysis'"
+        v-model:config="configs.clusteringConfig"
+        :available-columns="selectedFileColumns"
+      />
+
       <WordCloudConfig
         v-else-if="currentMethod === 'text_analysis'"
         :selected-file-columns="selectedFileColumns"
@@ -183,10 +189,12 @@ import { getDefaultConfigs } from '@/utils/configDefaults.js'
 import Waiting from "@/components/Waiting.vue";
 import LogisticRegressionConfig from "@/components/Config/LogisticRegressionConfig.vue";
 import DeleteColumns from "@/components/DeleteColumns.vue";
+import ClusteringConfig from "@/components/Config/ClusteringConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
   components: {
+    ClusteringConfig,
     DeleteColumns,
     Waiting,
     ChiSquareTestConfig,
@@ -308,7 +316,8 @@ export default {
         'chi_square_test',
         'non_parametric_test',
         'linear_regression',
-        'logistic_regression'
+        'logistic_regression',
+        'clustering_analysis'
       ]
     };
   },

@@ -66,5 +66,18 @@ export const getDefaultConfigs = () => ({
       fit_intercept: true,
       class_weight: null
     }
+  },
+  clusteringConfig: {
+    method: 'kmeans',
+    n_clusters: 3,
+    params: {
+      standardize: true,
+      init: 'k-means++',
+      max_iter: 300,
+      eps: 0.5,
+      min_samples: 5,
+      linkage: 'ward',
+      covariance_type: 'full'
+    }
   }
 })

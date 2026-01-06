@@ -50,6 +50,11 @@
       <LogisticRegressionResult :datasetDetails="datasetDetails" />
     </div>
 
+    <!-- 聚类分析结果 -->
+    <div v-else-if="currentMethod === 'clustering_analysis' && datasetDetails" class="analysis-section">
+      <ClusteringResult :datasetDetails="datasetDetails" />
+    </div>
+
     <!-- 词云分析结果 -->
     <div v-else-if="currentMethod === 'text_analysis' && datasetDetails" class="analysis-section">
       <WordCloudResult :dataset-details="datasetDetails" />
@@ -96,6 +101,7 @@ import NonParametricTestResult from "@/components/AnalyseResult/NonParametricTes
 import LinearRegressionResult from "@/components/AnalyseResult/LinearRegressionResult.vue";
 import Waiting from "@/components/Waiting.vue";
 import LogisticRegressionResult from "@/components/AnalyseResult/LogisticRegressionResult.vue";
+import ClusteringResult from "@/components/AnalyseResult/ClusteringResult.vue";
 
 export default {
   name: "ResultContent",
@@ -113,7 +119,8 @@ export default {
     WordCloudResult,
     NonParametricTestResult,
     LinearRegressionResult,
-    LogisticRegressionResult
+    LogisticRegressionResult,
+    ClusteringResult
   },
   props: {
     currentMethod: {

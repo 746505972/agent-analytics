@@ -447,6 +447,45 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       } else {
         throw new Error(result.error || "获取逻辑回归结果失败");
       }
+    } else if (method === 'clustering_analysis') {
+      // 准备聚类分析请求体
+      const requestBody = {
+        method: configs.clusteringConfig.method || 'kmeans',
+        n_clusters: configs.clusteringConfig.n_clusters || 3,
+        params: {
+          standardize: configs.clusteringConfig.params.standardize !== undefined ? configs.clusteringConfig.params.standardize : true,
+          init: configs.clusteringConfig.params.init || 'k-means++',
+          max_iter: configs.clusteringConfig.params.max_iter || 300,
+          eps: configs.clusteringConfig.params.eps || 0.5,
+          min_samples: configs.clusteringConfig.params.min_samples || 5,
+          linkage: configs.clusteringConfig.params.linkage || 'ward',
+          covariance_type: configs.clusteringConfig.params.covariance_type || 'full'
+        }
+      };
+
+      // 添加选中的列
+      if (selectedColumns && selectedColumns.length > 0) {
+        requestBody.columns = selectedColumns;
+      }
+
+      const response = await fetch(`/data/${dataId}/clustering_analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return {
+          ...result.data,
+          resultMethod: method
+        };
+      } else {
+        throw new Error(result.error || "获取聚类分析结果失败");
+      }
     }
     // 其他分析方法可以在这里添加
     return null;
