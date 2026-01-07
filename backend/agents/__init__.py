@@ -1,4 +1,4 @@
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
 from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -52,7 +52,7 @@ class DataAnalysisAgent:
         self.register_module_tools()
         
         # 创建agent
-        self.agent = create_react_agent(
+        self.agent = create_agent(
             model=self.llm,
             tools=self.tools
         )
@@ -70,8 +70,8 @@ class DataAnalysisAgent:
         register_builtin_tools(self)
         register_pandas_tools(self)
         register_ml_tools(self)
-    # TODO: 实现流式响应 & 添加分析结果上下文
-    def process_query_stream(self, query: str, data_context=None, session_id=None):
+    # TODO: 实现流式响应(DONE) & 添加分析结果上下文
+    async def process_query_stream(self, query: str, data_context=None, session_id=None):
         """
         流式处理用户查询
         
@@ -115,38 +115,50 @@ class DataAnalysisAgent:
             config = {"recursion_limit": 50}
             if session_id:
                 config["session_id"] = session_id
-                
-            # 使用stream模式获取工具调用的详细信息
-            tool_calls_info = []
-            
-            for chunk in self.agent.stream(
-                {"messages": messages}, 
-                config=config, 
-                stream_mode="updates"
-            ):
-                # 检查是否有工具调用信息
-                if "agent" in chunk and "messages" in chunk["agent"]:
-                    message = chunk["agent"]["messages"][0]
-                    if hasattr(message, 'tool_calls') and message.tool_calls:
-                        for tool_call in message.tool_calls:
+
+                async for token, metadata in self.agent.astream(
+                        {"messages": messages},
+                        config=config,
+                        stream_mode="messages",
+                ):
+                    # if token.content:
+                    #     print("========token:", token.content)
+                    # 检查token是否包含工具调用
+                    if hasattr(token, 'tool_calls') and token.tool_calls:
+                        for tool_call in token.tool_calls:
                             tool_call_info = {
                                 "name": tool_call["name"],
                                 "args": tool_call["args"]
                             }
-                            tool_calls_info.append(tool_call_info)
                             # 流式返回工具调用信息
                             yield {
                                 'type': 'tool_calls',
                                 'data': [tool_call_info]
                             }
-                
-                # 流式返回响应内容
-                if "agent" in chunk and "messages" in chunk["agent"]:
-                    message = chunk["agent"]["messages"][0]
-                    if hasattr(message, 'content') and message.content:
+                    
+                    # 检查token是否包含内容
+                    if hasattr(token, 'content') and token.content:
+                        # 检查是否是工具执行结果（ToolMessage）
+                        # 工具执行结果通常包含特定格式的内容，如错误或成功信息，或者包含tool_call_id
+                        # 或者检查metadata中的节点信息
+                        langgraph_node = metadata.get("langgraph_node", "") if metadata else ""
+                        
+                        # 如果是工具节点的输出，跳过不发送给前端
+                        if langgraph_node == "tools":
+                            continue
+                        
+                        # 如果内容是字典或列表（通常是工具执行结果），也跳过
+                        if isinstance(token.content, (dict, list)):
+                            continue
+                        
+                        # 检查是否是工具执行结果的其他标识
+                        if isinstance(token.content, str) and ('error' in token.content.lower() or 'success' in token.content.lower()):
+                            # 如果是错误信息，尝试让AI处理
+                            continue  # 跳过直接返回错误内容，让AI处理
+                        
                         yield {
                             'type': 'content',
-                            'data': message.content
+                            'data': token.content
                         }
             
             # 发送结束标记
@@ -156,11 +168,11 @@ class DataAnalysisAgent:
             }
         except Exception as e:
             import traceback
-            error_info = f"处理查询时发生错误: {traceback.format_exc()}"
-            print(error_info)
+            error_info = f"处理查询时发生错误，请稍后重试。"
+            print(f"处理查询时发生错误: {traceback.format_exc()}")
             yield {
                 'type': 'error',
-                'data': str(e)
+                'data': error_info
             }
 
     

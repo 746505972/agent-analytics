@@ -1,223 +1,193 @@
 <template>
   <div class="clustering-result" v-if="datasetDetails.resultMethod === 'clustering_analysis'">
-    <div v-if="clusteringData" >
-      <!-- 分析摘要 -->
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="info-label">聚类方法:</span>
-          <span class="info-value">{{ clusteringData.method }}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">特征列数:</span>
-          <span class="info-value">{{ clusteringData.columns.length }}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">簇数量:</span>
-          <span class="info-value">{{ clusteringData.n_clusters }}</span>
-        </div>
-        <div class="info-item">
-          <span class="info-label">样本数量:</span>
-          <span class="info-value">{{ clusteringData.sample_size }}</span>
-        </div>
+    <!-- 分析摘要 -->
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">聚类方法:</span>
+        <span class="info-value">{{ clusteringData.method }}</span>
       </div>
-
-      <!-- 评估指标 -->
-      <div class="table-header">
-        <h4>评估指标</h4>
-        <button class="copy-button" @click="copyTable('metrics')" title="复制表格">
-          <img src="@/assets/images/copy.svg" alt="复制" />
-        </button>
+      <div class="info-item">
+        <span class="info-label">特征列数:</span>
+        <span class="info-value">{{ clusteringData.columns.length }}</span>
       </div>
-      <div v-if="clusteringData.evaluation_metrics && 
-        (clusteringData.evaluation_metrics.silhouette_score || 
-         clusteringData.evaluation_metrics.calinski_harabasz_score)" class="stats-summary-container">
-        <table class="stats-summary-table" ref="metricsTable">
-          <thead>
-            <tr>
-              <th>指标名称</th>
-              <th>值</th>
-              <th>描述</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="clusteringData.evaluation_metrics.silhouette_score !== null">
-              <td>轮廓系数</td>
-              <td>{{ clusteringData.evaluation_metrics.silhouette_score.toFixed(4) }}</td>
-              <td>衡量聚类的紧密度和分离度，值越接近1越好</td>
-            </tr>
-            <tr v-if="clusteringData.evaluation_metrics.calinski_harabasz_score !== null">
-              <td>Calinski-Harabasz指数</td>
-              <td>{{ clusteringData.evaluation_metrics.calinski_harabasz_score.toFixed(2) }}</td>
-              <td>簇间离散度与簇内离散度的比值，值越大越好</td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="info-item">
+        <span class="info-label">簇数量:</span>
+        <span class="info-value">{{ clusteringData.n_clusters }}</span>
       </div>
-
-      <!-- 簇统计信息 -->
-      <div class="table-header">
-        <h4>簇统计信息</h4>
-        <button class="copy-button" @click="copyTable('clusterStats')" title="复制表格">
-          <img src="@/assets/images/copy.svg" alt="复制" />
-        </button>
-      </div>
-      <div class="stats-summary-container">
-        <table class="stats-summary-table" ref="clusterStatsTable">
-          <thead>
-            <tr>
-              <th>簇ID</th>
-              <th>样本数量</th>
-              <th>占比(%)</th>
-              <th>中心点坐标</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr 
-              v-for="(stats, clusterId) in clusteringData.cluster_stats" 
-              :key="clusterId"
-            >
-              <td>簇 {{ clusterId }}</td>
-              <td>{{ stats.size }}</td>
-              <td>{{ (stats.proportion * 100).toFixed(2) }}%</td>
-              <td>
-                <div 
-                  v-for="(value, feature) in stats.centroid" 
-                  :key="feature" 
-                  class="feature-value"
-                >
-                  <span class="feature-name">{{ feature }}:</span>
-                  <span class="feature-val">{{ value !== null ? value.toFixed(4) : 'N/A' }}</span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- 模型参数 -->
-      <div class="table-header">
-        <h4>模型参数</h4>
-        <button class="copy-button" @click="copyTable('params')" title="复制表格">
-          <img src="@/assets/images/copy.svg" alt="复制" />
-        </button>
-      </div>
-      <div class="stats-summary-container">
-        <table class="stats-summary-table" ref="paramsTable">
-          <thead>
-            <tr>
-              <th>参数名称</th>
-              <th>值</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>簇数量</td>
-              <td>{{ clusteringData.model_params.n_clusters }}</td>
-            </tr>
-            <tr>
-              <td>标准化</td>
-              <td>{{ clusteringData.model_params.standardize ? '是' : '否' }}</td>
-            </tr>
-            <tr>
-              <td>最大迭代次数</td>
-              <td>{{ clusteringData.model_params.max_iter }}</td>
-            </tr>
-            <!-- 算法特定参数 -->
-            <tr v-if="clusteringData.method === 'kmeans'">
-              <td>初始化方法</td>
-              <td>{{ clusteringData.model_params.init }}</td>
-            </tr>
-            <tr v-if="clusteringData.method === 'dbscan'">
-              <td>邻域半径(eps)</td>
-              <td>{{ clusteringData.model_params.eps }}</td>
-            </tr>
-            <tr v-if="clusteringData.method === 'dbscan'">
-              <td>最小样本数</td>
-              <td>{{ clusteringData.model_params.min_samples }}</td>
-            </tr>
-            <tr v-if="clusteringData.method === 'hierarchical'">
-              <td>链接方法</td>
-              <td>{{ clusteringData.model_params.linkage }}</td>
-            </tr>
-            <tr v-if="clusteringData.method === 'gmm'">
-              <td>协方差类型</td>
-              <td>{{ clusteringData.model_params.covariance_type }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- 聚类标签 -->
-      <div class="table-header">
-        <h4>聚类标签</h4>
-        <button class="copy-button" @click="copyTable('labels')" title="复制表格">
-          <img src="@/assets/images/copy.svg" alt="复制" />
-        </button>
-      </div>
-      <div class="labels-info">
-        <p>前20个样本的聚类标签:</p>
-        <div class="labels-preview">
-          <span 
-            v-for="(label, index) in clusteringData.cluster_labels.slice(0, 20)" 
-            :key="index" 
-            :class="['label-item', `cluster-${label}`]"
-          >
-            {{ label }}
-          </span>
-          <span v-if="clusteringData.cluster_labels.length > 20" class="more-labels">...还有{{ clusteringData.cluster_labels.length - 20 }}个</span>
-        </div>
-      </div>
-
-      <!-- 下载聚类结果 -->
-      <div class="table-header">
-        <h4>下载结果</h4>
-      </div>
-      <div class="download-section">
-        <p>下载包含原始数据和聚类标签的CSV文件：</p>
-        <button class="download-button" @click="downloadClusteringResult" :disabled="!clusteringData.result_file_path">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
-            <path fill="none" d="M0 0h24v24H0z"></path>
-            <path fill="currentColor" d="M1 14.5a6.496 6.496 0 0 1 3.064-5.519 8.001 8.001 0 0 1 15.872 0 6.5 6.5 0 0 1-2.936 12L7 21c-3.356-.274-6-3.078-6-6.5zm15.848 4.487a4.5 4.5 0 0 0 2.03-8.309l-.807-.503-.12-.942a6.001 6.001 0 0 0-11.903 0l-.12.942-.805.503a4.5 4.5 0 0 0 2.029 8.309l.173.013h9.35l.173-.013zM13 12h3l-4 5-4-5h3V8h2v4z"></path>
-          </svg>
-          下载聚类结果CSV
-        </button>
-        <div v-if="!clusteringData.result_file_path" class="no-result-file">
-          <p>暂无结果文件可供下载</p>
-        </div>
-      </div>
-
-      <!-- 使用ECharts可视化聚类结果（仅对数值特征进行2D可视化） -->
-      <div v-if="clusteringData.columns.length >= 2" class="visualization-section">
-        <div class="table-header">
-          <h4>聚类结果可视化</h4>
-        </div>
-        <div class="chart-controls">
-          <div class="control-group">
-            <label>X轴特征:</label>
-            <select v-model="selectedXFeature" @change="updateVisualization" class="control-select">
-              <option v-for="col in clusteringData.columns" :key="col" :value="col">{{ col }}</option>
-            </select>
-          </div>
-          <div class="control-group">
-            <label>Y轴特征:</label>
-            <select v-model="selectedYFeature" @change="updateVisualization" class="control-select">
-              <option v-for="col in clusteringData.columns" :key="col" :value="col">{{ col }}</option>
-            </select>
-          </div>
-        </div>
-        <div ref="clusteringChart" class="chart-container" style="height: 400px;"></div>
+      <div class="info-item">
+        <span class="info-label">样本数量:</span>
+        <span class="info-value">{{ clusteringData.sample_size }}</span>
       </div>
     </div>
-    <div v-else-if="datasetDetails.resultMethod === 'clustering_analysis' && !clusteringData" class="loading">
-      正在加载聚类分析结果...
-      {{datasetDetails}}
+
+    <!-- 评估指标 -->
+    <div class="table-header">
+      <h4>评估指标</h4>
+      <button class="copy-button" @click="copyTable('metrics')" title="复制表格">
+        <img src="@/assets/images/copy.svg" alt="复制" />
+      </button>
+    </div>
+    <div v-if="clusteringData.evaluation_metrics &&
+      (clusteringData.evaluation_metrics.silhouette_score ||
+       clusteringData.evaluation_metrics.calinski_harabasz_score)" class="stats-summary-container">
+      <table class="stats-summary-table" ref="metricsTable">
+        <thead>
+          <tr>
+            <th>指标名称</th>
+            <th>值</th>
+            <th>描述</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-if="clusteringData.evaluation_metrics.silhouette_score !== null">
+            <td>轮廓系数</td>
+            <td>{{ clusteringData.evaluation_metrics.silhouette_score.toFixed(4) }}</td>
+            <td>衡量聚类的紧密度和分离度，值越接近1越好</td>
+          </tr>
+          <tr v-if="clusteringData.evaluation_metrics.calinski_harabasz_score !== null">
+            <td>Calinski-Harabasz指数</td>
+            <td>{{ clusteringData.evaluation_metrics.calinski_harabasz_score.toFixed(2) }}</td>
+            <td>簇间离散度与簇内离散度的比值，值越大越好</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 簇统计信息 -->
+    <div class="table-header">
+      <h4>簇统计信息</h4>
+      <button class="copy-button" @click="copyTable('clusterStats')" title="复制表格">
+        <img src="@/assets/images/copy.svg" alt="复制" />
+      </button>
+    </div>
+    <div class="stats-summary-container">
+      <table class="stats-summary-table" ref="clusterStatsTable">
+        <thead>
+          <tr>
+            <th>簇ID</th>
+            <th>样本数量</th>
+            <th>占比(%)</th>
+            <th>中心点坐标</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="(stats, clusterId) in clusteringData.cluster_stats"
+            :key="clusterId"
+          >
+            <td>簇 {{ clusterId }}</td>
+            <td>{{ stats.size }}</td>
+            <td>{{ (stats.proportion * 100).toFixed(2) }}%</td>
+            <td>
+              <div
+                v-for="(value, feature) in stats.centroid"
+                :key="feature"
+                class="feature-value"
+              >
+                <span class="feature-name">{{ feature }}:</span>
+                <span class="feature-val">{{ value !== null ? value.toFixed(4) : 'N/A' }}</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 模型参数 -->
+    <div class="table-header">
+      <h4>模型参数</h4>
+      <button class="copy-button" @click="copyTable('params')" title="复制表格">
+        <img src="@/assets/images/copy.svg" alt="复制" />
+      </button>
+    </div>
+    <div class="stats-summary-container">
+      <table class="stats-summary-table" ref="paramsTable">
+        <thead>
+          <tr>
+            <th>参数名称</th>
+            <th>值</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>簇数量</td>
+            <td>{{ clusteringData.model_params.n_clusters }}</td>
+          </tr>
+          <tr>
+            <td>标准化</td>
+            <td>{{ clusteringData.model_params.standardize ? '是' : '否' }}</td>
+          </tr>
+          <tr>
+            <td>最大迭代次数</td>
+            <td>{{ clusteringData.model_params.max_iter }}</td>
+          </tr>
+          <!-- 算法特定参数 -->
+          <tr v-if="clusteringData.method === 'kmeans'">
+            <td>初始化方法</td>
+            <td>{{ clusteringData.model_params.init }}</td>
+          </tr>
+          <tr v-if="clusteringData.method === 'dbscan'">
+            <td>邻域半径(eps)</td>
+            <td>{{ clusteringData.model_params.eps }}</td>
+          </tr>
+          <tr v-if="clusteringData.method === 'dbscan'">
+            <td>最小样本数</td>
+            <td>{{ clusteringData.model_params.min_samples }}</td>
+          </tr>
+          <tr v-if="clusteringData.method === 'hierarchical'">
+            <td>链接方法</td>
+            <td>{{ clusteringData.model_params.linkage }}</td>
+          </tr>
+          <tr v-if="clusteringData.method === 'gmm'">
+            <td>协方差类型</td>
+            <td>{{ clusteringData.model_params.covariance_type }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 聚类标签 -->
+    <div class="table-header">
+      <h4>聚类标签</h4>
+      <button class="copy-button" @click="copyTable('labels')" title="复制表格">
+        <img src="@/assets/images/copy.svg" alt="复制" />
+      </button>
+    </div>
+    <div class="labels-info">
+      <p>前20个样本的聚类标签:</p>
+      <div class="labels-preview">
+        <span
+          v-for="(label, index) in clusteringData.cluster_labels.slice(0, 20)"
+          :key="index"
+          :class="['label-item', `cluster-${label}`]"
+        >
+          {{ label }}
+        </span>
+        <span v-if="clusteringData.cluster_labels.length > 20" class="more-labels">...还有{{ clusteringData.cluster_labels.length - 20 }}个</span>
+      </div>
+    </div>
+
+    <!-- 下载聚类结果 -->
+    <div class="table-header">
+      <h4>下载结果</h4>
+    </div>
+    <div class="download-section">
+      <p>下载包含原始数据和聚类标签的CSV文件：</p>
+      <button class="download-button" @click="downloadClusteringResult" :disabled="!clusteringData.result_file_path">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="20" height="20">
+          <path fill="none" d="M0 0h24v24H0z"></path>
+          <path fill="currentColor" d="M1 14.5a6.496 6.496 0 0 1 3.064-5.519 8.001 8.001 0 0 1 15.872 0 6.5 6.5 0 0 1-2.936 12L7 21c-3.356-.274-6-3.078-6-6.5zm15.848 4.487a4.5 4.5 0 0 0 2.03-8.309l-.807-.503-.12-.942a6.001 6.001 0 0 0-11.903 0l-.12.942-.805.503a4.5 4.5 0 0 0 2.029 8.309l.173.013h9.35l.173-.013zM13 12h3l-4 5-4-5h3V8h2v4z"></path>
+        </svg>
+        下载聚类结果CSV
+      </button>
+      <div v-if="!clusteringData.result_file_path" class="no-result-file">
+        <p>暂无结果文件可供下载</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
-import * as echarts from 'echarts';
-
 export default {
   name: 'ClusteringResult',
   props: {
@@ -226,141 +196,13 @@ export default {
       required: true
     }
   },
-  data() {
-    return {
-      selectedXFeature: '',
-      selectedYFeature: '',
-      chart: null
-    };
-  },
   computed: {
     clusteringData() {
       return this.datasetDetails;
 
     }
   },
-  watch: {
-    clusteringData: {
-      handler(newVal) {
-        if (newVal && this.clusteringData.columns.length >= 2) {
-          // 默认选择前两个特征进行可视化
-          this.selectedXFeature = this.clusteringData.columns[0];
-          this.selectedYFeature = this.clusteringData.columns[1];
-          this.$nextTick(() => {
-            this.updateVisualization();
-          });
-        }
-      },
-      immediate: true
-    }
-  },
   methods: {
-    updateVisualization() {
-      if (!this.clusteringData || !this.selectedXFeature || !this.selectedYFeature) {
-        return;
-      }
-
-      // 准备可视化数据
-      const chartData = [];
-      for (let i = 0; i < this.clusteringData.cluster_labels.length; i++) {
-        const xValue = this.datasetDetails.data[this.clusteringData.original_indices[i]][this.selectedXFeature];
-        const yValue = this.datasetDetails.data[this.clusteringData.original_indices[i]][this.selectedYFeature];
-        const clusterLabel = this.clusteringData.cluster_labels[i];
-        
-        if (xValue !== undefined && yValue !== undefined && 
-            xValue !== null && yValue !== null && 
-            !isNaN(xValue) && !isNaN(yValue)) {
-          chartData.push({
-            x: parseFloat(xValue),
-            y: parseFloat(yValue),
-            cluster: clusterLabel
-          });
-        }
-      }
-
-      // 销毁之前的图表实例
-      if (this.chart) {
-        this.chart.dispose();
-      }
-
-      // 初始化图表
-      this.chart = echarts.init(this.$refs.clusteringChart);
-
-      // 获取唯一簇标签
-      const uniqueClusters = [...new Set(this.clusteringData.cluster_labels)];
-      
-      // 为每个簇创建一个系列
-      const series = uniqueClusters.map(clusterId => {
-        const clusterData = chartData.filter(item => item.cluster === clusterId);
-        return {
-          name: `簇 ${clusterId}`,
-          type: 'scatter',
-          data: clusterData.map(item => [item.x, item.y]),
-          symbolSize: 8,
-          itemStyle: {
-            color: this.getColorByCluster(clusterId)
-          }
-        };
-      });
-
-      // 图表配置
-      const option = {
-        title: {
-          text: `聚类结果 - ${this.selectedXFeature} vs ${this.selectedYFeature}`,
-          left: 'center'
-        },
-        tooltip: {
-          trigger: 'axis',
-          formatter: (params) => {
-            const param = params[0];
-            return `簇: ${param.seriesName}<br/>${this.selectedXFeature}: ${param.value[0]}<br/>${this.selectedYFeature}: ${param.value[1]}`;
-          }
-        },
-        legend: {
-          data: uniqueClusters.map(clusterId => `簇 ${clusterId}`),
-          top: '10%'
-        },
-        xAxis: {
-          type: 'value',
-          name: this.selectedXFeature,
-          splitLine: {
-            lineStyle: {
-              type: 'dashed'
-            }
-          }
-        },
-        yAxis: {
-          type: 'value',
-          name: this.selectedYFeature,
-          splitLine: {
-            lineStyle: {
-              type: 'dashed'
-            }
-          }
-        },
-        series: series
-      };
-
-      this.chart.setOption(option);
-
-      // 响应窗口大小变化
-      window.addEventListener('resize', () => {
-        if (this.chart) {
-          this.chart.resize();
-        }
-      });
-    },
-    
-    getColorByCluster(clusterId) {
-      // 为不同簇分配不同颜色
-      const colors = [
-        '#c23531', '#2f4554', '#61a0a8', '#d48265', '#91c7ae',
-        '#749f83', '#ca8622', '#bda29a', '#6e7074', '#546570',
-        '#c4ccd3', '#f05b72', '#ef5b9c', '#f47920', '#905a3d'
-      ];
-      return colors[clusterId % colors.length];
-    },
-    
     // 下载聚类结果CSV文件
     downloadClusteringResult() {
       if (!this.clusteringData.result_file_path) {
@@ -514,36 +356,12 @@ export default {
       }
     }
   },
-  mounted() {
-    // 组件挂载后，如果已有数据则更新可视化
-    if (this.clusteringData && this.clusteringData.columns.length >= 2) {
-      this.selectedXFeature = this.clusteringData.columns[0];
-      this.selectedYFeature = this.clusteringData.columns[1];
-      this.$nextTick(() => {
-        this.updateVisualization();
-      });
-    }
-  },
-  beforeUnmount() {
-    // 组件销毁前清理图表实例
-    if (this.chart) {
-      this.chart.dispose();
-    }
-    window.removeEventListener('resize', this.handleResize);
-  }
 };
 </script>
 
 <style scoped>
 .clustering-result {
   padding: 20px;
-}
-
-.result-content {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
 .info-grid {
@@ -722,57 +540,6 @@ export default {
   color: #909399;
   font-style: italic;
   margin-top: 10px;
-}
-
-.visualization-section {
-  margin-top: 30px;
-}
-
-.visualization-section h4 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #333;
-  padding-bottom: 5px;
-}
-
-.chart-controls {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  padding: 15px;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-}
-
-.control-group {
-  display: flex;
-  flex-direction: column;
-}
-
-.control-group label {
-  margin-bottom: 5px;
-  font-weight: 500;
-  color: #606266;
-}
-
-.control-select {
-  padding: 6px 10px;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.chart-container {
-  border: 1px solid #ebeef5;
-  border-radius: 4px;
-  background-color: #fff;
-}
-
-.loading {
-  text-align: center;
-  padding: 40px;
-  color: #909399;
-  font-size: 16px;
 }
 
 h4 {

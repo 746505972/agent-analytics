@@ -15,7 +15,7 @@ def statistical_summary(file_path: str, columns: List[str], session_id: str = No
         Dict[str, Any]: 包含统计摘要信息的字典，格式适合 echarts 绘制表格
     """
 
-    df, numeric_columns = check_and_read(file_path, columns, session_id)
+    df, numeric_columns = check_and_read(file_path, columns, session_id, True)
 
     # 计算统计摘要信息
     summary_data = []

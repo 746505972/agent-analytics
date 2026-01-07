@@ -524,7 +524,6 @@ export default {
 
 .typing-indicator {
   display: inline-block;
-  width: 20px;
   height: 20px;
   position: relative;
 }
