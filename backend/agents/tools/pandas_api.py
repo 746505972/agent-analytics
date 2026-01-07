@@ -1,23 +1,17 @@
 """
 Pandas API 模块
-提供统计建模方法，包括数据清洗、聚类、假设检验、回归分析等功能
+提供统计建模方法，包括数据清洗、假设检验、回归分析等功能
 """
-import os
-import sys
+
 from typing import Any, List
-from tools import tool_error_handler
-
-# 添加项目根目录到sys.path
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
-
-# 添加绝对导入路径
-sys.path.insert(0, os.path.join(parent_dir, '..'))
+from .tool_error_handler import tool_error_handler
 
 from langchain_core.tools import tool
 from utils.file_manager import remove_invalid_samples, handle_missing_values
-from utils.pandas_tool import dimensionless_processing, scientific_calculation, one_hot_encoding
+from utils.pandas_tool import dimensionless_processing, scientific_calculation, one_hot_encoding,\
+    statistical_summary, text_to_numeric_or_datetime, correlation_analysis, normality_test, \
+    t_test, f_test, chi_square_test, non_parametric_test, linear_regression
+
 
 # 注册去除无效样本工具
 @tool
@@ -44,7 +38,6 @@ def remove_invalid_samples_tool(file_path: str, session_id: str = None,
                                   row_missing_threshold, col_missing_threshold)
 
 
-
 # 注册处理缺失值工具
 @tool
 @tool_error_handler
@@ -66,14 +59,15 @@ def handle_missing_values_tool(file_path: str, session_id: str = None,
     return handle_missing_values(file_path, session_id, specified_columns, interpolation_method,
                                  fill_value, knn_neighbors)
 
+
 # 注册量纲处理工具
 @tool
 @tool_error_handler
 def dimensionless_processing_tool(
-    file_path: str, session_id: str = None,
-    columns: List[str] = None,
-    method: str = "standard",
-    **kwargs
+        file_path: str, session_id: str = None,
+        columns: List[str] = None,
+        method: str = "standard",
+        **kwargs
 ) -> dict:
     """
     量纲处理 - 对数据进行标准化、归一化等处理
@@ -105,10 +99,10 @@ def dimensionless_processing_tool(
 @tool
 @tool_error_handler
 def scientific_calculation_tool(
-    file_path: str, session_id: str = None,
-    columns: List[str] = None,
-    operation: str = None,
-    params: dict = None
+        file_path: str, session_id: str = None,
+        columns: List[str] = None,
+        operation: str = None,
+        params: dict = None
 ) -> dict:
     """
     科学计算 - 对数据执行数学运算
@@ -126,9 +120,9 @@ def scientific_calculation_tool(
 @tool
 @tool_error_handler
 def one_hot_encoding_tool(
-    file_path: str, session_id: str = None,
-    columns: List[str] = None,
-    drop_first: bool = False
+        file_path: str, session_id: str = None,
+        columns: List[str] = None,
+        drop_first: bool = False
 ) -> dict:
     """
     独热编码 - 对分类变量进行独热编码处理
@@ -145,8 +139,8 @@ def one_hot_encoding_tool(
 @tool
 @tool_error_handler
 def statistical_summary_tool(
-    file_path: str, session_id: str = None,
-    columns: List[str] = None
+        file_path: str, session_id: str = None,
+        columns: List[str] = None
 ) -> dict:
     """
     统计摘要 - 计算并返回指定列的统计摘要信息
@@ -156,18 +150,18 @@ def statistical_summary_tool(
         session_id (str): session_id
         columns (List[str]): 需要处理的列名列表
     """
-    from utils.pandas_tool import statistical_summary
     return statistical_summary(file_path, columns, session_id)
+
 
 # 注册文本转换工具
 @tool
 @tool_error_handler
 def text_to_numeric_or_datetime_tool(
-    file_path: str,
-    columns: List[str],
-    convert_to: str = "numeric",
-    session_id: str = None,
-    datetime_format: str = None
+        file_path: str,
+        columns: List[str],
+        convert_to: str = "numeric",
+        session_id: str = None,
+        datetime_format: str = None
 ) -> dict:
     """
     文本转数值/时间 - 将包含千位分隔符、单位缩写（K,M等）的文本列转换为数值列，或将时间戳转换为时间列
@@ -179,7 +173,6 @@ def text_to_numeric_or_datetime_tool(
         session_id (str): 会话ID
         datetime_format (str): 时间格式(可选)，如转换为时间时可指定格式，例如 "%Y-%m-%d %H:%M:%S"
     """
-    from utils.pandas_tool import text_to_numeric_or_datetime
     return text_to_numeric_or_datetime(file_path, columns, convert_to, session_id, datetime_format)
 
 
@@ -187,9 +180,9 @@ def text_to_numeric_or_datetime_tool(
 @tool
 @tool_error_handler
 def correlation_analysis_tool(
-    file_path: str, session_id: str = None,
-    columns: List[str] = None,
-    method: str = "pearson"
+        file_path: str, session_id: str = None,
+        columns: List[str] = None,
+        method: str = "pearson"
 ) -> dict:
     """
     相关性分析 - 计算并返回指定列之间的相关系数和p值
@@ -200,14 +193,14 @@ def correlation_analysis_tool(
         columns (List[str]): 需要分析的列名列表
         method (str): 相关性计算方法 ("pearson", "spearman", "kendall")
     """
-    from utils.pandas_tool import correlation_analysis
     return correlation_analysis(file_path, columns, method, session_id)
+
 
 # 注册正态性检验工具
 @tool
 @tool_error_handler
 def normality_test_tool(file_path: str, columns: List[str], session_id: str = None,
-        method: str = "shapiro", alpha: float = 0.05, group_by: str = None) -> dict:
+                        method: str = "shapiro", alpha: float = 0.05, group_by: str = None) -> dict:
     """
     正态性检验（自带常值检验）
 
@@ -219,14 +212,14 @@ def normality_test_tool(file_path: str, columns: List[str], session_id: str = No
         alpha (float): 显著性水平 (默认0.05)
         group_by (str): 分组列名，如果提供则按组进行正态性检验
     """
-    from utils.pandas_tool import normality_test
     return normality_test(file_path, columns, session_id, method, alpha, group_by)
+
 
 # 注册T检验工具
 @tool
 @tool_error_handler
 def t_test_tool(file_path: str, columns: List[str], test_type: str = "one_sample",
-        session_id: str = None, **kwargs) -> dict:
+                session_id: str = None, **kwargs) -> dict:
     """
     T检验 - 对数据执行不同类型的T检验，自带正态性检验
 
@@ -248,14 +241,13 @@ def t_test_tool(file_path: str, columns: List[str], test_type: str = "one_sample
     Returns:
         Dict[str, Any]: 包含T检验结果和正态性检验结果的字典
     """
-    from utils.pandas_tool import t_test
     return t_test(file_path, columns, test_type, session_id, **kwargs)
 
 
 # 注册F检验工具
 @tool
 @tool_error_handler
-def f_test_tool(file_path: str, columns: List[str], session_id: str = None, 
+def f_test_tool(file_path: str, columns: List[str], session_id: str = None,
                 group_by: str = None, alpha: float = 0.05) -> dict:
     """
     F检验 - 对数据执行F检验，用于检验多个样本的方差是否相等或进行方差分析(ANOVA)
@@ -270,7 +262,6 @@ def f_test_tool(file_path: str, columns: List[str], session_id: str = None,
     Returns:
         Dict[str, Any]: 包含F检验结果的字典
     """
-    from utils.pandas_tool import f_test
     return f_test(file_path, columns, session_id, group_by, alpha)
 
 
@@ -292,7 +283,6 @@ def chi_square_test_tool(file_path: str, columns: List[str], session_id: str = N
     Returns:
         Dict[str, Any]: 包含卡方检验结果的字典
     """
-    from utils.pandas_tool import chi_square_test
     return chi_square_test(file_path, columns, session_id, alpha, group_by)
 
 
@@ -300,7 +290,7 @@ def chi_square_test_tool(file_path: str, columns: List[str], session_id: str = N
 @tool
 @tool_error_handler
 def non_parametric_test_tool(file_path: str, columns: List[str], test_type: str = "mannwhitney",
-                            session_id: str = None, group_by: str = None, alpha: float = 0.05, **kwargs) -> dict:
+                             session_id: str = None, group_by: str = None, alpha: float = 0.05, **kwargs) -> dict:
     """
     非参数检验 - 提供多种非参数检验方法
 
@@ -322,16 +312,15 @@ def non_parametric_test_tool(file_path: str, columns: List[str], test_type: str 
     Returns:
         Dict[str, Any]: 包含非参数检验结果的字典
     """
-    from utils.pandas_tool import non_parametric_test
     return non_parametric_test(file_path, columns, test_type, session_id, group_by, alpha, **kwargs)
 
 
 # 注册线性回归工具
 @tool
 @tool_error_handler
-def linear_regression_tool(file_path: str, x_columns: List[str], y_column: str, 
-                         method: str = "ols", session_id: str = None, 
-                         alpha: float = 1.0, l1_ratio: float = 0.5, **kwargs) -> dict:
+def linear_regression_tool(file_path: str, x_columns: List[str], y_column: str,
+                           method: str = "ols", session_id: str = None,
+                           alpha: float = 1.0, l1_ratio: float = 0.5, **kwargs) -> dict:
     """
     线性回归 - 使用普通最小二乘法或带正则化的线性回归方法
 
@@ -355,7 +344,6 @@ def linear_regression_tool(file_path: str, x_columns: List[str], y_column: str,
     Returns:
         Dict[str, Any]: 包含线性回归结果的字典
     """
-    from utils.pandas_tool import linear_regression
     return linear_regression(file_path, x_columns, y_column, method, session_id, alpha, l1_ratio, **kwargs)
 
 
@@ -363,7 +351,7 @@ def linear_regression_tool(file_path: str, x_columns: List[str], y_column: str,
 def register_pandas_tools(agent):
     """
     将pandas工具注册到agent
-    
+
     Args:
         agent: DataAnalysisAgent实例
     """

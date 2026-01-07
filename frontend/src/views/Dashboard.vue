@@ -11,6 +11,7 @@
       @load-analysis-from-history="loadAnalysisFromHistory"
       @remove-from-history="removeFromHistory"
       @show-preview="showDataPreview"
+      @remove-history="removeHistory"
     />
     <!-- 文件选择悬浮区域 -->
     <FileSelectionOverlay 
@@ -89,6 +90,7 @@
             @update:newColumnNames="handleNewColumnNamesUpdate"
             @update:dataTransformationConfig="updateDataTransformationConfig"
             @toggleColumnSelection="handleToggleColumnSelection"
+            @clear-selected-columns="clearSelectedColumns"
           />
         </div>
       </div>
@@ -266,6 +268,11 @@ export default {
       this.analysisHistory.splice(index, 1);
       // 更新localStorage
       localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
+    },
+
+    removeHistory(){
+      this.analysisHistory = [];
+      localStorage.removeItem('analysisHistory');
     },
 
     restoreAnalysisHistory() {
@@ -572,6 +579,10 @@ export default {
       }
 
       this.lastSelectedColumnIndex = index;
+    },
+
+    clearSelectedColumns(){
+      this.selectedColumns = [];
     },
 
     // 执行插值法

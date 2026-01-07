@@ -1,5 +1,5 @@
 <template>
-  <div class="f-test-result">
+  <div class="f-test-result" v-if="datasetDetails.resultMethod === 'f_test'">
     <!-- F检验信息 -->
     <div class="info-grid">
       <div class="info-item">

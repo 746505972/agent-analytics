@@ -1,5 +1,5 @@
 <template>
-  <div class="chi-square-test-result">
+  <div class="chi-square-test-result" v-if="datasetDetails.resultMethod === 'chi_square_test'">
     <!-- 卡方检验信息 -->
     <div class="info-grid">
       <div class="info-item">

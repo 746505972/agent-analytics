@@ -1,5 +1,5 @@
 <template>
-  <div class="t-test-result">
+  <div class="t-test-result" v-if="datasetDetails.resultMethod === 't_test'">
     <!-- 正态性检验结果 -->
     <div class="info-grid">
       <div class="info-item">

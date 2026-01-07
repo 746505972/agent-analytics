@@ -13,7 +13,7 @@ import logging
 
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
-
+from utils.file_manager import get_file_path
 # 导入Agent
 from agents import DataAnalysisAgent
 
@@ -46,9 +46,7 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
     """
     async def generate():
         try:
-            # 调试：打印从cookie获取的session_id
             session_id = request.state.session_id
-            logger.info(f"调试信息 - Session ID: {session_id}")
             
             logger.info("开始处理聊天请求")
             # 移除了聊天请求数据的日志打印，以保护用户隐私
@@ -57,7 +55,6 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
             data_context = None
             if chat_request.data_id:
                 try:
-                    from utils.file_manager import get_file_path
                     # 获取session_id
                     file_path = get_file_path(chat_request.data_id, session_id)
                     # 移除了文件路径的日志打印，以保护用户隐私
@@ -99,7 +96,7 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     logger.error(traceback.format_exc())
             
             # 流式执行agent，传递session_id给工具
-            for response_chunk in agent.process_query_stream(chat_request.message, data_context, session_id):
+            async for response_chunk in agent.process_query_stream(chat_request.message, data_context, session_id):
                 if response_chunk['type'] == 'tool_calls':
                     yield f"data: {json.dumps({'tool_calls': response_chunk['data']})}\n\n"
                 elif response_chunk['type'] == 'content':

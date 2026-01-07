@@ -42,9 +42,9 @@
           <h4>数据可视化</h4>
           <p>使用多种图表类型展示数据，包括折线图、柱状图、散点图等。</p>
         </div>
-        <div v-else-if="currentMethod === 'clustering'">
+        <div v-else-if="currentMethod === 'clustering_analysis'">
           <h4>聚类分析</h4>
-          <p>使用聚类算法对数据进行分组分析。</p>
+          <p>聚类分析是一种无监督学习方法，用于将数据集中的对象分组，使得同一组中的对象具有较高的相似性，而不同组之间的对象具有较高的相异性。</p>
         </div>
         <div v-else-if="currentMethod === 'classification'">
           <h4>分类分析</h4>

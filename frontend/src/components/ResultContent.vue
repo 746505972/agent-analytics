@@ -42,7 +42,17 @@
 
     <!-- 线性回归结果 -->
     <div v-else-if="currentMethod === 'linear_regression' && datasetDetails" class="analysis-section">
-      <LinearRegressionResult :result="datasetDetails" />
+      <LinearRegressionResult :datasetDetails="datasetDetails" />
+    </div>
+
+    <!-- 逻辑回归结果 -->
+    <div v-else-if="currentMethod === 'logistic_regression' && datasetDetails" class="analysis-section">
+      <LogisticRegressionResult :datasetDetails="datasetDetails" />
+    </div>
+
+    <!-- 聚类分析结果 -->
+    <div v-else-if="currentMethod === 'clustering_analysis' && datasetDetails" class="analysis-section">
+      <ClusteringResult :datasetDetails="datasetDetails" />
     </div>
 
     <!-- 词云分析结果 -->
@@ -90,6 +100,8 @@ import ChiSquareTestResult from "@/components/AnalyseResult/ChiSquareTestResult.
 import NonParametricTestResult from "@/components/AnalyseResult/NonParametricTestResult.vue";
 import LinearRegressionResult from "@/components/AnalyseResult/LinearRegressionResult.vue";
 import Waiting from "@/components/Waiting.vue";
+import LogisticRegressionResult from "@/components/AnalyseResult/LogisticRegressionResult.vue";
+import ClusteringResult from "@/components/AnalyseResult/ClusteringResult.vue";
 
 export default {
   name: "ResultContent",
@@ -106,7 +118,9 @@ export default {
     VisualizationPanel,
     WordCloudResult,
     NonParametricTestResult,
-    LinearRegressionResult
+    LinearRegressionResult,
+    LogisticRegressionResult,
+    ClusteringResult
   },
   props: {
     currentMethod: {

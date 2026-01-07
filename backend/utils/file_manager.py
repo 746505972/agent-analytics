@@ -2,7 +2,6 @@ import os
 import uuid
 from typing import Any, List
 
-import numpy as np
 import pandas as pd
 from sklearn.impute import KNNImputer
 
