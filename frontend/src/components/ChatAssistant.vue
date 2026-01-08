@@ -1,52 +1,81 @@
 <template>
-  {{sessions}}
   <div class="chat-section">
     <div class="chat-header">
       <div class="header-left">
         <h2>数据分析助手</h2>
-        <!-- 会话选择下拉菜单 -->
-        <select @change="switchToSession($event.target.value)" v-model="currentSessionId" class="session-selector">
-          <option v-for="session in sessions" :key="session.id" :value="session.id">{{ session.name }}</option>
-        </select>
       </div>
       <div class="header-right">
+        <!-- 历史记录按钮 -->
+        <button @click="toggleHistoryView" class="history-btn" :class="{ active: isShowingHistory }" title="查看历史记录">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71V3.5z"/>
+            <path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0z"/>
+          </svg>
+        </button>
         <button @click="createNewSession" class="new-session-btn" title="新建会话">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
             <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
           </svg>
         </button>
-        <button @click="deleteCurrentSession" class="delete-session-btn" title="删除当前会话" v-if="sessions.length > 1">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-          </svg>
-        </button>
       </div>
     </div>
-    <div class="chat-box">
-      <div class="messages">
-        <div 
-          v-for="(message, index) in chatMessages" 
-          :key="index"
-          class="message"
-          :class="message.type"
-        >
-          <span v-if="message.type === 'received' && message.content === '' && isWaitingForResponse" class="typing-indicator">
-            <span></span>
-            <span></span>
-            <span></span>
-          </span>
-          <div v-else class="message-content-wrapper">
-            <div v-html="renderMarkdown(message.content)" class="message-content"></div>
-            <button 
-              v-if="message.content" 
-              @click="copyMessageText(message.content)"
-              class="copy-button"
-              :class="{ copied: message.copied }"
-              :title="'复制文本'"
+    <!-- 历史记录视图 -->
+    <div v-if="isShowingHistory" class="chat-box">
+      <div  class="history-view">
+        <div class="history-list">
+          <div
+            v-for="session in sessions"
+            :key="session.id"
+            class="history-item"
+            @click="switchToSession(session.id)"
+          >
+            <div class="history-content">
+              <div class="history-name">
+                {{ session.name }}
+              </div>
+              <div class="history-date">{{ formatDate(session.createdAt) }}</div>
+            </div>
+            <button
+              @click="deleteSession(session.id)"
+              class="delete-history-btn"
+              title="删除历史记录"
             >
-              <img src="@/assets/images/copy.svg" alt="复制" width="12px" height="12px"/>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+              </svg>
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 聊天视图 -->
+    <div v-else class="chat-box">
+      <div class="chat-view">
+        <div class="messages">
+          <div
+            v-for="(message, index) in chatMessages"
+            :key="index"
+            class="message"
+            :class="message.type"
+          >
+            <span v-if="message.type === 'received' && message.content === '' && isWaitingForResponse" class="typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
+            <div v-else class="message-content-wrapper">
+              <div v-html="renderMarkdown(message.content)" class="message-content"></div>
+              <button
+                v-if="message.content"
+                @click="copyMessageText(message.content)"
+                class="copy-button"
+                :class="{ copied: message.copied }"
+                :title="'复制文本'"
+              >
+                <img src="@/assets/images/copy.svg" alt="复制" width="12px" height="12px"/>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -125,13 +154,15 @@ export default {
       default: () => []
     }
   },
+  emits: ['refresh-files'],
   data() {
     return {
       userInput: "",
       // 会话管理相关数据
       sessions: [],
       currentSessionId: null,
-      isWaitingForResponse: false
+      isWaitingForResponse: false,
+      isShowingHistory: false // 新增：是否显示历史记录视图
     }
   },
   computed: {
@@ -169,16 +200,16 @@ export default {
     },
     
     // 创建新会话
-    createNewSession(sessionName = '新会话') {
-      // 如果当前会话名为“新会话”，则不创建新会话
-      if (this.currentSession && this.currentSession.name === '新会话') {
+    createNewSession() {
+      // 如果当前会话名为"新会话"，则不创建新会话
+      if (this.sessions[0]?.name === '新会话') {
         return;
       }
       
       const newSessionId = this.generateSessionId();
       const newSession = {
         id: newSessionId,
-        name: sessionName,
+        name: '新会话',
         createdAt: new Date().toISOString(),
         messages: [
           {
@@ -188,7 +219,7 @@ export default {
         ]
       };
       
-      this.sessions.push(newSession);
+      this.sessions.unshift(newSession);
       this.currentSessionId = newSessionId;
       
       // 保存会话到localStorage
@@ -204,23 +235,29 @@ export default {
         this.currentSessionId = sessionId;
         // 保存当前会话ID到localStorage以保持状态
         localStorage.setItem('currentSessionId', sessionId);
+        // 切换回聊天视图
+        this.isShowingHistory = false;
       }
     },
     
     // 删除指定会话
     deleteSession(sessionId) {
-      if (this.sessions.length <= 1) {
-        this.showCopyNotification('至少需要保留一个会话', true);
-        return;
-      }
       
       const sessionIndex = this.sessions.findIndex(s => s.id === sessionId);
       if (sessionIndex !== -1) {
         this.sessions.splice(sessionIndex, 1);
         
-        // 如果删除的是当前会话，则切换到第一个会话
+        // 如果删除的是当前会话
         if (this.currentSessionId === sessionId) {
-          this.currentSessionId = this.sessions[0].id;
+          if (this.sessions.length > 0) {
+            // 切换到第一个会话
+            this.currentSessionId = this.sessions[0].id;
+          } else {
+            // 如果没有其他会话，清除当前会话ID
+            this.currentSessionId = null;
+            // 从localStorage中移除currentSessionId
+            localStorage.removeItem('currentSessionId');
+          }
         }
         
         this.saveSessions();
@@ -282,9 +319,6 @@ export default {
       this.userInput = "";
       this.isWaitingForResponse = true;
       
-      // 会话名称将由后端生成，此处不需要更新会话名称
-      // 留空，等待后端返回会话标题
-      
       // 添加AI回复占位符
       const aiMessageIndex = this.currentSession.messages.length;
       this.currentSession.messages.push({
@@ -302,6 +336,29 @@ export default {
           data_id: this.selectedFile,
           history: this.currentSession.messages.slice(0, -1) // 不包括刚添加的AI回复占位符
         };
+
+        // 如果是第一次查询，先调用生成标题的API
+        if (this.currentSession.name === '新会话') {
+          try {
+            const titleResponse = await fetch('/chat/generate_title', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(requestData),
+              credentials: 'include'
+            });
+            
+            if (titleResponse.ok) {
+              const titleData = await titleResponse.json();
+              // 更新会话名称
+              this.currentSession.name = titleData.title;
+              this.saveSessions();
+            }
+          } catch (titleError) {
+            console.error('生成会话标题失败:', titleError);
+          }
+        }
         
         // 发起流式请求
         const response = await fetch('/chat/stream', {
@@ -344,7 +401,6 @@ export default {
                       accumulatedContent += parsed.content;
                       // 更新AI回复内容
                       this.currentSession.messages[aiMessageIndex].content = accumulatedContent;
-                      console.log(accumulatedContent)
                       
                       // 强制更新DOM以实现实时显示效果
                       await this.$nextTick();
@@ -354,11 +410,6 @@ export default {
                       if (messagesContainer) {
                         messagesContainer.scrollTop = messagesContainer.scrollHeight;
                       }
-                    } else if (parsed.session_title !== undefined) {
-                      // 处理后端返回的会话标题
-                      this.currentSession.name = parsed.session_title;
-                      // 保存会话到localStorage
-                      this.saveSessions();
                     } else if (parsed.tool_calls !== undefined) {
                       // 处理工具调用信息
                       toolCalls = parsed.tool_calls;
@@ -533,14 +584,22 @@ export default {
       // 待实现
     },
     
-    // 删除当前会话
-    deleteCurrentSession() {
-      if (this.sessions.length <= 1) {
-        this.showCopyNotification('至少需要保留一个会话', true);
-        return;
-      }
-      this.deleteSession(this.currentSessionId);
+    // 格式化日期显示
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day} ${hours}:${minutes}`;
     },
+    
+    // 切换历史记录视图
+    toggleHistoryView() {
+      this.isShowingHistory = !this.isShowingHistory;
+    }
 
   },
 }

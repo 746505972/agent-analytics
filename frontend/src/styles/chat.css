@@ -312,9 +312,98 @@
   background-color: #ff4d4f;
 }
 
-/* 调整标题样式以适应新布局 */
-.chat-header h2 {
-  margin: 0;
-  padding: 0;
+/* 历史记录按钮样式 */
+.history-btn {
+  padding: 5px;
+  background-color: #f0f0f0;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-btn:hover {
+  background-color: #e6e6e6;
+}
+
+.history-btn.active {
+  background-color: #409eff;
+  color: white;
+}
+
+/* 历史记录视图样式 */
+.history-view {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background-color: #f5f7fa;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.history-item:hover {
+  background-color: #e6e9f0;
+}
+
+.history-name {
+  flex: 1;
+  font-size: 14px;
   color: #303133;
+}
+
+.delete-history-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  margin-left: 10px;
+  color: #f56c6c;
+  border-radius: 4px;
+}
+
+.delete-history-btn:hover {
+  background-color: #f56c6c;
+  color: white;
+}
+
+/* 聊天视图样式 */
+.chat-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 历史记录内容容器 */
+.history-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* 历史记录日期样式 */
+.history-date {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 5px;
+  text-align: left;
 }

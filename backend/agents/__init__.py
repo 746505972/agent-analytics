@@ -197,3 +197,37 @@ class DataAnalysisAgent:
         
         response = self.llm.invoke(prompt)
         return response.content
+
+class SessionTitleManager:
+    def __init__(self):
+        self.llm = None
+        self.setup_llm()
+        
+    def setup_llm(self):
+        api_key = os.getenv("DASHSCOPE_API_KEY")
+        if not api_key:
+            raise ValueError("DASHSCOPE_API_KEY 环境变量未设置")
+        
+        self.llm = ChatOpenAI(
+            api_key=api_key,
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            model="qwen-plus"
+        )
+    
+    def generate_session_title(self, user_query: str) -> str:
+        """
+        根据用户查询和数据上下文生成会话标题
+        """
+        # 构造提示词，让AI生成会话标题
+        prompt = f"请根据用户的数据分析需求生成一个简洁的会话标题（不超过15个字）：{user_query}。只需要返回标题，不要其他内容。"
+        
+        try:
+            response = self.llm.invoke(prompt)
+            title = response.content.strip()
+            # 限制标题长度
+            if len(title) > 20:
+                title = title[:20] + "..."
+            return title
+        except Exception:
+            # 如果生成失败，返回用户查询的前几个字
+            return user_query[:10] + "..." if len(user_query) > 10 else user_query
