@@ -140,7 +140,7 @@
 
 <script>
 import { marked } from 'marked';
-import '@/styles/chat.css'
+
 
 export default {
   name: "ChatAssistant",
@@ -604,3 +604,416 @@ export default {
   },
 }
 </script>
+
+<style scoped>
+.chat-section {
+  background: white;
+  border-radius: 8px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0;
+}
+
+.chat-header h2 {
+  padding-left: 20px;
+  color: #303133;
+}
+
+.clear-chat-btn {
+  padding: 5px 10px;
+  background-color: #f56c6c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.clear-chat-btn:hover {
+  background-color: #ff4d4f;
+}
+
+.chat-section h2 {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  color: #303133;
+}
+
+.chat-box {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+  height: 100%;
+}
+
+.messages {
+  flex: 1;
+  padding: 20px 20px 0 20px;
+  overflow-y: auto;
+}
+
+.message {
+  margin-bottom: 15px;
+  padding: 10px;
+  border-radius: 4px;
+}
+
+.message.sent {
+  background-color: #409eff;
+  color: white;
+  margin-left: auto;
+  max-width: 80%;
+}
+
+.message.received {
+  max-width: 100%;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.message-content-wrapper {
+  position: relative;
+}
+
+.copy-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  padding: 4px 4px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.message:hover .copy-button {
+  opacity: 1;
+}
+
+.copy-button:hover {
+  background-color: rgba(64, 158, 255, 0.7);
+  color: white;
+}
+
+.copy-button.copied {
+  background-color: #67c23a;
+  color: white;
+  opacity: 1;
+}
+
+.typing-indicator {
+  display: inline-block;
+  height: 20px;
+  position: relative;
+}
+
+.typing-indicator span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #409eff;
+  margin: 0 2px;
+  animation: typing 1s infinite;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typing {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.input-area {
+  display: flex;
+  padding: 0 10px 10px 10px;
+}
+
+.messageBox {
+  width: 100%;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+  border: 1px solid #dcdfe6;
+}
+.messageBox:focus-within {
+  border: 1px solid #409eff;
+}
+.fileUploadWrapper {
+  width: fit-content;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, Helvetica, sans-serif;
+  padding: 5px;
+}
+
+.fileUploadWrapper label {
+  cursor: pointer;
+  width: fit-content;
+  height: fit-content;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.fileUploadWrapper label svg {
+  height: 18px;
+}
+.fileUploadWrapper label svg path {
+  transition: all 0.3s;
+  stroke: #606266;
+}
+.fileUploadWrapper label svg circle {
+  transition: all 0.3s;
+  stroke: #606266;
+}
+.fileUploadWrapper label:hover svg path {
+  stroke: #409eff;
+}
+.fileUploadWrapper label:hover svg circle {
+  stroke: #409eff;
+  fill: #f5f7fa;
+}
+.fileUploadWrapper label:hover .tooltip {
+  display: block;
+  opacity: 1;
+}
+.tooltip {
+  position: absolute;
+  top: -40px;
+  display: none;
+  opacity: 0;
+  font-size: 10px;
+  text-wrap: nowrap;
+  background-color: #ffffff;
+  padding: 6px 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.596);
+  transition: all 0.3s;
+}
+#messageInput {
+  width: 200px;
+  height: 100%;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  padding: 5px 0 5px 5px;
+  color: #606266;
+  flex: 1;
+  white-space: pre-wrap;      /* 保留空格并允许换行 */
+  overflow-wrap: break-word;  /* 现代标准的换行属性 */
+  resize: none;               /* 如果不需要用户调整大小 */
+  overflow-y: auto;           /* 内容过多时显示垂直滚动条 */
+}
+#messageInput:focus ~ #sendButton svg path,
+#messageInput:valid ~ #sendButton svg path {
+  stroke: #409eff;
+}
+
+#sendButton {
+  width: fit-content;
+  height: 100%;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  padding: 5px;
+}
+#sendButton svg {
+  height: 18px;
+}
+#sendButton svg path {
+  transition: all 0.3s;
+  stroke: #606266;
+}
+#sendButton:hover svg path {
+  stroke: #409eff;
+}
+
+/* 保持原有的按钮样式 */
+#sendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 多会话UI样式 */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.session-selector {
+  padding: 5px 10px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background-color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  min-width: 150px;
+}
+
+.session-selector:focus {
+  outline: none;
+  border-color: #409eff;
+}
+
+.new-session-btn, .delete-session-btn {
+  padding: 5px;
+  background-color: #f0f0f0;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.new-session-btn:hover, .delete-session-btn:hover {
+  background-color: #e6e6e6;
+}
+
+.delete-session-btn {
+  background-color: #f56c6c;
+  color: white;
+}
+
+.delete-session-btn:hover {
+  background-color: #ff4d4f;
+}
+
+/* 历史记录按钮样式 */
+.history-btn {
+  padding: 5px;
+  background-color: #f0f0f0;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.history-btn:hover {
+  background-color: #e6e6e6;
+}
+
+.history-btn.active {
+  background-color: #409eff;
+  color: white;
+}
+
+/* 历史记录视图样式 */
+.history-view {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  background-color: #f5f7fa;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.history-item:hover {
+  background-color: #e6e9f0;
+}
+
+.history-name {
+  flex: 1;
+  font-size: 14px;
+  color: #303133;
+}
+
+.delete-history-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  margin-left: 10px;
+  color: #f56c6c;
+  border-radius: 4px;
+}
+
+.delete-history-btn:hover {
+  background-color: #f56c6c;
+  color: white;
+}
+
+/* 聊天视图样式 */
+.chat-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 历史记录内容容器 */
+.history-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* 历史记录日期样式 */
+.history-date {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 5px;
+  text-align: left;
+}
+
+</style>
