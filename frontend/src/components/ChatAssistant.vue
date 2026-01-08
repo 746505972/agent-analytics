@@ -33,6 +33,15 @@
       </div>
       <div class="input-area">
         <div class="messageBox">
+          <textarea
+            type="text" 
+            placeholder="输入您的分析需求..." 
+            v-model="userInput"
+            @keyup.enter="sendMessage"
+            :disabled="!selectedFile || isWaitingForResponse"
+            required
+            id="messageInput"
+          />
           <div class="fileUploadWrapper">
             <label>
               <svg @click="onAddClick" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 337 337">
@@ -60,15 +69,6 @@
               <span class="tooltip">添加历史</span>
             </label>
           </div>
-          <textarea
-            type="text" 
-            placeholder="输入您的分析需求..." 
-            v-model="userInput"
-            @keyup.enter="sendMessage"
-            :disabled="!selectedFile || isWaitingForResponse"
-            required
-            id="messageInput"
-          />
           <button @click="sendMessage" :disabled="!selectedFile || isWaitingForResponse" id="sendButton">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 664 663">
               <path
