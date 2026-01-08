@@ -9,6 +9,7 @@ export default {
   methods: {
     toggleHistoryView() {
       this.isShowingHistory = !this.isShowingHistory
+      this.$emit('toggleHistoryView', this.isShowingHistory)
     },
     createNewSession() {
       this.$emit('createNewSession')
@@ -16,11 +17,6 @@ export default {
   },
   props: {
     isHistoryShowing: Boolean
-  },
-  watch: {
-    isHistoryShowing(val) {
-      this.isShowingHistory = val
-    }
   },
 }
 </script>

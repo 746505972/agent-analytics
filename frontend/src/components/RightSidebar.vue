@@ -14,7 +14,7 @@
 </template>
 
 <script>
-import ChatAssistant from "@/components/ChatAssistant.vue";
+import ChatAssistant from "@/components/Chat/ChatAssistant.vue";
 
 export default {
   name: "RightSidebar",

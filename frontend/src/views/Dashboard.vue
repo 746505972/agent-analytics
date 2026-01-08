@@ -123,7 +123,6 @@
 </template>
 
 <script>
-import ChatAssistant from "@/components/ChatAssistant.vue";
 import ResultContent from "@/components/ResultContent.vue";
 import MethodDescription from "@/components/MethodDescription.vue";
 import MethodSelection from "@/components/MethodSelection.vue";
@@ -151,7 +150,7 @@ export default {
   components: {
     RightSidebar,
     MethodParameterConfig, FileSelectionOverlay, MethodDescription, ResultContent,
-    ChatAssistant, DashboardHeader, MethodSelection, PreviewModal
+    DashboardHeader, MethodSelection, PreviewModal
   },
   directives: {
     clickOutside: {
