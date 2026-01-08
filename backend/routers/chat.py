@@ -32,6 +32,59 @@ class ChatRequest(BaseModel):
 # 初始化全局agent实例
 agent = DataAnalysisAgent()
 
+class SessionTitleManager:
+    def __init__(self):
+        self.session_titles = {}
+    
+    def is_first_query(self, session_id: str, history: list) -> bool:
+        """
+        判断是否是当前会话的第一次查询
+        """ 
+        # 统计用户发送的消息数量（type为'sent'的消息）
+        user_message_count = 0
+        for msg in history:
+            # 前端的消息对象有type字段，但在history中可能只有content和type等信息
+            if isinstance(msg, dict) and msg.get('type') == 'sent':
+                user_message_count += 1
+        
+        # 如果用户只发送过一条消息，则表示这是第一次查询
+        return user_message_count == 1
+    
+    def generate_session_title(self, user_query: str, data_context=None) -> str:
+        """
+        根据用户查询和数据上下文生成会话标题
+        """
+        import os
+        from langchain_openai import ChatOpenAI
+        
+        api_key = os.getenv("DASHSCOPE_API_KEY")
+        if not api_key:
+            raise ValueError("DASHSCOPE_API_KEY 环境变量未设置")
+            
+        llm = ChatOpenAI(
+            api_key=api_key,
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            model="qwen-plus"
+        )
+        
+        # 构造提示词，让AI生成会话标题
+        prompt = f"请根据用户的数据分析需求生成一个简洁的会话标题（不超过15个字）：{user_query}。只需要返回标题，不要其他内容。"
+        
+        try:
+            response = llm.invoke(prompt)
+            title = response.content.strip()
+            # 限制标题长度
+            if len(title) > 20:
+                title = title[:20] + "..."
+            return title
+        except Exception as e:
+            logger.error(f"生成会话标题时出错: {e}")
+            # 如果生成失败，返回用户查询的前几个字
+            return user_query[:10] + "..." if len(user_query) > 10 else user_query
+
+# 创建会话标题管理器实例
+title_manager = SessionTitleManager()
+
 @router.post("/test")
 async def test_chat():
     """
