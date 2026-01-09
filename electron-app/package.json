@@ -1,6 +1,6 @@
 {
   "name": "agent-analytics",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "数据分析系统桌面应用",
   "main": "main.js",
   "type": "commonjs",

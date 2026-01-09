@@ -220,18 +220,22 @@ class SessionTitleManager:
     def setup_llm(self):
         api_key = os.getenv("DASHSCOPE_API_KEY")
         if not api_key:
-            raise ValueError("DASHSCOPE_API_KEY 环境变量未设置")
+            print("DASHSCOPE_API_KEY 环境变量未设置")
+            self.llm = None
+        else:
+            self.llm = ChatOpenAI(
+                api_key=api_key,
+                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+                model="qwen-plus"
+            )
 
-        self.llm = ChatOpenAI(
-            api_key=api_key,
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-            model="qwen-plus"
-        )
 
     def generate_session_title(self, user_query: str) -> str:
         """
         根据用户查询和数据上下文生成会话标题
         """
+        if self.llm is None:
+            return user_query[:10] + "..." if len(user_query) > 10 else user_query
         # 构造提示词，让AI生成会话标题
         prompt = f"请根据用户的数据分析需求生成一个简洁的会话标题（不超过15个字）：{user_query}。只需要返回标题，不要其他内容。"
 

@@ -114,47 +114,36 @@ function createWindow() {
   const { Menu } = require('electron');
   const template = [
     {
-      label: '导航',
-      submenu: [
-        {
-          label: '刷新',
-          click: () => {
-            mainWindow.webContents.reload();
-          }
-        },
-        { type: 'separator' },
-        {
-          label: '开发者工具',
-          click: () => mainWindow.webContents.openDevTools()
-        }
-      ]
+      label: '开发者工具',
+      click: () => mainWindow.webContents.openDevTools()
     },
     {
-      label: '帮助',
-      submenu: [
-        {
-          label: '关于',
-          click: () => {
-            const { dialog, shell } = require('electron');
-            const detailMessage = '内测版本 0.2.0\n数据分析系统桌面应用\n·后端启动的比较慢，大概半分钟，在完全启动前上传文件报错是很正常的，耐心等待即可。\n·后端使用Qwen-plus模型的LLM服务实现Agent功能，使用前请先配置环境变量DASHSCOPE_API_KEY\n获取环境变量请参考官网：';
-            
-            dialog.showMessageBox(mainWindow, {
-              type: 'info',
-              title: '关于',
-              message: 'Agent Analytics',
-              detail: detailMessage,
-              buttons: ['前往仓库', '打开链接', '关闭'],
-              defaultId: 2
-            }).then(result => {
-              if (result.response === 0) { // 前往仓库
-                shell.openExternal('https://github.com/746505972/agent-analytics');
-              } else if (result.response === 1) { // 打开链接
-                shell.openExternal('https://bailian.console.aliyun.com/?spm=5176.29597918.J_SEsSjsNv72yRuRFS2VknO.2.253f7b08WPebcH&tab=api#/api/?type=model&url=2803795');
-              }
-            });
-          }
+      label: '刷新',
+      click: () => {
+        mainWindow.webContents.reload();
+      }
+    },
+    {
+        label: '关于',
+        click: () => {
+          const { dialog, shell } = require('electron');
+          const detailMessage = '内测版本 0.2.0\n数据分析系统桌面应用\n·后端启动的比较慢，大概半分钟，在完全启动前上传文件报错是很正常的，耐心等待即可。\n·后端使用Qwen-plus模型的LLM服务实现Agent功能，使用前请先配置环境变量DASHSCOPE_API_KEY\n获取环境变量请参考官网：';
+
+          dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: '关于',
+            message: 'Agent Analytics',
+            detail: detailMessage,
+            buttons: ['前往仓库', '打开链接', '关闭'],
+            defaultId: 2
+          }).then(result => {
+            if (result.response === 0) { // 前往仓库
+              shell.openExternal('https://github.com/746505972/agent-analytics');
+            } else if (result.response === 1) { // 打开链接
+              shell.openExternal('https://bailian.console.aliyun.com/?spm=5176.29597918.J_SEsSjsNv72yRuRFS2VknO.2.253f7b08WPebcH&tab=api#/api/?type=model&url=2803795');
+            }
+          });
         }
-      ]
     }
   ];
   const menu = Menu.buildFromTemplate(template);
