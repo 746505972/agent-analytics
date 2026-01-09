@@ -97,7 +97,7 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     logger.error(traceback.format_exc())
             
             # 流式执行agent，传递session_id给工具
-            async for response_chunk in agent.process_query_stream(chat_request.message, data_context, session_id):
+            async for response_chunk in agent.process_query_stream(chat_request.message, data_context, session_id, chat_request.history):
                 if response_chunk['type'] == 'tool_calls':
                     yield f"data: {json.dumps({'tool_calls': response_chunk['data']})}\n\n"
                 elif response_chunk['type'] == 'content':

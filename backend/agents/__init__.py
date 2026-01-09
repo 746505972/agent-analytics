@@ -1,6 +1,6 @@
 from langchain.agents import create_agent
 from langchain_core.tools import tool
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_openai import ChatOpenAI
 import os
 
@@ -71,7 +71,7 @@ class DataAnalysisAgent:
         register_pandas_tools(self)
         register_ml_tools(self)
     # TODO: 实现流式响应(DONE) & 添加分析结果上下文
-    async def process_query_stream(self, query: str, data_context=None, session_id=None):
+    async def process_query_stream(self, query: str, data_context=None, session_id=None, history=None):
         """
         流式处理用户查询
         
@@ -79,10 +79,14 @@ class DataAnalysisAgent:
             query (str): 用户的自然语言查询
             data_context: 当前数据上下文
             session_id: 用户会话ID
+            history
             
         Yields:
             dict: 处理过程中的流式响应
         """
+        if history is None:
+            history = []
+
         try:
             # 准备输入
             messages = []
@@ -90,6 +94,12 @@ class DataAnalysisAgent:
             # 添加系统消息
 
             messages.append(SystemMessage(content=self.system_message))
+
+            for item in history:
+                if item['type'] == 'received':
+                    messages.append(AIMessage(content=item['content']))
+                else:
+                    messages.append(HumanMessage(content=item['content']))
             
             # 如果有数据上下文，则加入
             if data_context:
