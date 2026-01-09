@@ -142,6 +142,7 @@ npm run server
 - [x] 实现基础数据分析 API
 - [x] 添加数据可视化功能
 - [x] 实现自然语言交互
+- [x] 实现多会话及记忆管理
 - [ ] 自动生成分析报告
 - [ ] 集成更多机器学习算法
 - [ ] 支持更多文件格式
@@ -149,10 +150,10 @@ npm run server
 - [ ] 添加用户认证和权限管理
 
 ## Languages
-Total : 101 files,  21342 codes, 1973 comments, 2796 blanks, all 26111 lines
+Total : 134 files,  24764 codes, 2132 comments, 3238 blanks, all 30134 lines
 
 | language   | files |   code | comment | blank |  total |
 |:-----------|------:|-------:|--------:|------:|-------:|
-| vue        |    52 | 16,430 |     134 | 1,738 | 18,302 |
-| Python     |    21 |  3,785 |   1,709 |   891 |  6,385 |
-| JavaScript |    10 |    697 |     121 |    91 |    909 |
+| vue        |    65 | 19,046 |     171 | 2,036 | 21,253 |
+| Python     |    37 |  4,287 |   1,818 |   987 |  7,092 |
+| JavaScript |    12 |    880 |     134 |   100 |  1,114 |
