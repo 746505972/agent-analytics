@@ -14,7 +14,7 @@
 </template>
 
 <script>
-import ChatAssistant from "@/components/ChatAssistant.vue";
+import ChatAssistant from "@/components/Chat/ChatAssistant.vue";
 
 export default {
   name: "RightSidebar",
@@ -49,7 +49,7 @@ export default {
 
 <style scoped>
 .right-section {
-  flex: 1;
+  flex: 2 1 200px;
   padding-right: 10px;
   overflow-y: auto;
   max-height: 100%;

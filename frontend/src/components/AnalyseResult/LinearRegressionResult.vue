@@ -1,24 +1,24 @@
 <template>
-  <div class="linear-regression-result">
+  <div class="linear-regression-result" v-if="datasetDetails.resultMethod === 'linear_regression'">
     <h3>线性回归分析结果</h3>
     
     <!-- 模型信息 -->
     <div class="info-grid">
       <div class="info-item">
         <span class="info-label">回归方法:</span>
-        <span class="info-value">{{ result.method }}</span>
+        <span class="info-value">{{ datasetDetails.method }}</span>
       </div>
       <div class="info-item">
         <span class="info-label">因变量 (Y):</span>
-        <span class="info-value">{{ result.y_column }}</span>
+        <span class="info-value">{{ datasetDetails.y_column }}</span>
       </div>
       <div class="info-item">
         <span class="info-label">样本数量:</span>
-        <span class="info-value">{{ result.sample_size }}</span>
+        <span class="info-value">{{ datasetDetails.sample_size }}</span>
       </div>
-      <div class="info-item" v-if="result.intercept !== null">
+      <div class="info-item" v-if="datasetDetails.intercept !== null">
         <span class="info-label">截距:</span>
-        <span class="info-value">{{ formatNumber(result.intercept) }}</span>
+        <span class="info-value">{{ formatNumber(datasetDetails.intercept) }}</span>
       </div>
     </div>
 
@@ -34,7 +34,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(x, index) in result.x_columns" :key="index">
+          <tr v-for="(x, index) in datasetDetails.x_columns" :key="index">
             <td>{{ x }}</td>
           </tr>
         </tbody>
@@ -57,7 +57,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(coef, varName) in result.coefficients" :key="varName">
+          <tr v-for="(coef, varName) in datasetDetails.coefficients" :key="varName">
             <td>{{ varName }}</td>
             <td>{{ formatNumber(coef) }}</td>
           </tr>
@@ -83,26 +83,26 @@
         <tbody>
           <tr>
             <td>R² 得分</td>
-            <td>{{ formatNumber(result.evaluation_metrics.r2_score) }}</td>
+            <td>{{ formatNumber(datasetDetails.evaluation_metrics.r2_score) }}</td>
           </tr>
           <tr>
             <td>均方误差 (MSE)</td>
-            <td>{{ formatNumber(result.evaluation_metrics.mse) }}</td>
+            <td>{{ formatNumber(datasetDetails.evaluation_metrics.mse) }}</td>
           </tr>
           <tr>
             <td>均方根误差 (RMSE)</td>
-            <td>{{ formatNumber(result.evaluation_metrics.rmse) }}</td>
+            <td>{{ formatNumber(datasetDetails.evaluation_metrics.rmse) }}</td>
           </tr>
           <tr>
             <td>平均绝对误差 (MAE)</td>
-            <td>{{ formatNumber(result.evaluation_metrics.mae) }}</td>
+            <td>{{ formatNumber(datasetDetails.evaluation_metrics.mae) }}</td>
           </tr>
         </tbody>
       </table>
     </div>
 
     <!-- 正则化参数 -->
-    <div class="regularization-params" v-if="result.regularization_params">
+    <div class="regularization-params" v-if="datasetDetails.regularization_params">
       <div class="table-header">
         <h4>正则化参数</h4>
         <button class="copy-button" @click="copyTable('regularization')" title="复制表格">
@@ -120,26 +120,45 @@
           <tbody>
             <tr>
               <td>Alpha (正则化强度)</td>
-              <td>{{ formatNumber(result.alpha) }}</td>
+              <td>{{ formatNumber(datasetDetails.alpha) }}</td>
             </tr>
-            <tr v-if="result.method === 'elastic_net'">
+            <tr v-if="datasetDetails.method === 'elastic_net'">
               <td>L1比例</td>
-              <td>{{ formatNumber(result.l1_ratio) }}</td>
+              <td>{{ formatNumber(datasetDetails.l1_ratio) }}</td>
             </tr>
             <tr>
               <td>最大迭代次数</td>
-              <td>{{ result.regularization_params.max_iter }}</td>
+              <td>{{ datasetDetails.regularization_params.max_iter }}</td>
             </tr>
             <tr>
               <td>收敛容差</td>
-              <td>{{ formatNumber(result.regularization_params.tol) }}</td>
+              <td>{{ formatNumber(datasetDetails.regularization_params.tol) }}</td>
             </tr>
             <tr>
               <td>拟合截距</td>
-              <td>{{ result.regularization_params.fit_intercept ? '是' : '否' }}</td>
+              <td>{{ datasetDetails.regularization_params.fit_intercept ? '是' : '否' }}</td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- 线性回归公式 -->
+    <div class="table-header">
+      <h4>线性回归公式</h4>
+      <button class="copy-button" @click="copyFormula()" title="复制公式">
+        <img src="@/assets/images/copy.svg" alt="复制" />
+      </button>
+    </div>
+    <div class="formula-container">
+      <div class="formula-display">
+        <div class="formula-math">y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + ... + \beta_n x_n</div>
+      </div>
+      <div class="formula-breakdown">
+        <div class="formula-breakdown-item">
+          <span class="formula-part">y =</span>
+          <span class="formula-expression">{{ formatFormulaExpression() }}</span>
+        </div>
       </div>
     </div>
   </div>
@@ -149,7 +168,7 @@
 export default {
   name: 'LinearRegressionResult',
   props: {
-    result: {
+    datasetDetails: {
       type: Object,
       required: true
     }
@@ -279,6 +298,56 @@ export default {
           notification.parentNode.removeChild(notification);
         }
       }, 3000);
+    },
+    
+    // 格式化公式表达式
+    formatFormulaExpression() {
+      // 构建公式表达式
+      let parts = [];
+      
+      // 添加截距项
+      if (this.datasetDetails.intercept !== null && this.datasetDetails.intercept !== undefined) {
+        parts.push(this.formatNumber(this.datasetDetails.intercept));
+      } else {
+        parts.push('0');
+      }
+      
+      // 添加变量系数项
+      for (const [varName, value] of Object.entries(this.datasetDetails.coefficients)) {
+        const formattedValue = this.formatNumber(value);
+        // 根据系数正负决定符号
+        if (value >= 0 && parts.length > 1) {  // 如果不是第一项且系数为正
+          parts.push('+', `${formattedValue} * ${varName}`);
+        } else {
+          parts.push(`${formattedValue < 0 ? '' : '+'} ${formattedValue} * ${varName}`);
+        }
+      }
+      
+      return parts.join(' ');
+    },
+    
+    // 复制公式到剪贴板
+    copyFormula() {
+      let formulaText = `线性回归公式:\ny = ${this.formatFormulaExpression()}`;
+      
+      this.copyToClipboard(formulaText);
+    },
+    
+    // 统一的复制到剪贴板方法
+    copyToClipboard(csvContent) {
+      // 尝试使用 Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(csvContent).then(() => {
+          this.showCopyNotification('公式已复制到剪贴板');
+          console.log('公式已复制到剪贴板');
+        }).catch(err => {
+          console.error('复制失败:', err);
+          this.fallbackCopyTextToClipboard(csvContent);
+        });
+      } else {
+        // 回退方案
+        this.fallbackCopyTextToClipboard(csvContent);
+      }
     }
   }
 };
@@ -384,5 +453,53 @@ h4 {
 h5 {
   margin: 15px 0 10px 0;
   color: #666;
+}
+
+.formula-container {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e4e7ed;
+}
+
+.formula-display {
+  margin-bottom: 15px;
+}
+
+.formula-math {
+  font-size: 16px;
+  text-align: center;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+  font-family: 'Times New Roman', serif;
+  font-style: italic;
+}
+
+.formula-breakdown {
+  margin-top: 10px;
+}
+
+.formula-breakdown-item {
+  margin: 10px 0;
+  padding: 8px;
+  background-color: #fff;
+  border-radius: 4px;
+  border: 1px solid #e4e7ed;
+  display: flex;
+  align-items: center;
+}
+
+.formula-part {
+  font-weight: bold;
+  margin-right: 10px;
+  min-width: 50px;
+}
+
+.formula-expression {
+  font-family: 'Courier New', monospace;
+  flex: 1;
 }
 </style>

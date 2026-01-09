@@ -1,5 +1,5 @@
 <template>
-  <div class="basic-info-details">
+  <div class="basic-info-details" v-if="datasetDetails.resultMethod === 'basic_info'">
     <h3>数据集基本信息</h3>
     <div class="info-grid">
       <div class="info-item">

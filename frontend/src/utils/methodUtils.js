@@ -23,7 +23,7 @@ export function getMethodName(methodId) {
     'histogram': '直方图',
     'pie_chart': '饼图',
     'box_plot': '箱线图',
-    'clustering': '聚类分析',
+    'clustering_analysis': '聚类分析',
     'classification': '分类分析',
     'logistic_regression': '逻辑回归',
     'decision_tree': '决策树',

@@ -20,7 +20,7 @@
   
   <!-- 分析历史区域 -->
   <div class="analysis-history">
-    <div class="history-title">分析历史:</div>
+    <DeleteHistoryItems @click="$emit('remove-history')"/>
     <div class="history-buttons">
       <div
         v-for="(historyItem, index) in analysisHistory"
@@ -47,9 +47,11 @@
 
 <script>
 import { getMethodName } from "@/utils/methodUtils.js";
+import DeleteHistoryItems from "@/components/DeleteHistoryItems.vue";
 
 export default {
   name: "DashboardHeader",
+  components: {DeleteHistoryItems},
   props: {
     isFileSectionCollapsed: {
       type: Boolean,
@@ -76,7 +78,8 @@ export default {
     'toggle-file-section',
     'load-analysis-from-history',
     'remove-from-history',
-    'show-preview'
+    'show-preview',
+    'remove-history'
   ],
   methods: {
     getMethodName,
@@ -102,7 +105,7 @@ export default {
 .analysis-history {
   display: flex;
   align-items: center;
-  padding: 10px 20px;
+  padding: 10px;
   background-color: #f5f7fa;
   border-bottom: 1px solid #ebeef5;
 }

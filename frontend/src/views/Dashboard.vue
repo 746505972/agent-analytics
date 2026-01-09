@@ -11,6 +11,7 @@
       @load-analysis-from-history="loadAnalysisFromHistory"
       @remove-from-history="removeFromHistory"
       @show-preview="showDataPreview"
+      @remove-history="removeHistory"
     />
     <!-- 文件选择悬浮区域 -->
     <FileSelectionOverlay 
@@ -25,7 +26,7 @@
     
     <div class="dashboard-content">
       <!-- 左侧：方法选择区域 -->
-      <div class="left-section">
+      <div class="left-section" :style="{ flex: `0 0 ${leftSectionWidth}px` }">
         <!-- 方法选择区域移到左栏 -->
         <MethodSelection
           :selected-file="selectedFile"
@@ -35,10 +36,12 @@
           @select-method="handleSelectMethod"
           @toggle-category="toggleCategory"
         />
+        <!-- 左侧调整器 -->
+        <div class="resize-handle resize-handle-right" @mousedown="startResize($event, 'left')"></div>
       </div>
       
       <!-- 中间：列名列表区域 -->
-      <div class="middle-section">
+      <div class="middle-section" :style="{ flex: `1 1 ${middleSectionWidth}px` }">
         <!-- 结果渲染区 -->
         <div v-if="middleSectionView === 'result'" class="result-section">
           <div class="result-header">
@@ -89,8 +92,11 @@
             @update:newColumnNames="handleNewColumnNamesUpdate"
             @update:dataTransformationConfig="updateDataTransformationConfig"
             @toggleColumnSelection="handleToggleColumnSelection"
+            @clear-selected-columns="clearSelectedColumns"
           />
         </div>
+        <!-- 中间调整器 -->
+        <div class="resize-handle resize-handle-right" @mousedown="startResize($event, 'middle')"></div>
       </div>
 
       <!-- 右侧：聊天分析区域 -->
@@ -117,7 +123,6 @@
 </template>
 
 <script>
-import ChatAssistant from "@/components/ChatAssistant.vue";
 import ResultContent from "@/components/ResultContent.vue";
 import MethodDescription from "@/components/MethodDescription.vue";
 import MethodSelection from "@/components/MethodSelection.vue";
@@ -146,7 +151,7 @@ export default {
   components: {
     RightSidebar,
     MethodParameterConfig, FileSelectionOverlay, MethodDescription, ResultContent,
-    ChatAssistant, DashboardHeader, MethodSelection, PreviewModal
+    DashboardHeader, MethodSelection, PreviewModal
   },
   directives: {
     clickOutside: {
@@ -231,6 +236,12 @@ export default {
       // 数据转换相关配置
       dataTransformationConfig: {},
       configs:getDefaultConfigs(),
+      // 可调整宽度相关数据
+      leftSectionWidth: 250, // 左侧区域默认宽度
+      middleSectionWidth: 500, // 中间区域默认宽度
+      currentResizeSection: null, // 当前正在调整的区域
+      startX: 0, // 鼠标按下时的X坐标
+      startWidth: 0, // 调整开始时的宽度
     }
   },
     
@@ -267,6 +278,11 @@ export default {
       this.analysisHistory.splice(index, 1);
       // 更新localStorage
       localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
+    },
+
+    removeHistory(){
+      this.analysisHistory = [];
+      localStorage.removeItem('analysisHistory');
     },
 
     restoreAnalysisHistory() {
@@ -575,6 +591,10 @@ export default {
       this.lastSelectedColumnIndex = index;
     },
 
+    clearSelectedColumns(){
+      this.selectedColumns = [];
+    },
+
     // 执行插值法
     async executeMissingValueInterpolation() {
       this.isWaitingForResponse = true;
@@ -776,6 +796,64 @@ export default {
       this.restoreState();
     },
     
+    // 开始调整宽度
+    startResize(event, section) {
+      this.currentResizeSection = section;
+      this.startX = event.clientX;
+      
+      if (section === 'left') {
+        this.startWidth = this.leftSectionWidth;
+      } else if (section === 'middle') {
+        this.startWidth = this.middleSectionWidth;
+      }
+      
+      // 添加活动状态样式
+      const handle = event.target;
+      handle.classList.add('active');
+      
+      document.addEventListener('mousemove', this.handleResize);
+      document.addEventListener('mouseup', this.stopResize);
+      
+      // 防止文本被选中
+      event.preventDefault();
+    },
+    
+    // 处理宽度调整
+    handleResize(event) {
+      if (!this.currentResizeSection) return;
+      
+      const diff = event.clientX - this.startX;
+      
+      if (this.currentResizeSection === 'left') {
+        let newWidth = this.startWidth + diff;
+        // 设置最小和最大宽度限制
+        newWidth = Math.max(150, Math.min(newWidth, 250));
+        this.leftSectionWidth = newWidth;
+      } else if (this.currentResizeSection === 'middle') {
+        let newWidth = this.startWidth + diff;
+        // 设置最小和最大宽度限制
+        newWidth = Math.max(300, Math.min(newWidth, 1000));
+        this.middleSectionWidth = newWidth;
+      }
+    },
+    
+    // 停止调整宽度
+    stopResize(event) {
+      this.currentResizeSection = null;
+      
+      // 移除活动状态样式
+      if (event && event.target) {
+        event.target.classList.remove('active');
+      } else {
+        // 查找并移除所有活动的手柄样式
+        const activeHandles = document.querySelectorAll('.resize-handle.active');
+        activeHandles.forEach(handle => handle.classList.remove('active'));
+      }
+      
+      document.removeEventListener('mousemove', this.handleResize);
+      document.removeEventListener('mouseup', this.stopResize);
+    },
+    
     // 显示数据预览弹窗
     async showDataPreview() {
       if (!this.selectedFile) return;
@@ -877,7 +955,7 @@ export default {
 }
 
 .left-section {
-  flex: 0.5;
+  position: relative;
   padding-left: 0;
   overflow-y: auto;
   max-height: 100%;
@@ -885,7 +963,7 @@ export default {
 }
 
 .middle-section {
-  flex: 1.5;
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -926,10 +1004,53 @@ export default {
 .back-button:hover {
   background-color: #66b1ff;
 }
+
+/* 调整宽度的拖拽手柄 */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  user-select: none;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 2px;
+  height: 40px;
+  background-color: #dcdfe6;
+  transform: translateY(-50%);
+}
+
+.resize-handle:hover::after {
+  background-color: #409eff;
+}
+
+.resize-handle.active {
+  background-color: #409eff;
+  opacity: 0.2;
+}
+
+.resize-handle-right {
+  right: -5px;
+}
+
 @media (max-width: 768px) {
   .dashboard-content {
     flex-direction: column;
     height: auto;
   }
+
+  /* 在小屏幕上隐藏调整手柄 */
+  .resize-handle {
+    display: none;
+  }
 }
+
 </style>

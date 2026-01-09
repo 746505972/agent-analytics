@@ -54,5 +54,30 @@ export const getDefaultConfigs = () => ({
       tol: 0.0001,
       fit_intercept: true
     }
+  },
+  logisticRegressionConfig: {
+    y_column: '',
+    method: 'logistic',
+    solver: 'lbfgs',
+    params: {
+      C: 1.0,
+      max_iter: 1000,
+      tol: 0.0001,
+      fit_intercept: true,
+      class_weight: null
+    }
+  },
+  clusteringConfig: {
+    method: 'kmeans',
+    n_clusters: 3,
+    params: {
+      standardize: true,
+      init: 'k-means++',
+      max_iter: 300,
+      eps: 0.5,
+      min_samples: 5,
+      linkage: 'ward',
+      covariance_type: 'full'
+    }
   }
 })

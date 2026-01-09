@@ -3,15 +3,14 @@ import pandas as pd
 from utils.file_manager import ensure_session_dir, read_any_file
 from typing import List
 
-def check_and_read(file_path: str, columns: List[str], session_id: str = None, select_all_cols: bool = False) -> tuple:
+def check_and_read(file_path: str, columns: List[str], session_id: str = None) -> tuple:
     """
-    检查文件和列的有效性，并读取数据
+    检查文件和列的有效性，并读取数值列数据
 
     Args:
         file_path (str): 文件路径
         columns (List[str]): 需要处理的列名列表
         session_id (str): 会话ID
-        select_all_cols (bool): 默认选全部列
 
     Returns:
         tuple: (df, numeric_columns) 数据框和有效的数值列列表
@@ -36,12 +35,6 @@ def check_and_read(file_path: str, columns: List[str], session_id: str = None, s
     missing_columns = [col for col in columns if col not in df.columns]
     if missing_columns:
         raise ValueError(f"以下列不存在于数据集中: {missing_columns}")
-
-    if not columns:
-        raise ValueError("没有指定列")
-
-    if select_all_cols:
-        columns = df.columns
 
     # 只选择数值型列进行处理
     numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]

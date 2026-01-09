@@ -29,7 +29,7 @@
     "id": "ml",
     "name": "机器学习",
     "methods": [
-      { "id": "clustering", "name": "聚类分析" },
+      { "id": "clustering_analysis", "name": "聚类分析" },
       { "id": "classification", "name": "分类分析" },
       { "id": "logistic_regression", "name": "逻辑回归" },
       { "id": "decision_tree", "name": "决策树" },

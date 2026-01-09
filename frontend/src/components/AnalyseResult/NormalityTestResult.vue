@@ -1,5 +1,5 @@
 <template>
-  <div class="normality-test-result">
+  <div class="normality-test-result" v-if="datasetDetails.resultMethod === 'normality_test'">
     <div class="info-grid">
       <div class="info-item">
         <span class="info-label">检验方法:</span>

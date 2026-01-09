@@ -1,5 +1,5 @@
 <template>
-  <div class="correlation-result">
+  <div class="correlation-result" v-if="datasetDetails.resultMethod === 'correlation_analysis'">
     <!-- 相关性矩阵表格 -->
     <div class="table-header">
       <h4>{{datasetDetails.method || ''}}相关性矩阵</h4>

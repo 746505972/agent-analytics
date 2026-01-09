@@ -1,5 +1,5 @@
 <template>
-  <div class="non-parametric-result">
+  <div class="non-parametric-result" v-if="datasetDetails.resultMethod === 'non_parametric_test'">
     <div v-if="datasetDetails.non_parametric_test">
       <!-- Mann-Whitney U检验结果 -->
       <div v-if="datasetDetails.test_type === 'mannwhitney'" class="mannwhitney-section">

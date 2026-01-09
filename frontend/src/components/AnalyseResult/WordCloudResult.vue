@@ -1,5 +1,5 @@
 <template>
-  <div class="wordcloud-result">
+  <div class="wordcloud-result" v-if="datasetDetails.resultMethod === 'text_analysis'">
     <div v-if="wordcloudData" class="result-content">
       <!-- 图表显示在上方 -->
       <div class="chart-container">
