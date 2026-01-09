@@ -7,6 +7,7 @@
       <ChatAssistant 
         :selected-file="selectedFile"
         :files="files"
+        :analysis-history="analysisHistory"
         @refresh-files="refreshFiles"
       />
     </div>
@@ -14,7 +15,7 @@
 </template>
 
 <script>
-import ChatAssistant from "@/components/ChatAssistant.vue";
+import ChatAssistant from "@/components/Chat/ChatAssistant.vue";
 
 export default {
   name: "RightSidebar",
@@ -33,6 +34,10 @@ export default {
     isCollapsed: {
       type: Boolean,
       default: false
+    },
+    analysisHistory: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['toggle-collapse', 'refresh-files'],
@@ -49,7 +54,7 @@ export default {
 
 <style scoped>
 .right-section {
-  flex: 1;
+  flex: 2 1 200px;
   padding-right: 10px;
   overflow-y: auto;
   max-height: 100%;

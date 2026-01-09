@@ -1,6 +1,6 @@
 from langchain.agents import create_agent
 from langchain_core.tools import tool
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain_openai import ChatOpenAI
 import os
 
@@ -71,7 +71,7 @@ class DataAnalysisAgent:
         register_pandas_tools(self)
         register_ml_tools(self)
     # TODO: 实现流式响应(DONE) & 添加分析结果上下文
-    async def process_query_stream(self, query: str, data_context=None, session_id=None):
+    async def process_query_stream(self, query: str, data_context=None, session_id=None, history=None, analysis_history=None):
         """
         流式处理用户查询
         
@@ -79,18 +79,36 @@ class DataAnalysisAgent:
             query (str): 用户的自然语言查询
             data_context: 当前数据上下文
             session_id: 用户会话ID
+            history
+            analysis_history
             
         Yields:
             dict: 处理过程中的流式响应
         """
         try:
             # 准备输入
-            messages = []
-            
-            # 添加系统消息
+            messages = [SystemMessage(content=self.system_message)]
 
-            messages.append(SystemMessage(content=self.system_message))
-            
+            # 添加对话历史
+            if history:
+                for item in history:
+                    if item['type'] == 'received':
+                        messages.append(AIMessage(content=item['content']))
+                    else:
+                        messages.append(HumanMessage(content=item['content']))
+
+            # 添加分析历史记录
+            if analysis_history:
+                for i, item in enumerate(analysis_history):
+                    context_info = f"""
+                        <用户添加的分析历史记录{i}>
+                        dataId: {item['dataId']}
+                        method: {item['method']}
+                        result:{item['result']}
+                        </用户添加的分析历史记录{i}>
+                        """
+                    messages.append(HumanMessage(content=context_info))
+
             # 如果有数据上下文，则加入
             if data_context:
                 # 构造更清晰的提示信息
@@ -197,3 +215,37 @@ class DataAnalysisAgent:
         
         response = self.llm.invoke(prompt)
         return response.content
+
+class SessionTitleManager:
+    def __init__(self):
+        self.llm = None
+        self.setup_llm()
+        
+    def setup_llm(self):
+        api_key = os.getenv("DASHSCOPE_API_KEY")
+        if not api_key:
+            raise ValueError("DASHSCOPE_API_KEY 环境变量未设置")
+        
+        self.llm = ChatOpenAI(
+            api_key=api_key,
+            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            model="qwen-plus"
+        )
+    
+    def generate_session_title(self, user_query: str) -> str:
+        """
+        根据用户查询和数据上下文生成会话标题
+        """
+        # 构造提示词，让AI生成会话标题
+        prompt = f"请根据用户的数据分析需求生成一个简洁的会话标题（不超过15个字）：{user_query}。只需要返回标题，不要其他内容。"
+        
+        try:
+            response = self.llm.invoke(prompt)
+            title = response.content.strip()
+            # 限制标题长度
+            if len(title) > 20:
+                title = title[:20] + "..."
+            return title
+        except Exception:
+            # 如果生成失败，返回用户查询的前几个字
+            return user_query[:10] + "..." if len(user_query) > 10 else user_query

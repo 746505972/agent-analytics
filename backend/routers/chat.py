@@ -15,7 +15,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from utils.file_manager import get_file_path
 # 导入Agent
-from agents import DataAnalysisAgent
+from agents import DataAnalysisAgent, SessionTitleManager
 
 # 配置日志
 logging.basicConfig(level=logging.INFO)
@@ -28,9 +28,14 @@ class ChatRequest(BaseModel):
     message: str
     data_id: str = None
     history: list = []
+    analysis_history: list = []
+
+class TitleRequest(BaseModel):
+    message: str
 
 # 初始化全局agent实例
 agent = DataAnalysisAgent()
+title_manager = SessionTitleManager()
 
 @router.post("/test")
 async def test_chat():
@@ -96,7 +101,7 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     logger.error(traceback.format_exc())
             
             # 流式执行agent，传递session_id给工具
-            async for response_chunk in agent.process_query_stream(chat_request.message, data_context, session_id):
+            async for response_chunk in agent.process_query_stream(chat_request.message, data_context, session_id, chat_request.history, chat_request.analysis_history):
                 if response_chunk['type'] == 'tool_calls':
                     yield f"data: {json.dumps({'tool_calls': response_chunk['data']})}\n\n"
                 elif response_chunk['type'] == 'content':
@@ -114,3 +119,10 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
             yield f"data: {json.dumps({'error': error_msg})}\n\n"
     
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+@router.post("/generate_title")
+async def generate_title(request: TitleRequest):
+    """
+    生成标题接口
+    """
+    return JSONResponse(content={"title": title_manager.generate_session_title(request.message)})

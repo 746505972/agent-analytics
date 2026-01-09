@@ -32,7 +32,7 @@
           @click="$emit('load-analysis-from-history', historyItem)"
           class="history-button"
         >
-          {{ getMethodName(historyItem.method) }}{{ index + 1 }}
+          {{ historyItem.name }}{{ historyItem.id }}
         </button>
         <button
           @click="$emit('remove-from-history', index)"
@@ -46,7 +46,6 @@
 </template>
 
 <script>
-import { getMethodName } from "@/utils/methodUtils.js";
 import DeleteHistoryItems from "@/components/DeleteHistoryItems.vue";
 
 export default {
@@ -82,7 +81,6 @@ export default {
     'remove-history'
   ],
   methods: {
-    getMethodName,
     getSelectedFileName() {
       const file = this.files.find(f => f.data_id === this.selectedFile);
       return file ? file.filename : "无";
@@ -108,12 +106,6 @@ export default {
   padding: 10px;
   background-color: #f5f7fa;
   border-bottom: 1px solid #ebeef5;
-}
-
-.history-title {
-  font-weight: bold;
-  margin-right: 15px;
-  color: #303133;
 }
 
 .history-buttons {
@@ -158,7 +150,7 @@ export default {
   border: none;
   border-radius: 0 4px 4px 0;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
   transition: background-color 0.3s;
 }

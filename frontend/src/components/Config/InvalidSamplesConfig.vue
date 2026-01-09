@@ -7,8 +7,8 @@
           <label>
             <input 
               type="checkbox" 
-              :checked="removeDuplicates"
-              @change="$emit('update:removeDuplicates', $event.target.checked)"
+              v-model="localConfig.removeDuplicates"
+              @change="onConfigChange"
             /> 去除重复行
           </label>
         </div>
@@ -16,8 +16,8 @@
           <label>
             <input
               type="checkbox"
-              :checked="removeDuplicatesCols"
-              @change="$emit('update:removeDuplicatesCols', $event.target.checked)"
+              v-model="localConfig.removeDuplicatesCols"
+              @change="onConfigChange"
             /> 去除重复列
           </label>
         </div>
@@ -25,8 +25,8 @@
           <label>
             <input
               type="checkbox"
-              :checked="removeConstantCols"
-              @change="$emit('update:removeConstantCols', $event.target.checked)"
+              v-model="localConfig.removeConstantCols"
+              @change="onConfigChange"
             /> 去除唯一值列（常量列）
           </label>
         </div>
@@ -37,8 +37,8 @@
             行缺失阈值:
             <input 
               type="number" 
-              :value="rowMissingThreshold" 
-              @input="$emit('update:rowMissingThreshold', parseFloat($event.target.value))"
+              v-model.number="localConfig.rowMissingThreshold" 
+              @input="onConfigChange"
               min="0" 
               max="1" 
               step="0.01"
@@ -51,8 +51,8 @@
             列缺失阈值:
             <input 
               type="number" 
-              :value="columnMissingThreshold" 
-              @input="$emit('update:columnMissingThreshold', parseFloat($event.target.value))"
+              v-model.number="localConfig.columnMissingThreshold" 
+              @input="onConfigChange"
               min="0" 
               max="1" 
               step="0.01"
@@ -69,34 +69,35 @@
 export default {
   name: "InvalidSamplesConfig",
   props: {
-    removeDuplicates: {
-      type: Boolean,
-      default: false
-    },
-    removeDuplicatesCols: {
-      type: Boolean,
-      default: false
-    },
-    removeConstantCols: {
-      type: Boolean,
-      default: false
-    },
-    rowMissingThreshold: {
-      type: Number,
-      default: 1
-    },
-    columnMissingThreshold: {
-      type: Number,
-      default: 1
+    config: {
+      type: Object,
+      default: () => ({
+        removeDuplicates: false,
+        removeDuplicatesCols: false,
+        removeConstantCols: false,
+        rowMissingThreshold: 1,
+        columnMissingThreshold: 1
+      })
     }
   },
-  emits: [
-    'update:removeDuplicates',
-    'update:removeDuplicatesCols',
-    'update:removeConstantCols',
-    'update:rowMissingThreshold',
-    'update:columnMissingThreshold'
-  ]
+  data() {
+    return {
+      localConfig: { ...this.config }
+    };
+  },
+  watch: {
+    config: {
+      handler(newConfig) {
+        this.localConfig = { ...newConfig };
+      },
+      deep: true
+    },
+  },
+  methods: {
+    onConfigChange() {
+      this.$emit('update:config', { ...this.localConfig });
+    }
+  }
 }
 </script>
 

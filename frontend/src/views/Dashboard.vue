@@ -26,7 +26,7 @@
     
     <div class="dashboard-content">
       <!-- 左侧：方法选择区域 -->
-      <div class="left-section">
+      <div class="left-section" :style="{ flex: `0 0 ${leftSectionWidth}px` }">
         <!-- 方法选择区域移到左栏 -->
         <MethodSelection
           :selected-file="selectedFile"
@@ -36,10 +36,12 @@
           @select-method="handleSelectMethod"
           @toggle-category="toggleCategory"
         />
+        <!-- 左侧调整器 -->
+        <div class="resize-handle resize-handle-right" @mousedown="startResize($event, 'left')"></div>
       </div>
       
       <!-- 中间：列名列表区域 -->
-      <div class="middle-section">
+      <div class="middle-section" :style="{ flex: `1 1 ${middleSectionWidth}px` }">
         <!-- 结果渲染区 -->
         <div v-if="middleSectionView === 'result'" class="result-section">
           <div class="result-header">
@@ -75,14 +77,6 @@
             :selected-columns="selectedColumns"
             :header-edit-mode="headerEditMode"
             :new-column-names="newColumnNames"
-            v-model:remove-duplicates="removeDuplicates"
-            v-model:remove-duplicates-cols="removeDuplicatesCols"
-            v-model:remove-constant-cols="removeConstantCols"
-            v-model:row-missing-threshold="rowMissingThreshold"
-            v-model:column-missing-threshold="columnMissingThreshold"
-            v-model:interpolation-method="interpolationMethod"
-            v-model:fill-value="fillValue"
-            v-model:knn-neighbors="knnNeighbors"
             :last-selected-column-index="lastSelectedColumnIndex"
             :data-transformation-config="dataTransformationConfig"
             v-model:configs="configs"
@@ -93,6 +87,8 @@
             @clear-selected-columns="clearSelectedColumns"
           />
         </div>
+        <!-- 中间调整器 -->
+        <div class="resize-handle resize-handle-right" @mousedown="startResize($event, 'middle')"></div>
       </div>
 
       <!-- 右侧：聊天分析区域 -->
@@ -100,6 +96,7 @@
         :selected-file="selectedFile"
         :files="files"
         :is-collapsed="isRightSectionCollapsed"
+        :analysis-history="analysisHistory"
         @toggle-collapse="toggleRightSection"
         @refresh-files="loadUploadedFiles"
       />
@@ -119,7 +116,6 @@
 </template>
 
 <script>
-import ChatAssistant from "@/components/ChatAssistant.vue";
 import ResultContent from "@/components/ResultContent.vue";
 import MethodDescription from "@/components/MethodDescription.vue";
 import MethodSelection from "@/components/MethodSelection.vue";
@@ -141,60 +137,25 @@ import {
 import { getMethodName } from "@/utils/methodUtils.js";
 import { getDefaultConfigs } from '@/utils/configDefaults.js'
 import methodCategories from "@/utils/methodCategories.json";
+import clickOutside from "@/utils/clickOutside";
 
 export default {
   name: "Dashboard",
   components: {
-    RightSidebar,
-    MethodParameterConfig, FileSelectionOverlay, MethodDescription, ResultContent,
-    ChatAssistant, DashboardHeader, MethodSelection, PreviewModal
+    RightSidebar, MethodParameterConfig, FileSelectionOverlay, MethodDescription,
+    ResultContent, DashboardHeader, MethodSelection, PreviewModal
   },
-  directives: {
-    clickOutside: {
-      mounted(el, binding, vnode) {
-        // 确保元素已经被添加到DOM中
-        setTimeout(() => {
-          el.clickOutsideEvent = function(event) {
-            // 检查点击的元素是否在当前元素内部
-            if (!(el === event.target || el.contains(event.target))) {
-              // 检查绑定的值是否为函数
-              const handler = binding.value;
-              if (typeof handler === 'function') {
-                // 调用绑定的方法
-                handler(event);
-              }
-            }
-          };
-          // 将事件监听器添加到 document 上
-          document.addEventListener('click', el.clickOutsideEvent);
-        }, 0);
-      },
-      unmounted(el) {
-        // 解除事件监听器
-        if (el.clickOutsideEvent) {
-          document.removeEventListener('click', el.clickOutsideEvent);
-        }
-      }
-    }
-  },
+  directives: {clickOutside},
   data() {
     return {
       files: [],
       selectedFile: null,
       selectedFileColumns: [], // 用于显示选择的文件的列名
       selectedColumns: [], // 选中的列
-      userInput: "",
-      chatMessages: [
-        {
-          type: "received",
-          content: "您好！我是您的数据分析助手，请选择一个文件并告诉我您需要什么分析？"
-        }
-      ],
+      datasetDetails: null,// 分析结果详情
       isFileSectionCollapsed: true, // 默认收起文件选择区域
       isWaitingForResponse: false,
-      // 添加折叠右侧区域的状态
-      isRightSectionCollapsed: false,
-      // 新增方法选择相关数据
+      isRightSectionCollapsed: false,// 折叠右侧区域的状态
       currentMethod: 'basic_info',
       expandedCategories: ['statistics', 'ml', 'visualization', 'nlp', 'data_processing'], // 默认全部展开
       methodCategories: methodCategories,
@@ -216,22 +177,14 @@ export default {
       headerEditMode: 'add',
       analysisHistory: [],
       middleSectionView: 'config', // 'config' 表示参数配置区，'result' 表示结果渲染区
-      // 数据集详情
-      datasetDetails: null,
-      // 无效样本参数
-      removeDuplicates: false,
-      removeDuplicatesCols: false,
-      removeConstantCols: false,
-      rowMissingThreshold: 1,
-      columnMissingThreshold: 1,
-      // 插值法参数
-      interpolationMethod: 'linear',
-      fillValue: '',
-      knnNeighbors: 5,
       lastSelectedColumnIndex: -1,
-      // 数据转换相关配置
-      dataTransformationConfig: {},
+      dataTransformationConfig: {},// 数据转换相关配置
       configs:getDefaultConfigs(),
+      leftSectionWidth: 250, // 左侧区域默认宽度
+      middleSectionWidth: 500, // 中间区域默认宽度
+      currentResizeSection: null, // 当前正在调整的区域
+      startX: 0, // 鼠标按下时的X坐标
+      startWidth: 0, // 调整开始时的宽度
     }
   },
     
@@ -514,15 +467,7 @@ export default {
 
       this.isWaitingForResponse = true;
       try {
-        const invalidSamplesConfig = {
-          removeDuplicates: this.removeDuplicates,
-          removeDuplicateCols: this.removeDuplicatesCols,
-          removeConstantCols: this.removeConstantCols,
-          rowMissingThreshold: this.rowMissingThreshold,
-          columnMissingThreshold: this.columnMissingThreshold
-        };
-
-        const result = await executeInvalidSamples(this.selectedFile, invalidSamplesConfig);
+        const result = await executeInvalidSamples(this.selectedFile, this.configs.invalidSamplesConfig);
         
         // 刷新文件列表并选中处理后的新文件
         await this.loadUploadedFiles();
@@ -589,16 +534,10 @@ export default {
     async executeMissingValueInterpolation() {
       this.isWaitingForResponse = true;
       try {
-        const interpolationConfig = {
-          interpolationMethod: this.interpolationMethod,
-          fillValue: this.fillValue,
-          knnNeighbors: this.knnNeighbors
-        };
-
         const result = await executeMissingValueInterpolation(
           this.selectedFile,
           this.selectedColumns,
-          interpolationConfig
+          this.configs.interpolationConfig
         );
 
         // 刷新文件列表并选中处理后的新文件
@@ -656,15 +595,12 @@ export default {
       this.isWaitingForResponse = true;
       try {
         const result = await executeDeleteColumns(this.selectedFile, this.selectedColumns);
-        
         // 刷新文件列表并选中处理后的新文件
         await this.loadUploadedFiles();
         await this.selectFile(result.data.data_id);
-        
         // 显示成功信息
         const feedbackMessage = generateDeleteColumnsFeedback(result);
         alert(feedbackMessage);
-        
         // 清空选中列
         this.selectedColumns = [];
       } catch (error) {
@@ -674,15 +610,10 @@ export default {
         this.isWaitingForResponse = false;
       }
     },
-    // TODO:在这里添加清除参数
+
     switchToConfigView() {
       this.middleSectionView = 'config';
       this.selectedColumns=[]; // 用于插值法选中的列
-      this.removeDuplicates= false;
-      this.removeDuplicatesCols= false;
-      this.removeConstantCols= false;
-      this.rowMissingThreshold= 1;
-      this.columnMissingThreshold= 1;
       this.lastSelectedColumnIndex= -1;
       this.newColumnNames= [];
       this.headerEditMode= 'add';  // 修改：统一使用字符串类型，默认为添加模式
@@ -691,26 +622,22 @@ export default {
     
     // 添加到历史记录
     addToHistory(dataId, method, result) {
-      this.analysisHistory.push({
-        dataId, method, result
-      });
+      const name = getMethodName(method);
+      const id = (this.analysisHistory.at(-1)?.id ?? 0) + 1;
+      this.analysisHistory.push({dataId, method, result, name, id});
       localStorage.setItem('analysisHistory', JSON.stringify(this.analysisHistory));
     },
 
     // 应用自定义标题行
     async applyHeaderNames() {
       if (!this.selectedFile) return;
-
       this.isWaitingForResponse = true;
       try {
         const result = await applyHeaderNames(
           this.selectedFile, this.newColumnNames, this.headerEditMode
         );
-            
-        // 自动选择新生成的文件
         await this.loadUploadedFiles(); // 刷新文件列表
         await this.selectFile(result.data.data_id); // 选择新文件
-        
         // 显示成功消息
         if (this.headerEditMode === 'remove') {
           alert('首行删除成功，已自动选择新文件');
@@ -736,19 +663,16 @@ export default {
         // 获取选中文件的列名
         this.selectFile(savedSelectedFile);
       }
-      
       // 恢复选中的方法
       const savedSelectedMethod = localStorage.getItem('selectedMethod');
       if (savedSelectedMethod) {
         this.currentMethod = savedSelectedMethod;
       }
-      
       // 恢复展开的大类
       const savedExpandedCategories = localStorage.getItem('expandedCategories');
       if (savedExpandedCategories) {
         this.expandedCategories = JSON.parse(savedExpandedCategories);
       }
-      
       // 初始化添加/修改标题行模式
       if (this.currentMethod === 'add_header') {
         this.headerEditMode = 'modify'; // 修改：默认为修改模式
@@ -777,13 +701,66 @@ export default {
         // 如果收起，则展开
         this.expandedCategories.push(categoryId);
       }
-      // 保存展开状态到localStorage
       localStorage.setItem('expandedCategories', JSON.stringify(this.expandedCategories));
     },
-    
-    // 页面激活时恢复状态（从其他页面返回时调用）
+
     activated() {
       this.restoreState();
+    },
+    
+    // 开始调整宽度
+    startResize(event, section) {
+      this.currentResizeSection = section;
+      this.startX = event.clientX;
+      if (section === 'left') {
+        this.startWidth = this.leftSectionWidth;
+      } else if (section === 'middle') {
+        this.startWidth = this.middleSectionWidth;
+      }
+      // 添加活动状态样式
+      const handle = event.target;
+      handle.classList.add('active');
+      
+      document.addEventListener('mousemove', this.handleResize);
+      document.addEventListener('mouseup', this.stopResize);
+      // 防止文本被选中
+      event.preventDefault();
+    },
+    
+    // 处理宽度调整
+    handleResize(event) {
+      if (!this.currentResizeSection) return;
+      
+      const diff = event.clientX - this.startX;
+      
+      if (this.currentResizeSection === 'left') {
+        let newWidth = this.startWidth + diff;
+        // 设置最小和最大宽度限制
+        newWidth = Math.max(150, Math.min(newWidth, 250));
+        this.leftSectionWidth = newWidth;
+      } else if (this.currentResizeSection === 'middle') {
+        let newWidth = this.startWidth + diff;
+        // 设置最小和最大宽度限制
+        newWidth = Math.max(300, Math.min(newWidth, 1000));
+        this.middleSectionWidth = newWidth;
+      }
+    },
+    
+    // 停止调整宽度
+    stopResize(event) {
+      this.currentResizeSection = null;
+      
+      // 移除活动状态样式
+      if (event && event.target) {
+        event.target.classList.remove('active');
+      } else {
+        // 查找并移除所有活动的手柄样式
+        const activeHandles = document.querySelectorAll('.resize-handle.active');
+        activeHandles.forEach(handle => handle.classList.remove('active'));
+      }
+      
+      document.removeEventListener('mousemove', this.handleResize);
+      document.removeEventListener('mouseup', this.stopResize);
     },
     
     // 显示数据预览弹窗
@@ -887,7 +864,7 @@ export default {
 }
 
 .left-section {
-  flex: 0.5;
+  position: relative;
   padding-left: 0;
   overflow-y: auto;
   max-height: 100%;
@@ -895,7 +872,7 @@ export default {
 }
 
 .middle-section {
-  flex: 1.5;
+  position: relative;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -936,10 +913,53 @@ export default {
 .back-button:hover {
   background-color: #66b1ff;
 }
+
+/* 调整宽度的拖拽手柄 */
+.resize-handle {
+  position: absolute;
+  top: 0;
+  right: -5px;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  user-select: none;
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  width: 2px;
+  height: 40px;
+  background-color: #dcdfe6;
+  transform: translateY(-50%);
+}
+
+.resize-handle:hover::after {
+  background-color: #409eff;
+}
+
+.resize-handle.active {
+  background-color: #409eff;
+  opacity: 0.2;
+}
+
+.resize-handle-right {
+  right: -5px;
+}
+
 @media (max-width: 768px) {
   .dashboard-content {
     flex-direction: column;
     height: auto;
   }
+
+  /* 在小屏幕上隐藏调整手柄 */
+  .resize-handle {
+    display: none;
+  }
 }
+
 </style>

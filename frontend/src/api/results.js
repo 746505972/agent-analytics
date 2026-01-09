@@ -25,7 +25,7 @@ export async function fetchCompleteData(dataId) {
     if (result.success) {
       return {
         ...result.data,
-        resultMethod: method
+        resultMethod: 'data_visualization'
       };
     } else {
       throw new Error(result.error || "获取完整数据失败");
