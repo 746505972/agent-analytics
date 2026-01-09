@@ -30,8 +30,7 @@
             </span>
             <div v-else class="message-content-wrapper">
               <div v-html="renderMarkdown(message.content)" class="message-content"></div>
-              <MessageMeta :message=message
-              />
+              <MessageMeta :message=message />
               <button
                 v-if="message.content"
                 @click="copyMessageText(message.content)"
