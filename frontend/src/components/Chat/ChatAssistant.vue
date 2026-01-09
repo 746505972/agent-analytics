@@ -44,15 +44,15 @@
         </div>
       </div>
       <!-- 分析历史下拉选择 -->
-      <div class="analysis-history-dropdown">
+      <div class="analysis-history-dropdown" v-click-outside="close" >
         <div v-if="showHistoryDropdown" class="dropdown-content">
           <div
             v-for="(historyItem, index) in analysisHistory"
             :key="index"
             class="history-item"
-            @click="selectAnalysisHistory(historyItem, index)"
+            @click="selectAnalysisHistory(historyItem)"
           >
-            <span class="history-method">{{ getMethodName(historyItem.method) }}{{ index + 1 }}</span>
+            <span class="history-method">{{ historyItem.name }}{{ historyItem.id }}</span>
             <span class="history-status" :class="{ selected: isHistoryItemSelected(historyItem) }">
               {{ isHistoryItemSelected(historyItem) ? '已选择' : '未选择' }}
             </span>
@@ -64,11 +64,11 @@
           v-for="(historyItem, index) in selectedAnalysisHistory"
           :key="index"
         >
-          <button class="history-button">
-            {{ getMethodName(historyItem.method) }}{{ index + 1 }}
+          <div class="history-button">
+            {{ historyItem.name }}{{ historyItem.id }}
             <button class="delete-history-button"
               @click="removeSelectedHistory(index)">×</button>
-          </button>
+          </div>
         </div>
       </div>
       <div class="input-area">
@@ -93,15 +93,16 @@
 
 <script>
 import { marked } from 'marked';
-import { getMethodName } from "@/utils/methodUtils.js";
 import ChatHeader from "@/components/Chat/ChatHeader.vue";
 import HistoryView from "@/components/Chat/HistoryView.vue";
 import FileUploadWrapper from "@/components/Chat/FileUploadWrapper.vue";
 import SendButton from "@/components/Chat/SendButton.vue";
+import clickOutside from "@/utils/clickOutside";
 
 export default {
   name: "ChatAssistant",
   components: {ChatHeader, HistoryView, FileUploadWrapper, SendButton},
+  directives: {clickOutside},
   props: {
     selectedFile: {
       type: String,
@@ -546,8 +547,6 @@ export default {
     },
     
     onAddClick() {
-      // 用于将localStorage里的分析结果添加到agent上下文中。
-      // 待实现
       this.showHistoryDropdown = !this.showHistoryDropdown;
     },
     
@@ -557,23 +556,21 @@ export default {
     },
     
     // 选择分析历史
-    selectAnalysisHistory(historyItem, index) {
+    selectAnalysisHistory(historyItem) {
       // 检查是否已经选择过这个历史项
       const existingIndex = this.selectedAnalysisHistory.findIndex(
-        item => item.dataId === historyItem.dataId && item.method === historyItem.method
+        item => item.id === historyItem.id && item.method === historyItem.method
       );
       
       if (existingIndex === -1) {
         // 如果未选择，则添加到选中的列表
         this.selectedAnalysisHistory.push({
           ...historyItem,
-          index: index
         });
       } else {
         // 如果已选择，则从选中的列表中移除
         this.selectedAnalysisHistory.splice(existingIndex, 1);
       }
-      
       // 保持下拉框打开状态
       this.showHistoryDropdown = true;
     },
@@ -581,16 +578,17 @@ export default {
     // 检查分析历史是否已被选中
     isHistoryItemSelected(historyItem) {
       return this.selectedAnalysisHistory.some(
-        item => item.dataId === historyItem.dataId && item.method === historyItem.method
+        item => item.id === historyItem.id && item.method === historyItem.method
       );
     },
-    
-    // 获取方法名称
-    getMethodName,
     
     // 移除已选择的分析历史
     removeSelectedHistory(index) {
       this.selectedAnalysisHistory.splice(index, 1);
+    },
+
+    close(){
+      this.showHistoryDropdown = false;
     }
   },
 }
@@ -829,6 +827,7 @@ export default {
   max-height: 150px;
   width: 100%;
   overflow-y: auto;
+  user-select: none;
 }
 
 .history-item {
@@ -877,6 +876,7 @@ export default {
   border-radius: 4px;
   font-size: 10px;
   transition: background-color 0.3s;
+  user-select: none;
 }
 
 .history-button:hover {
