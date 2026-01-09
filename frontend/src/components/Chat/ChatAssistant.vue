@@ -30,11 +30,12 @@
             </span>
             <div v-else class="message-content-wrapper">
               <div v-html="renderMarkdown(message.content)" class="message-content"></div>
+              <MessageMeta :message=message
+              />
               <button
                 v-if="message.content"
                 @click="copyMessageText(message.content)"
                 class="copy-button"
-                :class="{ copied: message.copied }"
                 :title="'复制文本'"
               >
                 <img src="@/assets/images/copy.svg" alt="复制" width="12px" height="12px"/>
@@ -84,10 +85,13 @@ import SendButton from "@/components/Chat/SendButton.vue";
 import clickOutside from "@/utils/clickOutside";
 import HistoryButtons from "@/components/Chat/HistoryButtons.vue";
 import AnalysisHistoryDropdown from "@/components/Chat/AnalysisHistoryDropdown.vue";
+import MessageMeta from "@/components/Chat/MessageMeta.vue";
 
 export default {
   name: "ChatAssistant",
-  components: {AnalysisHistoryDropdown, ChatHeader, HistoryView, HistoryButtons, FileUploadWrapper, SendButton},
+  components: {
+    MessageMeta,
+    AnalysisHistoryDropdown, ChatHeader, HistoryView, HistoryButtons, FileUploadWrapper, SendButton},
   directives: {clickOutside},
   props: {
     selectedFile: {
@@ -258,11 +262,16 @@ export default {
       if (!this.currentSession) {
         this.createNewSession();
       }
-      
+      function getDetails(selectedAnalysisHistory) {
+        return selectedAnalysisHistory.length > 0
+          ? selectedAnalysisHistory.map(({ dataId, name }) => (`${dataId}-${name}`)) : null;
+      }
       // 添加用户消息到当前会话的聊天记录
       const userMessage = {
         type: "sent",
-        content: this.userInput
+        content: this.userInput,
+        details: getDetails(this.selectedAnalysisHistory),
+        createdAt: new Date().toISOString()
       };
       
       this.currentSession.messages.push(userMessage);
@@ -285,18 +294,20 @@ export default {
         const requestData = {
           message: userQuery,
           data_id: this.selectedFile,
-          history: this.currentSession.messages.slice(0, -1) // 不包括刚添加的AI回复占位符
+          history: this.currentSession.messages.slice(0, -1), // 不包括刚添加的AI回复占位符
+          analysis_history: this.selectedAnalysisHistory
         };
 
         // 如果是第一次查询，先调用生成标题的API
         if (this.currentSession.name === '新会话') {
           try {
+            const request = {message: userQuery,};
             const titleResponse = await fetch('/chat/generate_title', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(requestData),
+              body: JSON.stringify(request),
               credentials: 'include'
             });
             
@@ -601,12 +612,12 @@ export default {
 
 .message {
   margin-bottom: 15px;
-  padding: 10px;
   border-radius: 4px;
 }
 
 .message.sent {
   background-color: #409eff;
+  padding: 10px 10px 0 10px;
   color: white;
   margin-left: auto;
   max-width: 80%;
@@ -614,7 +625,6 @@ export default {
 
 .message.received {
   max-width: 100%;
-  padding: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -643,12 +653,6 @@ export default {
 .copy-button:hover {
   background-color: rgba(64, 158, 255, 0.7);
   color: white;
-}
-
-.copy-button.copied {
-  background-color: #67c23a;
-  color: white;
-  opacity: 1;
 }
 
 .typing-indicator {

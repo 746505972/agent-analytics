@@ -71,7 +71,7 @@ class DataAnalysisAgent:
         register_pandas_tools(self)
         register_ml_tools(self)
     # TODO: 实现流式响应(DONE) & 添加分析结果上下文
-    async def process_query_stream(self, query: str, data_context=None, session_id=None, history=None):
+    async def process_query_stream(self, query: str, data_context=None, session_id=None, history=None, analysis_history=None):
         """
         流式处理用户查询
         
@@ -80,24 +80,35 @@ class DataAnalysisAgent:
             data_context: 当前数据上下文
             session_id: 用户会话ID
             history
+            analysis_history
             
         Yields:
             dict: 处理过程中的流式响应
         """
-        if history is None:
-            history = []
-
         try:
             # 准备输入
             messages = [SystemMessage(content=self.system_message)]
 
             # 添加对话历史
-            for item in history:
-                if item['type'] == 'received':
-                    messages.append(AIMessage(content=item['content']))
-                else:
-                    messages.append(HumanMessage(content=item['content']))
-            
+            if history:
+                for item in history:
+                    if item['type'] == 'received':
+                        messages.append(AIMessage(content=item['content']))
+                    else:
+                        messages.append(HumanMessage(content=item['content']))
+
+            # 添加分析历史记录
+            if analysis_history:
+                for i, item in enumerate(analysis_history):
+                    context_info = f"""
+                        <用户添加的分析历史记录{i}>
+                        dataId: {item['dataId']}
+                        method: {item['method']}
+                        result:{item['result']}
+                        </用户添加的分析历史记录{i}>
+                        """
+                    messages.append(HumanMessage(content=context_info))
+
             # 如果有数据上下文，则加入
             if data_context:
                 # 构造更清晰的提示信息
