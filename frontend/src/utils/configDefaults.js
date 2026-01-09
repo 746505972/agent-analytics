@@ -1,4 +1,17 @@
 export const getDefaultConfigs = () => ({
+  interpolationConfig:{
+    interpolationMethod: 'linear',
+    fillValue: '',
+    knnNeighbors: 5,
+  },
+  invalidSamplesConfig: {
+    // 无效样本参数
+    removeDuplicates: false,
+    removeDuplicatesCols: false,
+    removeConstantCols: false,
+    rowMissingThreshold: 1,
+    columnMissingThreshold: 1,
+  },
   correlationMethod: 'pearson',
   wordcloudConfig: {
     color: ['#FF274B'],

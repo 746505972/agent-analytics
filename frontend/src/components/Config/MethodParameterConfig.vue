@@ -68,26 +68,12 @@
 
       <InvalidSamplesConfig
         v-else-if="currentMethod === 'invalid_samples'"
-        :remove-duplicates="removeDuplicates"
-        :remove-duplicates-cols="removeDuplicatesCols"
-        :remove-constant-cols="removeConstantCols"
-        :row-missing-threshold="rowMissingThreshold"
-        :column-missing-threshold="columnMissingThreshold"
-        @update:removeDuplicates="$emit('update:removeDuplicates', $event)"
-        @update:removeDuplicatesCols="$emit('update:removeDuplicatesCols', $event)"
-        @update:removeConstantCols="$emit('update:removeConstantCols', $event)"
-        @update:rowMissingThreshold="$emit('update:rowMissingThreshold', $event)"
-        @update:columnMissingThreshold="$emit('update:columnMissingThreshold', $event)"
+        v-model:config="configs.invalidSamplesConfig"
       />
 
       <MissingValueInterpolationConfig
         v-else-if="currentMethod === 'missing_value_interpolation'"
-        :interpolation-method="interpolationMethod"
-        :fill-value="fillValue"
-        :knn-neighbors="knnNeighbors"
-        @update:interpolationMethod="$emit('update:interpolationMethod', $event)"
-        @update:fillValue="$emit('update:fillValue', $event)"
-        @update:knnNeighbors="$emit('update:knnNeighbors', $event)"
+        v-model:config="configs.interpolationConfig"
       />
 
       <DataTransformationConfig
@@ -237,38 +223,6 @@ export default {
       type: Array,
       default: () => []
     },
-    removeDuplicates: {
-      type: Boolean,
-      default: false
-    },
-    removeDuplicatesCols: {
-      type: Boolean,
-      default: false
-    },
-    removeConstantCols: {
-      type: Boolean,
-      default: false
-    },
-    rowMissingThreshold: {
-      type: Number,
-      default: 1
-    },
-    columnMissingThreshold: {
-      type: Number,
-      default: 1
-    },
-    interpolationMethod: {
-      type: String,
-      default: 'linear'
-    },
-    fillValue: {
-      type: String,
-      default: ''
-    },
-    knnNeighbors: {
-      type: Number,
-      default: 5
-    },
     lastSelectedColumnIndex: {
       type: Number,
       default: -1
@@ -292,9 +246,6 @@ export default {
     'update:removeConstantCols',
     'update:rowMissingThreshold',
     'update:columnMissingThreshold',
-    'update:interpolationMethod',
-    'update:fillValue',
-    'update:knnNeighbors',
     'update:newColumnNames',
     'update:dataTransformationConfig',
     'toggleColumnSelection',

@@ -1,9 +1,9 @@
 <template>
   <div class="chat-section">
-    <ChatHeader
+    <ChatHeader 
       v-model:is-showing-history="isShowingHistory"
-      @toggleHistoryView="toggleHistoryView"
-      @createNewSession="createNewSession"
+      @toggleHistoryView="toggleHistoryView" 
+      @createNewSession="createNewSession" 
     />
     <!-- 历史记录视图 -->
     <div v-if="isShowingHistory" class="chat-box">
@@ -30,11 +30,11 @@
             </span>
             <div v-else class="message-content-wrapper">
               <div v-html="renderMarkdown(message.content)" class="message-content"></div>
+              <MessageMeta :message=message />
               <button
                 v-if="message.content"
                 @click="copyMessageText(message.content)"
                 class="copy-button"
-                :class="{ copied: message.copied }"
                 :title="'复制文本'"
               >
                 <img src="@/assets/images/copy.svg" alt="复制" width="12px" height="12px"/>
@@ -43,6 +43,18 @@
           </div>
         </div>
       </div>
+      <!-- 分析历史下拉选择 -->
+      <AnalysisHistoryDropdown
+        :show-dropdown="showHistoryDropdown"
+        :analysis-history="analysisHistory"
+        :selected-analysis-history="selectedAnalysisHistory"
+        @update:showDropdown="showHistoryDropdown = $event"
+        @selectHistory="selectAnalysisHistory"
+        @removeHistory="selectAnalysisHistory"
+      />
+      <HistoryButtons
+        :selected-analysis-history="selectedAnalysisHistory"
+        @remove-selected-history="removeSelectedHistory" />
       <div class="input-area">
         <div class="messageBox">
           <textarea
@@ -70,16 +82,27 @@ import HistoryView from "@/components/Chat/HistoryView.vue";
 import FileUploadWrapper from "@/components/Chat/FileUploadWrapper.vue";
 import SendButton from "@/components/Chat/SendButton.vue";
 import {backendBaseUrl} from "@/api/apiConfig";
+import clickOutside from "@/utils/clickOutside";
+import HistoryButtons from "@/components/Chat/HistoryButtons.vue";
+import AnalysisHistoryDropdown from "@/components/Chat/AnalysisHistoryDropdown.vue";
+import MessageMeta from "@/components/Chat/MessageMeta.vue";
 
 export default {
   name: "ChatAssistant",
-  components: {ChatHeader, HistoryView, FileUploadWrapper, SendButton},
+  components: {
+    MessageMeta, AnalysisHistoryDropdown, ChatHeader, HistoryView,
+    HistoryButtons, FileUploadWrapper, SendButton},
+  directives: {clickOutside},
   props: {
     selectedFile: {
       type: String,
       default: null
     },
     files: {
+      type: Array,
+      default: () => []
+    },
+    analysisHistory: {
       type: Array,
       default: () => []
     }
@@ -92,7 +115,9 @@ export default {
       sessions: [],
       currentSessionId: null,
       isWaitingForResponse: false,
-      isShowingHistory: false // 新增：是否显示历史记录视图
+      isShowingHistory: false, // 新增：是否显示历史记录视图
+      showHistoryDropdown: false,
+      selectedAnalysisHistory: [],
     }
   },
   computed: {
@@ -119,7 +144,7 @@ export default {
   async created() {
     // 在组件创建时调用测试接口获取session_id
     await this.initializeSessionID();
-
+    
     // 初始化多会话
     this.initializeSessions();
   },
@@ -128,14 +153,14 @@ export default {
     generateSessionId() {
       return 'session_' + Date.now();
     },
-
+    
     // 创建新会话
     createNewSession() {
       // 如果当前会话名为"新会话"，则不创建新会话
       if (this.sessions[0]?.name === '新会话') {
         return;
       }
-
+      
       const newSessionId = this.generateSessionId();
       const newSession = {
         id: newSessionId,
@@ -148,16 +173,16 @@ export default {
           }
         ]
       };
-
+      
       this.sessions.unshift(newSession);
       this.currentSessionId = newSessionId;
-
+      
       // 保存会话到localStorage
       this.saveSessions();
-
+      
       return newSessionId;
     },
-
+    
     // 切换到指定会话
     switchToSession(sessionId) {
       const session = this.sessions.find(s => s.id === sessionId);
@@ -169,14 +194,14 @@ export default {
         this.isShowingHistory = false;
       }
     },
-
+    
     // 删除指定会话
     deleteSession(sessionId) {
-
+      
       const sessionIndex = this.sessions.findIndex(s => s.id === sessionId);
       if (sessionIndex !== -1) {
         this.sessions.splice(sessionIndex, 1);
-
+        
         // 如果删除的是当前会话
         if (this.currentSessionId === sessionId) {
           if (this.sessions.length > 0) {
@@ -189,16 +214,16 @@ export default {
             localStorage.removeItem('currentSessionId');
           }
         }
-
+        
         this.saveSessions();
-
+        
         // 如果删除了所有会话，创建一个新会话
         if (this.sessions.length === 0) {
           this.createNewSession();
         }
       }
     },
-
+    
     // 保存所有会话到localStorage
     saveSessions() {
       localStorage.setItem('chatSessions', JSON.stringify(this.sessions));
@@ -206,7 +231,7 @@ export default {
         localStorage.setItem('currentSessionId', this.currentSessionId);
       }
     },
-
+    
     // 添加初始化session的方法
     async initializeSessionID() {
       try {
@@ -237,18 +262,23 @@ export default {
       if (!this.currentSession) {
         this.createNewSession();
       }
-
+      function getDetails(selectedAnalysisHistory) {
+        return selectedAnalysisHistory.length > 0
+          ? selectedAnalysisHistory.map(({ dataId, name }) => (`${dataId}-${name}`)) : null;
+      }
       // 添加用户消息到当前会话的聊天记录
       const userMessage = {
         type: "sent",
-        content: this.userInput
+        content: this.userInput,
+        details: getDetails(this.selectedAnalysisHistory),
+        createdAt: new Date().toISOString()
       };
       
       this.currentSession.messages.push(userMessage);
       const userQuery = this.userInput;
       this.userInput = "";
       this.isWaitingForResponse = true;
-
+      
       // 添加AI回复占位符
       const aiMessageIndex = this.currentSession.messages.length;
       this.currentSession.messages.push({
@@ -264,21 +294,23 @@ export default {
         const requestData = {
           message: userQuery,
           data_id: this.selectedFile,
-          history: this.currentSession.messages.slice(0, -1) // 不包括刚添加的AI回复占位符
+          history: this.currentSession.messages.slice(0, -1), // 不包括刚添加的AI回复占位符
+          analysis_history: this.selectedAnalysisHistory
         };
 
         // 如果是第一次查询，先调用生成标题的API
         if (this.currentSession.name === '新会话') {
           try {
+            const request = {message: userQuery,};
             const titleResponse = await fetch(`${backendBaseUrl}/chat/generate_title`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(requestData),
+              body: JSON.stringify(request),
               credentials: 'include'
             });
-
+            
             if (titleResponse.ok) {
               const titleData = await titleResponse.json();
               // 更新会话名称
@@ -289,7 +321,7 @@ export default {
             console.error('生成会话标题失败:', titleError);
           }
         }
-
+        
         // 发起流式请求
         const response = await fetch(`${backendBaseUrl}/chat/stream`, {
           method: 'POST',
@@ -358,7 +390,6 @@ export default {
                           setTimeout(async () => {
                             // 触发父组件刷新文件列表的事件
                             this.$emit('refresh-files');
-                            
                             // 显示通知
                             this.showCopyNotification(`工具执行成功，请在文件列表中查看新文件`, false);
                           }, 500);
@@ -375,8 +406,6 @@ export default {
                   } catch (e) {
                     // 即使解析失败，也尝试显示原始内容
                     this.currentSession.messages[aiMessageIndex].content = `解析错误: ${data}`;
-                    
-                    // 强制更新DOM
                     await this.$nextTick();
                   }
                 }
@@ -390,8 +419,8 @@ export default {
         this.currentSession.messages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;
       } finally {
         this.isWaitingForResponse = false;
-        // 保存会话到localStorage
-        this.saveSessions();
+        this.selectedAnalysisHistory = []; // 清空已选择的分析历史
+        this.saveSessions(); // 保存会话到localStorage
       }
     },
     
@@ -483,10 +512,10 @@ export default {
       if (savedSessions) {
         try {
           this.sessions = JSON.parse(savedSessions);
-
+          
           // 获取上次活动的会话ID
           const lastSessionId = localStorage.getItem('currentSessionId');
-
+          
           // 检查是否有有效的会话ID
           if (lastSessionId && this.sessions.some(session => session.id === lastSessionId)) {
             this.currentSessionId = lastSessionId;
@@ -508,18 +537,44 @@ export default {
         this.createNewSession();
       }
     },
-
+    
     onAddClick() {
-      // 用于将localStorage里的分析结果添加到agent上下文中。
-      // 待实现
-      console.log("添加分析结果到agent上下文");
+      this.showHistoryDropdown = !this.showHistoryDropdown;
     },
     
     // 切换历史记录视图
     toggleHistoryView() {
       this.isShowingHistory = !this.isShowingHistory;
-    }
+    },
 
+    // 选择分析历史
+    selectAnalysisHistory(historyItem) {
+      // 检查是否已经选择过这个历史项
+      const existingIndex = this.selectedAnalysisHistory.findIndex(
+        item => item.id === historyItem.id && item.method === historyItem.method
+      );
+
+      if (existingIndex === -1) {
+        // 如果未选择，则添加到选中的列表
+        this.selectedAnalysisHistory.push({
+          ...historyItem,
+        });
+      } else {
+        // 如果已选择，则从选中的列表中移除
+        this.selectedAnalysisHistory.splice(existingIndex, 1);
+      }
+      // 保持下拉框打开状态
+      this.showHistoryDropdown = true;
+    },
+
+    // 移除已选择的分析历史
+    removeSelectedHistory(index) {
+      this.selectedAnalysisHistory.splice(index, 1);
+    },
+
+    close(){
+      this.showHistoryDropdown = false;
+    }
   },
 }
 </script>
@@ -557,12 +612,12 @@ export default {
 
 .message {
   margin-bottom: 15px;
-  padding: 10px;
   border-radius: 4px;
 }
 
 .message.sent {
   background-color: #409eff;
+  padding: 10px 10px 0 10px;
   color: white;
   margin-left: auto;
   max-width: 80%;
@@ -570,7 +625,6 @@ export default {
 
 .message.received {
   max-width: 100%;
-  padding: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -599,12 +653,6 @@ export default {
 .copy-button:hover {
   background-color: rgba(64, 158, 255, 0.7);
   color: white;
-}
-
-.copy-button.copied {
-  background-color: #67c23a;
-  color: white;
-  opacity: 1;
 }
 
 .typing-indicator {

@@ -6,7 +6,7 @@
         <div class="option-row">
           <label>
             插值方法:
-            <select :value="interpolationMethod" @input="$emit('update:interpolationMethod', $event.target.value)" class="interpolation-method-select">
+            <select v-model="localConfig.interpolationMethod" @change="onConfigChange" class="interpolation-method-select">
               <option value="linear">线性插值</option>
               <option value="ffill">前向填充</option>
               <option value="bfill">后向填充</option>
@@ -18,12 +18,12 @@
           </label>
         </div>
 
-        <div class="option-row" v-if="interpolationMethod === 'constant'">
+        <div class="option-row" v-if="localConfig.interpolationMethod === 'constant'">
           <label>
             填充值:
             <input
-              :value="fillValue"
-              @input="$emit('update:fillValue', $event.target.value)"
+              v-model="localConfig.fillValue"
+              @input="onConfigChange"
               placeholder="请输入填充值"
               class="input-value"
               aria-label="填充值"
@@ -31,12 +31,12 @@
           </label>
         </div>
 
-        <div class="option-row" v-if="interpolationMethod === 'knn'">
+        <div class="option-row" v-if="localConfig.interpolationMethod === 'knn'">
           <label>
             KNN邻居数:
             <input
-              :value="knnNeighbors"
-              @input="$emit('update:knnNeighbors', parseInt($event.target.value))"
+              v-model.number="localConfig.knnNeighbors"
+              @input="onConfigChange"
               type="number"
               min="1"
               max="10"
@@ -45,32 +45,32 @@
           </label>
         </div>
         <!-- 方法介绍 -->
-        <div class="method-description" v-if="interpolationMethod">
-          <p v-if="interpolationMethod === 'linear'">
+        <div class="method-description" v-if="localConfig.interpolationMethod">
+          <p v-if="localConfig.interpolationMethod === 'linear'">
             线性插值使用线性函数来估算缺失值。它会在已知数据点之间画一条直线，并使用这条直线来估计缺失值。
             这种方法适用于数值型数据，假设数据在局部范围内呈线性变化。
           </p>
-          <p v-else-if="interpolationMethod === 'ffill'">
+          <p v-else-if="localConfig.interpolationMethod === 'ffill'">
             前向填充使用前面最近的有效值来填充缺失值。对于时间序列数据特别有用，
             因为它假设有连续性的数据点具有相似的值。
           </p>
-          <p v-else-if="interpolationMethod === 'bfill'">
+          <p v-else-if="localConfig.interpolationMethod === 'bfill'">
             后向填充使用后面最近的有效值来填充缺失值。这种方法也适用于时间序列数据，
             特别是在数据趋势是反向的情况下。
           </p>
-          <p v-else-if="interpolationMethod === 'mean'">
+          <p v-else-if="localConfig.interpolationMethod === 'mean'">
             均值填充使用每列的平均值来填充该列的缺失值。这是一种简单而常用的方法，
             适用于数值型数据，但可能会降低数据的方差。
           </p>
-          <p v-else-if="interpolationMethod === 'median'">
+          <p v-else-if="localConfig.interpolationMethod === 'median'">
             中位数填充使用每列的中位数来填充该列的缺失值。相比均值填充，它对异常值更鲁棒，
             是处理偏态分布数据的一个更好选择。
           </p>
-          <p v-else-if="interpolationMethod === 'constant'">
+          <p v-else-if="localConfig.interpolationMethod === 'constant'">
             常量填充使用指定的固定值来填充所有缺失值。这种方法非常直接，
             但在后续分析中可能会影响数据的真实分布。
           </p>
-          <p v-else-if="interpolationMethod === 'knn'">
+          <p v-else-if="localConfig.interpolationMethod === 'knn'">
             KNN（K最近邻）插值使用机器学习方法，基于最相似的k个样本来估算缺失值。
             它会考虑其他列的信息来预测缺失值，因此需要所有列参与计算。
             这就是为什么KNN方法会对全体列进行插值的原因。
@@ -85,24 +85,33 @@
 export default {
   name: "MissingValueInterpolationConfig",
   props: {
-    interpolationMethod: {
-      type: String,
-      default: 'linear'
+    config: {
+      type: Object,
+      default: () => ({
+        interpolationMethod: 'linear',
+        fillValue: '',
+        knnNeighbors: 5,
+      })
     },
-    fillValue: {
-      type: String,
-      default: ''
-    },
-    knnNeighbors: {
-      type: Number,
-      default: 5
-    }
   },
-  emits: [
-    'update:interpolationMethod',
-    'update:fillValue',
-    'update:knnNeighbors'
-  ]
+  data() {
+    return {
+      localConfig: { ...this.config }
+    };
+  },
+  watch: {
+    config: {
+      handler(newConfig) {
+        this.localConfig = { ...newConfig };
+      },
+      deep: true
+    },
+  },
+  methods: {
+    onConfigChange() {
+      this.$emit('update:config', { ...this.localConfig });
+    }
+  }
 }
 </script>
 
