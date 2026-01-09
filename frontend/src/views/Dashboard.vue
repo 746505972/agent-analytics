@@ -104,6 +104,7 @@
         :selected-file="selectedFile"
         :files="files"
         :is-collapsed="isRightSectionCollapsed"
+        :analysis-history="analysisHistory"
         @toggle-collapse="toggleRightSection"
         @refresh-files="loadUploadedFiles"
       />

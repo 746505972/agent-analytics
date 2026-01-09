@@ -7,6 +7,7 @@
       <ChatAssistant 
         :selected-file="selectedFile"
         :files="files"
+        :analysis-history="analysisHistory"
         @refresh-files="refreshFiles"
       />
     </div>
@@ -33,6 +34,10 @@ export default {
     isCollapsed: {
       type: Boolean,
       default: false
+    },
+    analysisHistory: {
+      type: Array,
+      default: () => []
     }
   },
   emits: ['toggle-collapse', 'refresh-files'],

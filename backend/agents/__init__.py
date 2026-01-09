@@ -89,12 +89,9 @@ class DataAnalysisAgent:
 
         try:
             # 准备输入
-            messages = []
-            
-            # 添加系统消息
+            messages = [SystemMessage(content=self.system_message)]
 
-            messages.append(SystemMessage(content=self.system_message))
-
+            # 添加对话历史
             for item in history:
                 if item['type'] == 'received':
                     messages.append(AIMessage(content=item['content']))

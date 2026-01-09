@@ -158,7 +158,7 @@ export default {
   border: none;
   border-radius: 0 4px 4px 0;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
   transition: background-color 0.3s;
 }
