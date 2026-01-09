@@ -44,33 +44,17 @@
         </div>
       </div>
       <!-- 分析历史下拉选择 -->
-      <div class="analysis-history-dropdown" v-click-outside="close" >
-        <div v-if="showHistoryDropdown" class="dropdown-content">
-          <div
-            v-for="(historyItem, index) in analysisHistory"
-            :key="index"
-            class="history-item"
-            @click="selectAnalysisHistory(historyItem)"
-          >
-            <span class="history-method">{{ historyItem.name }}{{ historyItem.id }}</span>
-            <span class="history-status" :class="{ selected: isHistoryItemSelected(historyItem) }">
-              {{ isHistoryItemSelected(historyItem) ? '已选择' : '未选择' }}
-            </span>
-          </div>
-        </div>
-      </div>
-      <div class="history-buttons">
-        <div
-          v-for="(historyItem, index) in selectedAnalysisHistory"
-          :key="index"
-        >
-          <div class="history-button">
-            {{ historyItem.name }}{{ historyItem.id }}
-            <button class="delete-history-button"
-              @click="removeSelectedHistory(index)">×</button>
-          </div>
-        </div>
-      </div>
+      <AnalysisHistoryDropdown 
+        :show-dropdown="showHistoryDropdown"
+        :analysis-history="analysisHistory"
+        :selected-analysis-history="selectedAnalysisHistory"
+        @update:showDropdown="showHistoryDropdown = $event"
+        @selectHistory="selectAnalysisHistory"
+        @removeHistory="selectAnalysisHistory"
+      />
+      <HistoryButtons 
+        :selected-analysis-history="selectedAnalysisHistory"
+        @remove-selected-history="removeSelectedHistory" />
       <div class="input-area">
         <div class="messageBox">
           <textarea
@@ -98,10 +82,12 @@ import HistoryView from "@/components/Chat/HistoryView.vue";
 import FileUploadWrapper from "@/components/Chat/FileUploadWrapper.vue";
 import SendButton from "@/components/Chat/SendButton.vue";
 import clickOutside from "@/utils/clickOutside";
+import HistoryButtons from "@/components/Chat/HistoryButtons.vue";
+import AnalysisHistoryDropdown from "@/components/Chat/AnalysisHistoryDropdown.vue";
 
 export default {
   name: "ChatAssistant",
-  components: {ChatHeader, HistoryView, FileUploadWrapper, SendButton},
+  components: {AnalysisHistoryDropdown, ChatHeader, HistoryView, HistoryButtons, FileUploadWrapper, SendButton},
   directives: {clickOutside},
   props: {
     selectedFile: {
@@ -393,7 +379,6 @@ export default {
                           setTimeout(async () => {
                             // 触发父组件刷新文件列表的事件
                             this.$emit('refresh-files');
-                            
                             // 显示通知
                             this.showCopyNotification(`工具执行成功，请在文件列表中查看新文件`, false);
                           }, 500);
@@ -410,8 +395,6 @@ export default {
                   } catch (e) {
                     // 即使解析失败，也尝试显示原始内容
                     this.currentSession.messages[aiMessageIndex].content = `解析错误: ${data}`;
-                    
-                    // 强制更新DOM
                     await this.$nextTick();
                   }
                 }
@@ -425,10 +408,8 @@ export default {
         this.currentSession.messages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;
       } finally {
         this.isWaitingForResponse = false;
-        // 清空已选择的分析历史
-        this.selectedAnalysisHistory = [];
-        // 保存会话到localStorage
-        this.saveSessions();
+        this.selectedAnalysisHistory = []; // 清空已选择的分析历史
+        this.saveSessions(); // 保存会话到localStorage
       }
     },
     
@@ -573,13 +554,6 @@ export default {
       }
       // 保持下拉框打开状态
       this.showHistoryDropdown = true;
-    },
-    
-    // 检查分析历史是否已被选中
-    isHistoryItemSelected(historyItem) {
-      return this.selectedAnalysisHistory.some(
-        item => item.id === historyItem.id && item.method === historyItem.method
-      );
     },
     
     // 移除已选择的分析历史
@@ -809,97 +783,6 @@ export default {
   padding: 0;
   font-size: 0.875em;
   color: #24292f;
-}
-
-/* 分析历史下拉框样式 */
-.analysis-history-dropdown {
-  position: relative;
-  display: flex;
-  align-items: center;
-  padding: 0 10px;
-}
-
-.dropdown-content {
-  position: relative;
-  border: 1px solid #dcdfe6;
-  border-radius: 4px;
-  z-index: 1000;
-  max-height: 150px;
-  width: 100%;
-  overflow-y: auto;
-  user-select: none;
-}
-
-.history-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 6px;
-  border-bottom: 1px solid #ebeef5;
-  cursor: pointer;
-  transition: background-color 0.3s;
-}
-
-.history-item:last-child {
-  border-bottom: none;
-}
-
-.history-item:hover {
-  background-color: #f5f7fa;
-}
-
-.history-method {
-  font-size: 14px;
-  color: #606266;
-}
-
-.history-status {
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.history-status.selected {
-  background-color: #409eff;
-  color: white;
-}
-
-.history-status:not(.selected) {
-  background-color: #909399;
-  color: white;
-}
-
-.history-button {
-  padding: 2px;
-  background-color: rgba(144, 147, 153, 0.4);
-  border: none;
-  border-radius: 4px;
-  font-size: 10px;
-  transition: background-color 0.3s;
-  user-select: none;
-}
-
-.history-button:hover {
-  background-color: #66b1ff;
-}
-
-.delete-history-button {
-  font-size: 10px;
-  border: none;
-  background-color: unset;
-  cursor: pointer;
-}
-
-.delete-history-button:hover {
-  color: #ff4d4f;
-}
-
-.history-buttons {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  height: 20px;
-  padding: 0 10px;
 }
 
 </style>
