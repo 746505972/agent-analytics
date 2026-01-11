@@ -29,13 +29,13 @@ class ChatRequest(BaseModel):
     data_id: str = None
     history: list = []
     analysis_history: list = []
+    base_url: str = None
+    model: str = None
 
 class TitleRequest(BaseModel):
     message: str
-
-# 初始化全局agent实例
-agent = DataAnalysisAgent()
-title_manager = SessionTitleManager()
+    base_url: str = None
+    model: str = None
 
 @router.post("/test")
 async def test_chat():
@@ -49,6 +49,9 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
     """
     流式聊天接口
     """
+    # 根据请求参数创建Agent实例
+    agent = DataAnalysisAgent(base_url=chat_request.base_url, model=chat_request.model)
+    
     async def generate():
         try:
             session_id = request.state.session_id
@@ -106,8 +109,8 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
                     yield f"data: {json.dumps({'tool_calls': response_chunk['data']})}\n\n"
                 elif response_chunk['type'] == 'content':
                     yield f"data: {json.dumps({'content': response_chunk['data']})}\n\n"
-                # elif response_chunk['type'] == 'error':
-                #     yield f"data: {json.dumps({'error': response_chunk['data']})}\n\n"
+                elif response_chunk['type'] == 'error':
+                    yield f"data: {json.dumps({'error': response_chunk['data']})}\n\n"
                 elif response_chunk['type'] == 'end':
                     yield "data: [DONE]\n\n"
                     break
@@ -121,8 +124,9 @@ async def chat_stream(request: Request, chat_request: ChatRequest):
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 @router.post("/generate_title")
-async def generate_title(request: TitleRequest):
+async def generate_title(chat_request: TitleRequest):
     """
     生成标题接口
     """
-    return JSONResponse(content={"title": title_manager.generate_session_title(request.message)})
+    title_manager = SessionTitleManager(base_url=chat_request.base_url, model=chat_request.model)
+    return JSONResponse(content={"title": title_manager.generate_session_title(chat_request.message)})

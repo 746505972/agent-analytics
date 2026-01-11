@@ -1,5 +1,4 @@
 import functools
-import traceback
 
 def tool_error_handler(func):
     """
@@ -11,7 +10,7 @@ def tool_error_handler(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            error_message = f"工具执行错误: {str(e)}\n错误类型: {type(e).__name__}\n详细堆栈: {traceback.format_exc()}"
+            error_message = f"工具执行错误: {str(e)}\n错误类型: {type(e).__name__}"
             # 返回错误信息作为正常结果，而不是抛出异常
-            return {"error": str(e), "error_message": error_message, "success": False}
+            return {"error": error_message, "success": False}
     return wrapper

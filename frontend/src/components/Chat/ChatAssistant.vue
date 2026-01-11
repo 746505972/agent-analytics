@@ -2,7 +2,8 @@
   <div class="chat-section">
     <ChatHeader 
       v-model:is-showing-history="isShowingHistory"
-      @toggleHistoryView="toggleHistoryView" 
+      v-model:base-url="baseUrl"
+      v-model:model="model"
       @createNewSession="createNewSession" 
     />
     <!-- 历史记录视图 -->
@@ -117,6 +118,8 @@ export default {
       isShowingHistory: false, // 新增：是否显示历史记录视图
       showHistoryDropdown: false,
       selectedAnalysisHistory: [],
+      baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      model: 'qwen-plus'
     }
   },
   computed: {
@@ -263,7 +266,10 @@ export default {
       }
       function getDetails(selectedAnalysisHistory) {
         return selectedAnalysisHistory.length > 0
-          ? selectedAnalysisHistory.map(({ dataId, name }) => (`${dataId}-${name}`)) : null;
+          ? selectedAnalysisHistory.map(({ dataId, name }) => {
+              const formattedDataId = dataId.length > 10 ? dataId.substring(0, 7) + '...' : dataId;
+              return `${formattedDataId}-${name}`;
+            }) : null;
       }
       // 添加用户消息到当前会话的聊天记录
       const userMessage = {
@@ -294,13 +300,15 @@ export default {
           message: userQuery,
           data_id: this.selectedFile,
           history: this.currentSession.messages.slice(0, -1), // 不包括刚添加的AI回复占位符
-          analysis_history: this.selectedAnalysisHistory
+          analysis_history: this.selectedAnalysisHistory,
+          base_url: this.baseUrl,
+          model: this.model,
         };
 
         // 如果是第一次查询，先调用生成标题的API
         if (this.currentSession.name === '新会话') {
           try {
-            const request = {message: userQuery,};
+            const request = {message: userQuery,base_url: this.baseUrl,model: this.model};
             const titleResponse = await fetch('/chat/generate_title', {
               method: 'POST',
               headers: {
@@ -535,15 +543,12 @@ export default {
         // 如果没有保存的会话，创建一个新会话
         this.createNewSession();
       }
+      this.baseUrl = localStorage.getItem('baseUrl') || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+      this.model = localStorage.getItem('model') || 'qwen-plus';
     },
     
     onAddClick() {
       this.showHistoryDropdown = !this.showHistoryDropdown;
-    },
-    
-    // 切换历史记录视图
-    toggleHistoryView() {
-      this.isShowingHistory = !this.isShowingHistory;
     },
     
     // 选择分析历史
