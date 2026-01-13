@@ -461,6 +461,7 @@ export default {
         alert("获取分析结果失败: " + error.message);
       } finally {
         this.isWaitingForResponse = false;
+        await this.loadUploadedFiles();
       }
     },
     
