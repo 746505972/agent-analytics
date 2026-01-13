@@ -77,7 +77,7 @@ class DataAnalysisAgent:
         register_pandas_tools(self)
         register_ml_tools(self)
     # DONE: 实现流式响应 & 添加分析结果上下文
-    # TODO: 减少上下文长度
+    # TODO: 减少上下文长度 & tokens count
     async def process_query_stream(self, query: str, data_context=None, session_id=None, history=None, analysis_history=None):
         """
         流式处理用户查询

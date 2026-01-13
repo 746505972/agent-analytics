@@ -112,6 +112,7 @@
       @next-page="nextPage"
       @change-page="changePage"
     />
+    <WaitingForServer v-if="isWaitingForServer"/>
   </div>
 </template>
 
@@ -138,12 +139,14 @@ import { getMethodName } from "@/utils/methodUtils.js";
 import { getDefaultConfigs } from '@/utils/configDefaults.js'
 import methodCategories from "@/utils/methodCategories.json";
 import clickOutside from "@/utils/clickOutside";
+import WaitingForServer from "@/components/WaitingForServer.vue";
+import {checkServerStatus} from "@/utils/checkServerStatus";
 
 export default {
   name: "Dashboard",
   components: {
-    RightSidebar, MethodParameterConfig, FileSelectionOverlay, MethodDescription,
-    ResultContent, DashboardHeader, MethodSelection, PreviewModal
+    WaitingForServer, RightSidebar, MethodParameterConfig, FileSelectionOverlay,
+    MethodDescription, ResultContent, DashboardHeader, MethodSelection, PreviewModal
   },
   directives: {clickOutside},
   data() {
@@ -185,10 +188,12 @@ export default {
       currentResizeSection: null, // 当前正在调整的区域
       startX: 0, // 鼠标按下时的X坐标
       startWidth: 0, // 调整开始时的宽度
+      isWaitingForServer: true // 检查后端是否启动
     }
   },
     
   async mounted() {
+    await this.checkServerStatus();
     await this.loadUploadedFiles();
     // 恢复保存的状态
     this.restoreState();
@@ -204,6 +209,7 @@ export default {
   },
   methods: {
     getMethodName,
+    checkServerStatus,
     // 清除localStorage中的数据
     clearLocalStorage() {
       // 清除与文件相关的localStorage项

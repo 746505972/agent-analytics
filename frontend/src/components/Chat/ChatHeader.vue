@@ -99,7 +99,7 @@ export default {
       >
     </div>
     <div class="setting-item">
-      <label for="modelInput">API Key请设置为环境变量:</label>
+      <label for="modelInput">API Key请设置为<strong>系统环境变量</strong>:</label>
       <h5>DASHSCOPE_API_KEY</h5>
     </div>
   </div>
