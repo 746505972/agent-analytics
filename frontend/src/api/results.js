@@ -486,6 +486,47 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       } else {
         throw new Error(result.error || "获取聚类分析结果失败");
       }
+    } else if (method === 'xgboost') {
+      // 准备XGBoost分析请求体
+      const requestBody = {
+        x_columns: selectedColumns || [],
+        y_column: configs.xgboostConfig.y_column,
+        task_type: configs.xgboostConfig.task_type || 'auto',
+        objective: configs.xgboostConfig.objective || null,
+        n_estimators: configs.xgboostConfig.n_estimators || 100,
+        max_depth: configs.xgboostConfig.max_depth || 6,
+        learning_rate: configs.xgboostConfig.learning_rate || 0.3,
+        subsample: configs.xgboostConfig.subsample || 1.0,
+        colsample_bytree: configs.xgboostConfig.colsample_bytree || 1.0,
+        random_state: configs.xgboostConfig.random_state || 42,
+        params: {
+          ...configs.xgboostConfig.params
+        }
+      };
+
+      // 验证Y列是否已选择
+      if (!requestBody.y_column) {
+        throw new Error("请选择因变量(Y列)");
+      }
+
+      const response = await fetch(`/data/${dataId}/xgboost_analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return {
+          ...result.data,
+          resultMethod: method
+        };
+      } else {
+        throw new Error(result.error || "获取XGBoost分析结果失败");
+      }
     }
     // 其他分析方法可以在这里添加
     return null;

@@ -6,7 +6,7 @@
 from typing import List, Dict, Any
 from langchain_core.tools import tool
 from .tool_error_handler import tool_error_handler
-from utils.ml_tool import logistic_regression, clustering_analysis
+from utils.ml_tool import logistic_regression, clustering_analysis, xgboost_analysis, xgboost_classification, xgboost_regression
 
 # 注册逻辑回归工具
 @tool
@@ -76,6 +76,105 @@ def clustering_analysis_tool(file_path: str, columns: List[str],
     return clustering_analysis(file_path, columns, method, n_clusters, session_id, **kwargs)
 
 
+# 注册XGBoost分类工具
+@tool
+@tool_error_handler
+def xgboost_classification_tool(file_path: str, x_columns: List[str], y_column: str,
+                             session_id: str = None, objective: str = 'binary:logistic',
+                             n_estimators: int = 100, max_depth: int = 6,
+                             learning_rate: float = 0.3, subsample: float = 1.0,
+                             colsample_bytree: float = 1.0, random_state: int = 42,
+                             **kwargs) -> Dict[str, Any]:
+    """
+    XGBoost分类 - 使用XGBoost进行分类任务
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列，分类标签）
+        session_id (str): 会话ID
+        objective (str): 目标函数
+            - "binary:logistic": 二分类（默认）
+            - "multi:softmax": 多分类
+            - "multi:softprob": 多分类概率输出
+        n_estimators (int): 树的数量 (默认100)
+        max_depth (int): 树的最大深度 (默认6)
+        learning_rate (float): 学习率 (默认0.3)
+        subsample (float): 子样本比例 (默认1.0)
+        colsample_bytree (float): 每棵树使用的特征比例 (默认1.0)
+        random_state (int): 随机种子 (默认42)
+        **kwargs: 其他XGBoost参数
+
+    Returns:
+        Dict[str, Any]: 包含XGBoost分类结果的字典
+    """
+    return xgboost_classification(file_path, x_columns, y_column, session_id, 
+                                 objective, n_estimators, max_depth, 
+                                 learning_rate, subsample, colsample_bytree, 
+                                 random_state, **kwargs)
+
+
+# 注册XGBoost回归工具
+@tool
+@tool_error_handler
+def xgboost_regression_tool(file_path: str, x_columns: List[str], y_column: str,
+                           session_id: str = None, objective: str = 'reg:squarederror',
+                           n_estimators: int = 100, max_depth: int = 6,
+                           learning_rate: float = 0.3, subsample: float = 1.0,
+                           colsample_bytree: float = 1.0, random_state: int = 42,
+                           **kwargs) -> Dict[str, Any]:
+    """
+    XGBoost回归 - 使用XGBoost进行回归任务
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列）
+        session_id (str): 会话ID
+        objective (str): 目标函数
+            - "reg:squarederror": 回归平方损失（默认）
+            - "reg:squaredlogerror": 回归平方对数损失
+            - "reg:pseudohubererror": Huber回归
+        n_estimators (int): 树的数量 (默认100)
+        max_depth (int): 树的最大深度 (默认6)
+        learning_rate (float): 学习率 (默认0.3)
+        subsample (float): 子样本比例 (默认1.0)
+        colsample_bytree (float): 每棵树使用的特征比例 (默认1.0)
+        random_state (int): 随机种子 (默认42)
+        **kwargs: 其他XGBoost参数
+
+    Returns:
+        Dict[str, Any]: 包含XGBoost回归结果的字典
+    """
+    return xgboost_regression(file_path, x_columns, y_column, session_id,
+                              objective, n_estimators, max_depth,
+                              learning_rate, subsample, colsample_bytree,
+                              random_state, **kwargs)
+
+
+# 注册XGBoost分析工具（自动判断分类或回归）
+@tool
+@tool_error_handler
+def xgboost_analysis_tool(file_path: str, x_columns: List[str], y_column: str,
+                        task_type: str = "auto", session_id: str = None,
+                        **kwargs) -> Dict[str, Any]:
+    """
+    XGBoost分析 - 自动判断任务类型并执行相应的XGBoost分析
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列）
+        task_type (str): 任务类型 ("classification", "regression", "auto")
+        session_id (str): 会话ID
+        **kwargs: 其他参数
+
+    Returns:
+        Dict[str, Any]: 包含XGBoost分析结果的字典
+    """
+    return xgboost_analysis(file_path, x_columns, y_column, task_type, session_id, **kwargs)
+
+
 # 将模块中的函数注册为工具
 def register_ml_tools(agent):
     """
@@ -86,3 +185,6 @@ def register_ml_tools(agent):
     """
     agent.tools.append(logistic_regression_tool)
     agent.tools.append(clustering_analysis_tool)
+    agent.tools.append(xgboost_classification_tool)
+    agent.tools.append(xgboost_regression_tool)
+    agent.tools.append(xgboost_analysis_tool)

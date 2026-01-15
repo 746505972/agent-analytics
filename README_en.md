@@ -13,6 +13,8 @@
 <img src="frontend/src/assets/images/logo.png" alt="Logo" width="200" align="center">
 </div>
 
+[中文](README.md)
+
 ## Project Introduction
 
 Agent-Analytics is an adaptive data analysis and report generation system based on Large Language Model (LLM) Agents, designed to achieve automated data processing, analysis, and visualized report output through intelligent agent technology.

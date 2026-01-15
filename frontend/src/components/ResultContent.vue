@@ -54,6 +54,11 @@
     <div v-else-if="currentMethod === 'clustering_analysis' && datasetDetails" class="analysis-section">
       <ClusteringResult :datasetDetails="datasetDetails" />
     </div>
+    
+    <!-- XGBoost分析结果 -->
+    <div v-else-if="currentMethod === 'xgboost' && datasetDetails" class="analysis-section">
+      <XGBoostResult :datasetDetails="datasetDetails" />
+    </div>
 
     <!-- 词云分析结果 -->
     <div v-else-if="currentMethod === 'text_analysis' && datasetDetails" class="analysis-section">
@@ -102,6 +107,7 @@ import LinearRegressionResult from "@/components/AnalyseResult/LinearRegressionR
 import Waiting from "@/components/Waiting.vue";
 import LogisticRegressionResult from "@/components/AnalyseResult/LogisticRegressionResult.vue";
 import ClusteringResult from "@/components/AnalyseResult/ClusteringResult.vue";
+import XGBoostResult from "@/components/AnalyseResult/XGBoostResult.vue";
 
 export default {
   name: "ResultContent",
@@ -120,7 +126,8 @@ export default {
     NonParametricTestResult,
     LinearRegressionResult,
     LogisticRegressionResult,
-    ClusteringResult
+    ClusteringResult,
+    XGBoostResult
   },
   props: {
     currentMethod: {

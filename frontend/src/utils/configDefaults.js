@@ -92,5 +92,17 @@ export const getDefaultConfigs = () => ({
       linkage: 'ward',
       covariance_type: 'full'
     }
+  },
+  xgboostConfig: {
+    y_column: '',
+    task_type: 'auto',
+    objective: '',
+    n_estimators: 100,
+    max_depth: 6,
+    learning_rate: 0.3,
+    subsample: 1.0,
+    colsample_bytree: 1.0,
+    random_state: 42,
+    params: {}
   }
 })

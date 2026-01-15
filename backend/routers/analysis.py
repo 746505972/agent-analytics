@@ -1,5 +1,6 @@
 import sys
 import os
+import traceback
 
 # 添加项目根目录到sys.path
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -15,7 +16,7 @@ from typing import List, Optional, Tuple, Dict, Any
 from routers.data import load_csv_file
 from utils.pandas_tool import statistical_summary, correlation_analysis, \
     normality_test, t_test, f_test, chi_square_test, non_parametric_test,linear_regression
-from utils.ml_tool import clustering_analysis,logistic_regression
+from utils.ml_tool import clustering_analysis,logistic_regression, xgboost_analysis
 from utils.file_manager import get_file_path
 import pandas as pd
 
@@ -576,6 +577,82 @@ async def get_clustering_analysis(request: Request, data_id: str, body: Clusteri
         })
     except Exception as e:
         logger.error(f"获取聚类分析结果时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )
+
+
+class XGBoostRequest(BaseModel):
+    x_columns: List[str]  # 自变量列
+    y_column: str         # 因变量列
+    task_type: str = "auto"  # 任务类型
+    objective: Optional[str] = None  # 目标函数
+    n_estimators: int = 100  # 树的数量
+    max_depth: int = 6       # 树的最大深度
+    learning_rate: float = 0.3  # 学习率
+    subsample: float = 1.0      # 子样本比例
+    colsample_bytree: float = 1.0  # 每棵树使用的特征比例
+    random_state: int = 42        # 随机种子
+    params: Optional[Dict[str, Any]] = None  # 其他参数
+
+
+@router.post("/{data_id}/xgboost_analysis")
+async def get_xgboost_analysis(request: Request, data_id: str, body: XGBoostRequest):
+    """
+    获取数据文件的XGBoost分析结果接口，用于"XGBoost"方法
+    """
+    try:
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.x_columns)
+        if error_response:
+            return error_response
+
+        kwargs = body.params if body.params else {}
+        if body.objective:
+            kwargs['objective'] = body.objective
+        
+        kwargs.update({
+            'n_estimators': body.n_estimators,
+            'max_depth': body.max_depth,
+            'learning_rate': body.learning_rate,
+            'subsample': body.subsample,
+            'colsample_bytree': body.colsample_bytree,
+            'random_state': body.random_state
+        })
+
+        xgboost_result = xgboost_analysis(
+            file_path, columns_to_process, body.y_column, body.task_type, session_id, **kwargs)
+
+        result_data = {
+            "data_id": data_id,
+            "method": xgboost_result["method"],
+            "x_columns": xgboost_result["x_columns"],
+            "y_column": xgboost_result["y_column"],
+            "objective": xgboost_result.get("objective"),
+            "feature_importance": xgboost_result["feature_importance"],
+            "evaluation_metrics": xgboost_result["evaluation_metrics"],
+            "sample_size": xgboost_result["sample_size"],
+            "train_size": xgboost_result.get("train_size"),
+            "test_size": xgboost_result.get("test_size"),
+            "model_params": xgboost_result["model_params"]
+        }
+
+        # 如果是分类任务，添加分类相关信息
+        if "n_classes" in xgboost_result:
+            result_data["n_classes"] = xgboost_result["n_classes"]
+            result_data["class_labels"] = xgboost_result["class_labels"]
+            result_data["confusion_matrix"] = xgboost_result.get("confusion_matrix")
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取XGBoost分析结果时出错: {str(e)},{traceback.format_exc()}")
         return JSONResponse(
             status_code=500,
             content={
