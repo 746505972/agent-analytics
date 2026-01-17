@@ -723,8 +723,14 @@ async def get_svm_analysis(request: Request, data_id: str, body: SVMRequest):
             result_data["class_labels"] = svm_result["class_labels"]
             result_data["support_vectors_count"] = svm_result["support_vectors_count"]
             result_data["n_support_vectors_per_class"] = svm_result["n_support_vectors_per_class"]
+            result_data["predicted_labels"] = svm_result["predicted_labels"]  # 添加预测标签
         else:
             result_data["support_vectors_count"] = svm_result["support_vectors_count"]
+            result_data["predicted_values"] = svm_result["predicted_values"]  # 添加预测值
+
+        # 添加结果文件路径
+        if "result_file_path" in svm_result:
+            result_data["result_file_path"] = svm_result["result_file_path"]
 
         return JSONResponse(content={
             "success": True,

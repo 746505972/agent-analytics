@@ -1,8 +1,10 @@
 from typing import List, Dict, Any
 import numpy as np
+import pandas as pd
 from sklearn.svm import SVC, SVR
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, mean_squared_error, r2_score
+import os
 from .check_and_read import check_and_read
 
 
@@ -127,6 +129,19 @@ def svm_analysis(file_path: str, x_columns: List[str], y_column: str,
         n_support_vectors = model.n_support_
         support_vectors_count = int(np.sum(n_support_vectors))
 
+        # 生成包含原始数据和预测标签的DataFrame
+        result_df = df.loc[X.index].copy()
+        result_df['svm_predicted_label'] = y_pred
+        # 添加原始真实标签
+        result_df['actual_label'] = y_encoded
+
+        # 生成结果文件路径
+        filename = f"{os.path.splitext(os.path.basename(file_path))[0]}_svm_classification_result"
+        result_file_path = os.path.join("data", session_id, f"{filename}.csv")
+
+        # 保存为CSV
+        result_df.to_csv(result_file_path, index=False, encoding='utf-8-sig')
+
         # 准备返回结果
         result = {
             "method": "svm_classification",
@@ -147,6 +162,8 @@ def svm_analysis(file_path: str, x_columns: List[str], y_column: str,
                 "f1_micro": _safe_float(f1_micro)
             },
             "sample_size": len(X),
+            "predicted_labels": [int(label) for label in y_pred],
+            "result_file_path": result_file_path,  # 返回结果文件路径
             "model_params": {
                 "kernel": kernel,
                 "C": C,
@@ -190,6 +207,18 @@ def svm_analysis(file_path: str, x_columns: List[str], y_column: str,
         # 获取支持向量的数量
         support_vectors_count = model.support_vectors_.shape[0]
 
+        # 生成包含原始数据和预测值的DataFrame
+        result_df = df.loc[X.index].copy()
+        result_df['svm_predicted_value'] = y_pred
+        result_df['actual_value'] = y
+
+        # 生成结果文件路径
+        filename = f"{os.path.splitext(os.path.basename(file_path))[0]}_svm_regression_result"
+        result_file_path = os.path.join("data", session_id, f"{filename}.csv")
+
+        # 保存为CSV
+        result_df.to_csv(result_file_path, index=False, encoding='utf-8-sig')
+
         # 准备返回结果
         result = {
             "method": "svm_regression",
@@ -204,6 +233,8 @@ def svm_analysis(file_path: str, x_columns: List[str], y_column: str,
                 "mae": _safe_float(mae)
             },
             "sample_size": len(X),
+            "predicted_values": [float(val) for val in y_pred],
+            "result_file_path": result_file_path,  # 返回结果文件路径
             "model_params": {
                 "kernel": kernel,
                 "C": C,
