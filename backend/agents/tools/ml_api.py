@@ -6,7 +6,9 @@
 from typing import List, Dict, Any
 from langchain_core.tools import tool
 from .tool_error_handler import tool_error_handler
-from utils.ml_tool import logistic_regression, clustering_analysis, xgboost_analysis, xgboost_classification, xgboost_regression
+from utils.ml_tool import logistic_regression, clustering_analysis, xgboost_analysis,\
+    xgboost_classification, xgboost_regression, svm_analysis
+
 
 # 注册逻辑回归工具
 @tool

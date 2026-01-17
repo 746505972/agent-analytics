@@ -25,6 +25,7 @@ class DataAnalysisAgent:
             【输入信息】
             1. 数据上下文：当前分析文件的基本信息，包括文件名、数据规模（行列数）、列名等
             2. 用户问题：用户提出的具体分析需求
+            3. 分析历史（可能存在）：用户添加的分析历史记录
     
             【操作规则】
             1. 严格区分数据上下文与用户问题，不混淆二者
@@ -71,11 +72,13 @@ class DataAnalysisAgent:
         from .tools.pandas_api import register_pandas_tools
         from .tools.ml_api import register_ml_tools
         from .tools.basic_api import register_builtin_tools
+        # from .tools.search import register_search_tools
         
         # 注册各模块的工具
         register_builtin_tools(self)
         register_pandas_tools(self)
         register_ml_tools(self)
+        # register_search_tools(self)
     # DONE: 实现流式响应 & 添加分析结果上下文
     # TODO: 减少上下文长度 & tokens count
     async def process_query_stream(self, query: str, data_context=None, session_id=None, history=None, analysis_history=None):
