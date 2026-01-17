@@ -175,6 +175,50 @@ def xgboost_analysis_tool(file_path: str, x_columns: List[str], y_column: str,
     return xgboost_analysis(file_path, x_columns, y_column, task_type, session_id, **kwargs)
 
 
+# 注册SVM分析工具
+@tool
+@tool_error_handler
+def svm_analysis_tool(file_path: str, x_columns: List[str], y_column: str,
+                     task_type: str = "classification", session_id: str = None,
+                     kernel: str = 'rbf', C: float = 1.0, gamma: str = 'scale', degree: int = 3,
+                     coef0: float = 0.0, shrinking: bool = True, probability: bool = True,
+                     tol: float = 1e-3, max_iter: int = -1, **kwargs) -> Dict[str, Any]:
+    """
+    支持向量机(SVM)分析 - 使用SVM进行分类或回归任务
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列）
+        task_type (str): 任务类型 ("classification" 或 "regression")
+        session_id (str): 会话ID
+        kernel (str): 核函数类型
+            - "linear": 线性核
+            - "poly": 多项式核
+            - "rbf": 径向基函数核 (默认)
+            - "sigmoid": Sigmoid核
+            - "precomputed": 预计算核
+        C (float): 正则化参数，值越大对错误分类的惩罚越大 (默认1.0)
+        gamma (str or float): 核函数系数
+            - "scale": 1/(n_features * X.var()) (默认)
+            - "auto": 1/n_features
+            - float: 指定值
+        degree (int): 多项式核的度数 (仅对kernel="poly"有效，默认3)
+        coef0 (float): 核函数中的独立项 (仅对"poly"和"sigmoid"有效，默认0.0)
+        shrinking (bool): 是否使用启发式收缩启发式 (默认True)
+        probability (bool): 是否启用概率预测 (默认True)
+        tol (float): 停止准则的容忍度 (默认1e-3)
+        max_iter (int): 最大迭代次数，-1表示无限制 (默认-1)
+        **kwargs: 其他参数
+
+    Returns:
+        Dict[str, Any]: 包含SVM分析结果的字典
+    """
+    return svm_analysis(file_path, x_columns, y_column, task_type, session_id,
+                       kernel, C, gamma, degree, coef0, shrinking, probability,
+                       tol, max_iter, **kwargs)
+
+
 # 将模块中的函数注册为工具
 def register_ml_tools(agent):
     """
@@ -188,3 +232,4 @@ def register_ml_tools(agent):
     agent.tools.append(xgboost_classification_tool)
     agent.tools.append(xgboost_regression_tool)
     agent.tools.append(xgboost_analysis_tool)
+    agent.tools.append(svm_analysis_tool)

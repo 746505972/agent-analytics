@@ -25,7 +25,7 @@
           <p>点击选择列，支持 Ctrl/Shift 多选</p>
           <p>不选则分析所有数值型列</p>
         </div>
-        <div v-else-if="['linear_regression','logistic_regression', 'xgboost'].includes(currentMethod)">
+        <div v-else-if="['linear_regression','logistic_regression', 'xgboost', 'svm'].includes(currentMethod)">
           <div class="header">
             <h3>选择自变量 (X)</h3> <DeleteColumns @click="clearSelectedColumns" />
           </div>
@@ -144,6 +144,12 @@
         :columns="selectedFileColumns"
       />
 
+      <SVMConfig
+        v-else-if="currentMethod === 'svm'"
+        v-model:config="configs.svmConfig"
+        :columns="selectedFileColumns"
+      />
+
       <WordCloudConfig
         v-else-if="currentMethod === 'text_analysis'"
         :selected-file-columns="selectedFileColumns"
@@ -183,12 +189,14 @@ import LogisticRegressionConfig from "@/components/Config/LogisticRegressionConf
 import DeleteColumns from "@/components/DeleteColumns.vue";
 import ClusteringConfig from "@/components/Config/ClusteringConfig.vue";
 import XGBoostConfig from "@/components/Config/XGBoostConfig.vue";
+import SVMConfig from "@/components/Config/SVMConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
   components: {
     ClusteringConfig,
     XGBoostConfig,
+    SVMConfig,
     DeleteColumns,
     Waiting,
     ChiSquareTestConfig,
@@ -277,7 +285,8 @@ export default {
         'linear_regression',
         'logistic_regression',
         'clustering_analysis',
-        'xgboost'
+        'xgboost',
+        'svm'
       ]
     };
   },

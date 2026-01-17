@@ -527,6 +527,49 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       } else {
         throw new Error(result.error || "获取XGBoost分析结果失败");
       }
+    } else if (method === 'svm') {
+      // 准备SVM分析请求体
+      const requestBody = {
+        x_columns: selectedColumns || [],
+        y_column: configs.svmConfig.y_column,
+        task_type: configs.svmConfig.task_type || 'classification',
+        kernel: configs.svmConfig.kernel || 'rbf',
+        C: configs.svmConfig.C || 1.0,
+        gamma: configs.svmConfig.gamma || 'scale',
+        degree: configs.svmConfig.degree || 3,
+        coef0: configs.svmConfig.coef0 || 0.0,
+        shrinking: configs.svmConfig.shrinking || true,
+        probability: configs.svmConfig.probability || true,
+        tol: configs.svmConfig.tol || 0.001,
+        max_iter: configs.svmConfig.max_iter || -1,
+        params: {
+          ...configs.svmConfig.params
+        }
+      };
+
+      // 验证Y列是否已选择
+      if (!requestBody.y_column) {
+        throw new Error("请选择因变量(Y列)");
+      }
+
+      const response = await fetch(`/data/${dataId}/svm_analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return {
+          ...result.data,
+          resultMethod: method
+        };
+      } else {
+        throw new Error(result.error || "获取SVM分析结果失败");
+      }
     }
     // 其他分析方法可以在这里添加
     return null;

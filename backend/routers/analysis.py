@@ -16,7 +16,7 @@ from typing import List, Optional, Tuple, Dict, Any
 from routers.data import load_csv_file
 from utils.pandas_tool import statistical_summary, correlation_analysis, \
     normality_test, t_test, f_test, chi_square_test, non_parametric_test,linear_regression
-from utils.ml_tool import clustering_analysis,logistic_regression, xgboost_analysis
+from utils.ml_tool import clustering_analysis,logistic_regression, xgboost_analysis, svm_analysis
 from utils.file_manager import get_file_path
 import pandas as pd
 
@@ -600,6 +600,22 @@ class XGBoostRequest(BaseModel):
     params: Optional[Dict[str, Any]] = None  # 其他参数
 
 
+class SVMRequest(BaseModel):
+    x_columns: List[str]  # 自变量列
+    y_column: str         # 因变量列
+    task_type: str = "classification"  # 任务类型
+    kernel: str = "rbf"  # 核函数类型
+    C: float = 1.0  # 正则化参数
+    gamma: str = "scale"  # 核函数系数
+    degree: int = 3  # 多项式核的度数
+    coef0: float = 0.0  # 核函数中的独立项
+    shrinking: bool = True  # 是否使用启发式收缩
+    probability: bool = True  # 是否启用概率预测
+    tol: float = 1e-3  # 停止准则的容忍度
+    max_iter: int = -1  # 最大迭代次数
+    params: Optional[Dict[str, Any]] = None  # 其他参数
+
+
 @router.post("/{data_id}/xgboost_analysis")
 async def get_xgboost_analysis(request: Request, data_id: str, body: XGBoostRequest):
     """
@@ -653,6 +669,69 @@ async def get_xgboost_analysis(request: Request, data_id: str, body: XGBoostRequ
         })
     except Exception as e:
         logger.error(f"获取XGBoost分析结果时出错: {str(e)},{traceback.format_exc()}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )
+
+
+@router.post("/{data_id}/svm_analysis")
+async def get_svm_analysis(request: Request, data_id: str, body: SVMRequest):
+    """
+    获取数据文件的支持向量机(SVM)分析结果接口，用于"SVM"方法
+    """
+    try:
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.x_columns)
+        if error_response:
+            return error_response
+
+        kwargs = body.params if body.params else {}
+        
+        kwargs.update({
+            'kernel': body.kernel,
+            'C': body.C,
+            'gamma': body.gamma,
+            'degree': body.degree,
+            'coef0': body.coef0,
+            'shrinking': body.shrinking,
+            'probability': body.probability,
+            'tol': body.tol,
+            'max_iter': body.max_iter
+        })
+
+        svm_result = svm_analysis(
+            file_path, columns_to_process, body.y_column, body.task_type, session_id, **kwargs)
+
+        result_data = {
+            "data_id": data_id,
+            "method": svm_result["method"],
+            "task_type": svm_result["task_type"],
+            "x_columns": svm_result["x_columns"],
+            "y_column": svm_result["y_column"],
+            "evaluation_metrics": svm_result["evaluation_metrics"],
+            "sample_size": svm_result["sample_size"],
+            "model_params": svm_result["model_params"]
+        }
+
+        # 根据任务类型添加特定信息
+        if svm_result.get("task_type", "").endswith("classification"):
+            result_data["n_classes"] = svm_result["n_classes"]
+            result_data["class_labels"] = svm_result["class_labels"]
+            result_data["support_vectors_count"] = svm_result["support_vectors_count"]
+            result_data["n_support_vectors_per_class"] = svm_result["n_support_vectors_per_class"]
+        else:
+            result_data["support_vectors_count"] = svm_result["support_vectors_count"]
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取SVM分析结果时出错: {str(e)},{traceback.format_exc()}")
         return JSONResponse(
             status_code=500,
             content={

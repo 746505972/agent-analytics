@@ -104,5 +104,19 @@ export const getDefaultConfigs = () => ({
     colsample_bytree: 1.0,
     random_state: 42,
     params: {}
+  },
+  svmConfig: {
+    y_column: '',
+    task_type: 'classification',
+    kernel: 'rbf',
+    C: 1.0,
+    gamma: 'scale',
+    degree: 3,
+    coef0: 0.0,
+    shrinking: true,
+    probability: true,
+    tol: 0.001,
+    max_iter: -1,
+    params: {}
   }
 })

@@ -59,6 +59,11 @@
     <div v-else-if="currentMethod === 'xgboost' && datasetDetails" class="analysis-section">
       <XGBoostResult :datasetDetails="datasetDetails" />
     </div>
+    
+    <!-- SVM分析结果 -->
+    <div v-else-if="currentMethod === 'svm' && datasetDetails" class="analysis-section">
+      <SVMResult :datasetDetails="datasetDetails" />
+    </div>
 
     <!-- 词云分析结果 -->
     <div v-else-if="currentMethod === 'text_analysis' && datasetDetails" class="analysis-section">
@@ -108,6 +113,7 @@ import Waiting from "@/components/Waiting.vue";
 import LogisticRegressionResult from "@/components/AnalyseResult/LogisticRegressionResult.vue";
 import ClusteringResult from "@/components/AnalyseResult/ClusteringResult.vue";
 import XGBoostResult from "@/components/AnalyseResult/XGBoostResult.vue";
+import SVMResult from "./AnalyseResult/SVMResult.vue";
 
 export default {
   name: "ResultContent",
@@ -127,7 +133,8 @@ export default {
     LinearRegressionResult,
     LogisticRegressionResult,
     ClusteringResult,
-    XGBoostResult
+    XGBoostResult,
+    SVMResult
   },
   props: {
     currentMethod: {
