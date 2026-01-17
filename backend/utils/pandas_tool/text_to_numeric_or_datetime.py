@@ -19,7 +19,8 @@ def text_to_numeric_or_datetime(file_path: str, columns: List[str], convert_to: 
     Returns:
         Dict[str, Any]: 处理结果信息
     """
-    df, _ = check_and_read(file_path, columns, session_id)
+    # 这个函数专门处理文本列，所以不检查数值列
+    df, _ = check_and_read(file_path, columns, session_id, ignore_text= True)
 
     # 处理列
     processed_columns = []
@@ -69,9 +70,35 @@ def text_to_numeric_or_datetime(file_path: str, columns: List[str], convert_to: 
         for col in columns:
             try:
                 if datetime_format:
+                    # 如果指定了格式，则直接使用该格式
                     df[col] = pd.to_datetime(df[col], format=datetime_format)
                 else:
-                    df[col] = pd.to_datetime(df[col])
+                    # 尝试多种常见日期格式，最后才使用pandas默认解析
+                    formats_to_try = [
+                        "%Y%m%d",           # 20160925
+                        "%Y/%m/%d",         # 2016/09/25
+                        "%Y-%m-%d",         # 2016-09-25
+                        "%Y.%m.%d",         # 2016.09.25
+                        "%Y-%m-%d %H:%M:%S", # 2016-09-25 10:30:00
+                        "%Y/%m/%d %H:%M:%S", # 2016/09/25 10:30:00
+                        "%d/%m/%Y",         # 25/09/2016
+                        "%d-%m-%Y",         # 25-09-2016
+                        "%m/%d/%Y",         # 09/25/2016
+                        "%m-%d-%Y",         # 09-25-2016
+                    ]
+                    
+                    converted = False
+                    for fmt in formats_to_try:
+                        try:
+                            df[col] = pd.to_datetime(df[col], format=fmt)
+                            converted = True
+                            break
+                        except ValueError:
+                            continue
+                    
+                    # 如果所有指定格式都失败，则使用pandas默认解析（可以处理更多格式）
+                    if not converted:
+                        df[col] = pd.to_datetime(df[col])
                 processed_columns.append(col)
             except Exception as e:
                 raise ValueError(f"列 {col} 转换为时间失败: {e}")
