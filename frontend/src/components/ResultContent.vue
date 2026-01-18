@@ -50,6 +50,11 @@
       <LogisticRegressionResult :datasetDetails="datasetDetails" />
     </div>
 
+    <!-- 决策树分析结果 -->
+    <div v-else-if="currentMethod === 'decision_tree' && datasetDetails" class="analysis-section">
+      <DecisionTreeResult :datasetDetails="datasetDetails" />
+    </div>
+
     <!-- 聚类分析结果 -->
     <div v-else-if="currentMethod === 'clustering_analysis' && datasetDetails" class="analysis-section">
       <ClusteringResult :datasetDetails="datasetDetails" />
@@ -114,6 +119,7 @@ import LogisticRegressionResult from "@/components/AnalyseResult/LogisticRegress
 import ClusteringResult from "@/components/AnalyseResult/ClusteringResult.vue";
 import XGBoostResult from "@/components/AnalyseResult/XGBoostResult.vue";
 import SVMResult from "./AnalyseResult/SVMResult.vue";
+import DecisionTreeResult from "@/components/AnalyseResult/DecisionTreeResult.vue";
 
 export default {
   name: "ResultContent",
@@ -134,7 +140,8 @@ export default {
     LogisticRegressionResult,
     ClusteringResult,
     XGBoostResult,
-    SVMResult
+    SVMResult,
+    DecisionTreeResult
   },
   props: {
     currentMethod: {

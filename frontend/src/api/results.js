@@ -570,6 +570,46 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       } else {
         throw new Error(result.error || "获取SVM分析结果失败");
       }
+    } else if (method === 'decision_tree') {
+      // 准备决策树分析请求体
+      const requestBody = {
+        x_columns: selectedColumns || [],
+        y_column: configs.decisionTreeConfig.y_column,
+        task_type: configs.decisionTreeConfig.task_type || 'auto',
+        criterion: configs.decisionTreeConfig.criterion || null,
+        max_depth: configs.decisionTreeConfig.max_depth || null,
+        min_samples_split: configs.decisionTreeConfig.min_samples_split || 2,
+        min_samples_leaf: configs.decisionTreeConfig.min_samples_leaf || 1,
+        max_features: configs.decisionTreeConfig.max_features || null,
+        random_state: configs.decisionTreeConfig.random_state || 42,
+        params: {
+          ...configs.decisionTreeConfig.params
+        }
+      };
+
+      // 验证Y列是否已选择
+      if (!requestBody.y_column) {
+        throw new Error("请选择因变量(Y列)");
+      }
+
+      const response = await fetch(`/data/${dataId}/decision_tree_analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return {
+          ...result.data,
+          resultMethod: method
+        };
+      } else {
+        throw new Error(result.error || "获取决策树分析结果失败");
+      }
     }
     // 其他分析方法可以在这里添加
     return null;

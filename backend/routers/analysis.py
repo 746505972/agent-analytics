@@ -16,7 +16,8 @@ from typing import List, Optional, Tuple, Dict, Any
 from routers.data import load_csv_file
 from utils.pandas_tool import statistical_summary, correlation_analysis, \
     normality_test, t_test, f_test, chi_square_test, non_parametric_test,linear_regression
-from utils.ml_tool import clustering_analysis,logistic_regression, xgboost_analysis, svm_analysis
+from utils.ml_tool import clustering_analysis,logistic_regression, xgboost_analysis, svm_analysis, \
+    decision_tree_analysis
 from utils.file_manager import get_file_path
 import pandas as pd
 
@@ -738,6 +739,79 @@ async def get_svm_analysis(request: Request, data_id: str, body: SVMRequest):
         })
     except Exception as e:
         logger.error(f"获取SVM分析结果时出错: {str(e)},{traceback.format_exc()}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )
+
+
+class DecisionTreeRequest(BaseModel):
+    x_columns: List[str]  # 自变量列
+    y_column: str         # 因变量列
+    task_type: str = "auto"  # 任务类型
+    criterion: Optional[str] = None  # 分割标准
+    max_depth: Optional[int] = None  # 树的最大深度
+    min_samples_split: int = 2       # 内部节点分裂所需的最小样本数
+    min_samples_leaf: int = 1        # 叶节点所需的最小样本数
+    max_features: Optional[str] = None  # 寻找最佳分割时考虑的特征数量
+    random_state: int = 42           # 随机种子
+    params: Optional[Dict[str, Any]] = None  # 其他参数
+
+
+@router.post("/{data_id}/decision_tree_analysis")
+async def get_decision_tree_analysis(request: Request, data_id: str, body: DecisionTreeRequest):
+    """
+    获取数据文件的决策树分析结果接口，用于"决策树"方法
+    """
+    try:
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.x_columns)
+        if error_response:
+            return error_response
+
+        kwargs = body.params if body.params else {}
+        
+        kwargs.update({
+            'criterion': body.criterion,
+            'max_depth': body.max_depth,
+            'min_samples_split': body.min_samples_split,
+            'min_samples_leaf': body.min_samples_leaf,
+            'max_features': body.max_features,
+            'random_state': body.random_state
+        })
+
+        dt_result = decision_tree_analysis(
+            file_path, columns_to_process, body.y_column, body.task_type, session_id, **kwargs)
+
+        result_data = {
+            "data_id": data_id,
+            "method": dt_result["method"],
+            "x_columns": dt_result["x_columns"],
+            "y_column": dt_result["y_column"],
+            "criterion": dt_result.get("criterion"),
+            "feature_importance": dt_result["feature_importance"],
+            "evaluation_metrics": dt_result["evaluation_metrics"],
+            "sample_size": dt_result["sample_size"],
+            "train_size": dt_result.get("train_size"),
+            "test_size": dt_result.get("test_size"),
+            "model_params": dt_result["model_params"]
+        }
+
+        # 如果是分类任务，添加分类相关信息
+        if "n_classes" in dt_result:
+            result_data["n_classes"] = dt_result["n_classes"]
+            result_data["class_labels"] = dt_result["class_labels"]
+            result_data["confusion_matrix"] = dt_result.get("confusion_matrix")
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取决策树分析结果时出错: {str(e)},{traceback.format_exc()}")
         return JSONResponse(
             status_code=500,
             content={

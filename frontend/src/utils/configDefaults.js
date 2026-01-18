@@ -118,5 +118,16 @@ export const getDefaultConfigs = () => ({
     tol: 0.001,
     max_iter: -1,
     params: {}
+  },
+  decisionTreeConfig: {
+    y_column: '',
+    task_type: 'auto',
+    criterion: '',
+    max_depth: null,
+    min_samples_split: 2,
+    min_samples_leaf: 1,
+    max_features: '',
+    random_state: 42,
+    params: {}
   }
 })

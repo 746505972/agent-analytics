@@ -25,7 +25,7 @@
           <p>点击选择列，支持 Ctrl/Shift 多选</p>
           <p>不选则分析所有数值型列</p>
         </div>
-        <div v-else-if="['linear_regression','logistic_regression', 'xgboost', 'svm'].includes(currentMethod)">
+        <div v-else-if="['linear_regression','logistic_regression', 'xgboost', 'svm', 'decision_tree'].includes(currentMethod)">
           <div class="header">
             <h3>选择自变量 (X)</h3> <DeleteColumns @click="clearSelectedColumns" />
           </div>
@@ -39,8 +39,8 @@
           <p>点击选择一列，用于分析文本数据</p>
           <p>多选则默认分析第一列</p>
         </div>
-        <div v-else>
-          <h3>列名列表</h3>
+        <div v-else class="header">
+          <h3>列名列表</h3> <DeleteColumns @click="clearSelectedColumns" />
         </div>
 
         <ul class="column-list">
@@ -132,6 +132,12 @@
         :available-columns="selectedFileColumns"
       />
 
+      <DecisionTreeConfig
+        v-else-if="currentMethod === 'decision_tree'"
+        v-model:config="configs.decisionTreeConfig"
+        :columns="selectedFileColumns"
+      />
+
       <ClusteringConfig
         v-else-if="currentMethod === 'clustering_analysis'"
         v-model:config="configs.clusteringConfig"
@@ -190,10 +196,12 @@ import DeleteColumns from "@/components/DeleteColumns.vue";
 import ClusteringConfig from "@/components/Config/ClusteringConfig.vue";
 import XGBoostConfig from "@/components/Config/XGBoostConfig.vue";
 import SVMConfig from "@/components/Config/SVMConfig.vue";
+import DecisionTreeConfig from "@/components/Config/DecisionTreeConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
   components: {
+    DecisionTreeConfig,
     ClusteringConfig,
     XGBoostConfig,
     SVMConfig,
@@ -286,7 +294,8 @@ export default {
         'logistic_regression',
         'clustering_analysis',
         'xgboost',
-        'svm'
+        'svm',
+        'decision_tree'
       ]
     };
   },

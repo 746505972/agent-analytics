@@ -7,7 +7,8 @@ from typing import List, Dict, Any
 from langchain_core.tools import tool
 from .tool_error_handler import tool_error_handler
 from utils.ml_tool import logistic_regression, clustering_analysis, xgboost_analysis,\
-    xgboost_classification, xgboost_regression, svm_analysis
+    xgboost_classification, xgboost_regression, svm_analysis, decision_tree_analysis,\
+    decision_tree_classification, decision_tree_regression
 
 
 # 注册逻辑回归工具
@@ -221,6 +222,118 @@ def svm_analysis_tool(file_path: str, x_columns: List[str], y_column: str,
                        tol, max_iter, **kwargs)
 
 
+# 注册决策树分类工具
+@tool
+@tool_error_handler
+def decision_tree_classification_tool(file_path: str, x_columns: List[str], y_column: str,
+                                   session_id: str = None, criterion: str = 'gini',
+                                   max_depth: int = None, min_samples_split: int = 2,
+                                   min_samples_leaf: int = 1, max_features: str = None,
+                                   random_state: int = 42, **kwargs) -> Dict[str, Any]:
+    """
+    决策树分类 - 使用决策树进行分类任务
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列，分类标签）
+        session_id (str): 会话ID
+        criterion (str): 分割标准
+            - "gini": 基尼不纯度 (默认)
+            - "entropy": 信息熵
+        max_depth (int): 树的最大深度，None表示无限制 (默认None)
+        min_samples_split (int): 内部节点分裂所需的最小样本数 (默认2)
+        min_samples_leaf (int): 叶节点所需的最小样本数 (默认1)
+        max_features (str or int): 寻找最佳分割时考虑的特征数量
+            - None: 使用所有特征
+            - "sqrt": 使用sqrt(n_features)个特征
+            - "log2": 使用log2(n_features)个特征
+            - int: 指定具体数量
+        random_state (int): 随机种子 (默认42)
+        **kwargs: 其他决策树参数
+
+    Returns:
+        Dict[str, Any]: 包含决策树分类结果的字典
+    """
+    return decision_tree_classification(file_path, x_columns, y_column, session_id,
+                                      criterion, max_depth, min_samples_split,
+                                      min_samples_leaf, max_features, random_state, **kwargs)
+
+
+# 注册决策树回归工具
+@tool
+@tool_error_handler
+def decision_tree_regression_tool(file_path: str, x_columns: List[str], y_column: str,
+                               session_id: str = None, criterion: str = 'squared_error',
+                               max_depth: int = None, min_samples_split: int = 2,
+                               min_samples_leaf: int = 1, max_features: str = None,
+                               random_state: int = 42, **kwargs) -> Dict[str, Any]:
+    """
+    决策树回归 - 使用决策树进行回归任务
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列）
+        session_id (str): 会话ID
+        criterion (str): 分割标准
+            - "squared_error": 平方误差 (默认，sklearn 1.0+版本)
+            - "friedman_mse": Friedman均方误差
+            - "absolute_error": 绝对误差
+            - "poisson": 泊松偏差
+        max_depth (int): 树的最大深度，None表示无限制 (默认None)
+        min_samples_split (int): 内部节点分裂所需的最小样本数 (默认2)
+        min_samples_leaf (int): 叶节点所需的最小样本数 (默认1)
+        max_features (str or int): 寻找最佳分割时考虑的特征数量
+            - None: 使用所有特征
+            - "sqrt": 使用sqrt(n_features)个特征
+            - "log2": 使用log2(n_features)个特征
+            - int: 指定具体数量
+        random_state (int): 随机种子 (默认42)
+        **kwargs: 其他决策树参数
+
+    Returns:
+        Dict[str, Any]: 包含决策树回归结果的字典
+    """
+    return decision_tree_regression(file_path, x_columns, y_column, session_id,
+                                  criterion, max_depth, min_samples_split,
+                                  min_samples_leaf, max_features, random_state, **kwargs)
+
+
+# 注册决策树分析工具（自动判断分类或回归）
+@tool
+@tool_error_handler
+def decision_tree_analysis_tool(file_path: str, x_columns: List[str], y_column: str,
+                             task_type: str = "auto", session_id: str = None,
+                             criterion: str = None, max_depth: int = None, 
+                             min_samples_split: int = 2, min_samples_leaf: int = 1, 
+                             max_features: str = None, random_state: int = 42,
+                             **kwargs) -> Dict[str, Any]:
+    """
+    决策树分析 - 自动判断任务类型并执行相应的决策树分析
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列）
+        task_type (str): 任务类型 ("classification", "regression", "auto")
+        session_id (str): 会话ID
+        criterion (str): 分割标准
+        max_depth (int): 树的最大深度
+        min_samples_split (int): 内部节点分裂所需的最小样本数
+        min_samples_leaf (int): 叶节点所需的最小样本数
+        max_features (str): 寻找最佳分割时考虑的特征数量
+        random_state (int): 随机种子
+        **kwargs: 其他参数
+
+    Returns:
+        Dict[str, Any]: 包含决策树分析结果的字典
+    """
+    return decision_tree_analysis(file_path, x_columns, y_column, task_type, session_id,
+                                criterion, max_depth, min_samples_split, min_samples_leaf,
+                                max_features, random_state, **kwargs)
+
+
 # 将模块中的函数注册为工具
 def register_ml_tools(agent):
     """
@@ -235,3 +348,6 @@ def register_ml_tools(agent):
     agent.tools.append(xgboost_regression_tool)
     agent.tools.append(xgboost_analysis_tool)
     agent.tools.append(svm_analysis_tool)
+    agent.tools.append(decision_tree_classification_tool)
+    agent.tools.append(decision_tree_regression_tool)
+    agent.tools.append(decision_tree_analysis_tool)
