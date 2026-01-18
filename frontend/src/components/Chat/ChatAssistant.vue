@@ -68,8 +68,18 @@
             id="messageInput"
           />
           <FileUploadWrapper @add-click="onAddClick" />
-          <SendButton :disabled="!selectedFile || isWaitingForResponse"
-                      @click="sendMessage"/>
+          <!-- 根据是否正在等待响应显示停止按钮或发送按钮 -->
+          <button
+            @click="stopGeneration"
+            class="stop-button"
+            :title="'停止生成'"
+          >
+            <img src="@/assets/images/stop.svg" alt="停止" width="16px" height="16px"/>
+          </button>
+          <SendButton
+            :disabled="!selectedFile || isWaitingForResponse || userInput === ''"
+            :title="'发送'"
+            @click="sendMessage"/>
         </div>
       </div>
     </div>
@@ -119,7 +129,8 @@ export default {
       showHistoryDropdown: false,
       selectedAnalysisHistory: [],
       baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-      model: 'qwen-plus'
+      model: 'qwen-plus',
+      abortController: null // 用于中断请求
     }
   },
   computed: {
@@ -284,6 +295,9 @@ export default {
       this.userInput = "";
       this.isWaitingForResponse = true;
       
+      // 创建AbortController实例用于中断请求
+      this.abortController = new AbortController();
+      
       // 添加AI回复占位符
       const aiMessageIndex = this.currentSession.messages.length;
       this.currentSession.messages.push({
@@ -336,7 +350,8 @@ export default {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(requestData),
-          credentials: 'include'
+          credentials: 'include',
+          signal: this.abortController.signal // 添加中断信号
         });
         
         if (response.ok && response.body) {
@@ -348,6 +363,12 @@ export default {
           
           // 逐步接收流式响应
           while (!done) {
+            // 检查是否被中断
+            if (this.abortController.signal.aborted) {
+              console.log('请求已被中断');
+              break;
+            }
+            
             const { value, done: readerDone } = await reader.read();
             done = readerDone;
             
@@ -423,12 +444,33 @@ export default {
           this.currentSession.messages[aiMessageIndex].content = `抱歉，无法连接到AI助手。状态码: ${response.status}`;
         }
       } catch (error) {
-        this.currentSession.messages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;
+        // 检查是否是由于中断导致的错误
+        if (error.name === 'AbortError') {
+          console.log('请求已被中断');
+          // 可以选择在此处更新消息内容提示用户请求被中断
+          const aiMessage = this.currentSession.messages.find((msg, idx) => 
+            idx === this.currentSession.messages.length - 1 && msg.type === 'received'
+          );
+          if (aiMessage) {
+            aiMessage.content = '生成已停止';
+          }
+        } else {
+          this.currentSession.messages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;
+        }
       } finally {
         this.isWaitingForResponse = false;
+        this.abortController = null; // 重置abortController
         this.selectedAnalysisHistory = []; // 清空已选择的分析历史
         this.saveSessions(); // 保存会话到localStorage
       }
+    },
+    
+    // 停止生成
+    stopGeneration() {
+      if (this.abortController) {
+        this.abortController.abort(); // 中断请求
+      }
+      this.isWaitingForResponse = false;
     },
     
     // 复制消息文本
@@ -728,6 +770,20 @@ export default {
 #messageInput:focus,
 #messageInput:valid {
   stroke: #409eff;
+}
+
+.stop-button {
+  width: fit-content;
+  height: 100%;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  padding: 5px;
 }
 
 /* 聊天视图样式 */

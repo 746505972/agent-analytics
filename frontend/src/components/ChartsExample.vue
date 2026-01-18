@@ -7,7 +7,7 @@ export default {
 <template>
 <div class="example-section">
         <h2>
-          <img src="../assets/images/table-icon.svg" alt="表格图标">
+          <img src="../assets/images/stop.svg" alt="表格图标">
           表格示例
         </h2>
         <div class="example-table-container">
