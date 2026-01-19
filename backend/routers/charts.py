@@ -18,8 +18,10 @@ from routers.data import load_csv_file
 # 导入pyecharts相关模块
 from pyecharts import options as opts
 from pyecharts.charts import Line, Bar, Pie, Scatter, Boxplot
-from pyecharts.globals import ThemeType
+from pyecharts.globals import ThemeType, CurrentConfig
 
+# 配置pyecharts使用本地资源
+CurrentConfig.ONLINE_HOST = '../../assets/'
 
 router = APIRouter(prefix="/charts", tags=["charts"])
 
@@ -129,6 +131,8 @@ async def generate_chart(request: Request, config: ChartConfig):
 
         # 保存图表到HTML文件
         chart.render(chart_path)
+
+        modify_html_resource_links(chart_path)
 
 
         # 返回图表路径
@@ -543,3 +547,46 @@ def create_boxplot_chart(df, config, y_axis_columns):
     )
     
     return boxplot
+
+def modify_html_resource_links(file_path):
+    """
+    修改生成的HTML文件，实现资源加载优先级：
+    1. 首先尝试使用默认CDN资源
+    2. 如果CDN不可用，则使用本地资源作为后备
+    """
+    try:
+        # 读取生成的HTML文件
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # 替换资源链接，使用带有后备机制的HTML代码
+        # 先尝试CDN，如果失败则使用本地资源
+        import re
+
+        # 匹配包含本地资源引用的script标签
+        cdn_url = 'https://assets.pyecharts.org/assets/v5/echarts.min.js'
+        local_url = '../../assets/echarts.min.js'
+
+        # 创建带有后备机制的脚本加载代码
+        fallback_script = f'''
+<script src="{local_url}"></script>
+<script>
+  window.echarts || document.write('<script src="{cdn_url}"><\/script>');
+</script>
+'''.strip()
+
+        # 查找并替换原始的静态资源引用
+        # 原始引用通常是类似这样的：<script type="text/javascript" src="../../assets/echarts.min.js"></script>
+        content = re.sub(r'<script[^>]*src=[\'"][^"\']*echarts[^"\']*[\'"][^>]*></script>', '', content)
+
+        # 在<head>标签内插入新的带后备机制的脚本
+        head_end_pos = content.find('</head>')
+        if head_end_pos != -1:
+            content = content[:head_end_pos] + '\n' + fallback_script + '\n' + content[head_end_pos:]
+
+        # 写回修改后的内容
+        with open(file_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+    except Exception as e:
+        logger.error(f"修改HTML资源链接时出错: {str(e)}")
