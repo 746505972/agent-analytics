@@ -3,6 +3,7 @@ from .clustering import clustering_analysis
 from ._xgboost import xgboost_analysis, xgboost_classification, xgboost_regression
 from ._svm import svm_analysis
 from ._decision_tree import decision_tree_analysis, decision_tree_classification, decision_tree_regression
+from ._neural_network import neural_network_analysis, neural_network_classification, neural_network_regression
 
 __all__ = [
     "logistic_regression",
@@ -13,7 +14,10 @@ __all__ = [
     "svm_analysis",
     "decision_tree_analysis",
     "decision_tree_classification",
-    "decision_tree_regression"
+    "decision_tree_regression",
+    "neural_network_analysis",
+    "neural_network_classification",
+    "neural_network_regression"
 ]
 
 __author__ = 'github.com/746505972'

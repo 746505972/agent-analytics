@@ -129,5 +129,30 @@ export const getDefaultConfigs = () => ({
     max_features: '',
     random_state: 42,
     params: {}
+  },
+  neuralNetworkConfig: {
+    y_column: '',
+    task_type: 'auto',
+    hidden_layer_sizes: [100],
+    activation: 'relu',
+    solver: 'adam',
+    alpha: 0.0001,
+    max_iter: 200,
+    early_stopping: false,
+    validation_fraction: 0.1,
+    learning_rate_init: 0.001,
+    random_state: 42,
+    batch_size: 'auto',
+    learning_rate: 'constant',
+    shuffle: true,
+    verbose: false,
+    warm_start: false,
+    momentum: 0.9,
+    nesterovs_momentum: true,
+    beta_1: 0.9,
+    beta_2: 0.999,
+    epsilon: 1e-8,
+    n_iter_no_change: 10,
+    params: {}
   }
 })

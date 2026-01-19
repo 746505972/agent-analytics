@@ -150,6 +150,12 @@
         :columns="selectedFileColumns"
       />
 
+      <NeuralNetworkConfig
+        v-else-if="currentMethod === 'neural_network'"
+        v-model:config="configs.neuralNetworkConfig"
+        :columns="selectedFileColumns"
+      />
+
       <SVMConfig
         v-else-if="currentMethod === 'svm'"
         v-model:config="configs.svmConfig"
@@ -197,10 +203,12 @@ import ClusteringConfig from "@/components/Config/ClusteringConfig.vue";
 import XGBoostConfig from "@/components/Config/XGBoostConfig.vue";
 import SVMConfig from "@/components/Config/SVMConfig.vue";
 import DecisionTreeConfig from "@/components/Config/DecisionTreeConfig.vue";
+import NeuralNetworkConfig from "@/components/Config/NeuralNetworkConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
   components: {
+    NeuralNetworkConfig,
     DecisionTreeConfig,
     ClusteringConfig,
     XGBoostConfig,
@@ -295,7 +303,8 @@ export default {
         'clustering_analysis',
         'xgboost',
         'svm',
-        'decision_tree'
+        'decision_tree',
+        'neural_network'
       ]
     };
   },

@@ -59,6 +59,11 @@
     <div v-else-if="currentMethod === 'clustering_analysis' && datasetDetails" class="analysis-section">
       <ClusteringResult :datasetDetails="datasetDetails" />
     </div>
+
+    <!-- 神经网络分析结果 -->
+    <div v-else-if="currentMethod === 'neural_network' && datasetDetails" class="analysis-section">
+      <NeuralNetworkResult :datasetDetails="datasetDetails" />
+    </div>
     
     <!-- XGBoost分析结果 -->
     <div v-else-if="currentMethod === 'xgboost' && datasetDetails" class="analysis-section">
@@ -120,6 +125,7 @@ import ClusteringResult from "@/components/AnalyseResult/ClusteringResult.vue";
 import XGBoostResult from "@/components/AnalyseResult/XGBoostResult.vue";
 import SVMResult from "./AnalyseResult/SVMResult.vue";
 import DecisionTreeResult from "@/components/AnalyseResult/DecisionTreeResult.vue";
+import NeuralNetworkResult from "./AnalyseResult/NeuralNetworkResult.vue";
 
 export default {
   name: "ResultContent",
@@ -141,7 +147,8 @@ export default {
     ClusteringResult,
     XGBoostResult,
     SVMResult,
-    DecisionTreeResult
+    DecisionTreeResult,
+    NeuralNetworkResult
   },
   props: {
     currentMethod: {

@@ -8,7 +8,8 @@ from langchain_core.tools import tool
 from .tool_error_handler import tool_error_handler
 from utils.ml_tool import logistic_regression, clustering_analysis, xgboost_analysis,\
     xgboost_classification, xgboost_regression, svm_analysis, decision_tree_analysis,\
-    decision_tree_classification, decision_tree_regression
+    decision_tree_classification, decision_tree_regression, neural_network_classification,\
+    neural_network_regression, neural_network_analysis
 
 
 # 注册逻辑回归工具
@@ -334,6 +335,195 @@ def decision_tree_analysis_tool(file_path: str, x_columns: List[str], y_column: 
                                 max_features, random_state, **kwargs)
 
 
+# 注册神经网络分类工具
+@tool
+@tool_error_handler
+def neural_network_classification_tool(file_path: str, x_columns: List[str], y_column: str,
+                                   session_id: str = None, hidden_layer_sizes: tuple = (100,),
+                                   activation: str = 'relu', solver: str = 'adam',
+                                   alpha: float = 0.0001, batch_size: str = 'auto',
+                                   learning_rate: str = 'constant', learning_rate_init: float = 0.001,
+                                   max_iter: int = 200, shuffle: bool = True,
+                                   random_state: int = 42, tol: float = 1e-4,
+                                   verbose: bool = False, warm_start: bool = False,
+                                   momentum: float = 0.9, nesterovs_momentum: bool = True,
+                                   early_stopping: bool = False, validation_fraction: float = 0.1,
+                                   beta_1: float = 0.9, beta_2: float = 0.999,
+                                   epsilon: float = 1e-8, n_iter_no_change: int = 10,
+                                   **kwargs) -> Dict[str, Any]:
+    """
+    神经网络分类 - 使用多层感知机(MLP)进行分类任务
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列，分类标签）
+        session_id (str): 会话ID
+        
+        # 神经网络结构参数
+        hidden_layer_sizes (tuple): 隐藏层节点数元组 (例如 (100,) 表示1个隐藏层含100个节点, (50, 25) 表示2个隐藏层分别含50和25个节点)
+        activation (str): 激活函数
+            - "identity": 恒等函数
+            - "logistic": sigmoid函数
+            - "tanh": 双曲正切函数
+            - "relu": ReLU函数 (默认)
+        
+        # 优化器参数
+        solver (str): 求解器
+            - "lbfgs": 拟牛顿法 (适合小数据集)
+            - "sgd": 随机梯度下降
+            - "adam": Adam优化器 (默认)
+        alpha (float): L2正则化参数 (默认0.0001)
+        batch_size (str or int): 批大小 (默认'auto')
+        learning_rate (str): 学习率调整策略
+            - "constant": 恒定学习率 (默认)
+            - "invscaling": 逆缩放
+            - "adaptive": 自适应
+        learning_rate_init (float): 初始学习率 (默认0.001)
+        
+        # 训练参数
+        max_iter (int): 最大迭代次数 (默认200)
+        shuffle (bool): 是否在每次迭代前打乱样本 (默认True)
+        random_state (int): 随机种子 (默认42)
+        tol (float): 停止容差 (默认1e-4)
+        verbose (bool): 是否输出训练过程信息 (默认False)
+        warm_start (bool): 是否使用上次训练结果继续训练 (默认False)
+        
+        # SGD优化器特有参数
+        momentum (float): 动量参数 (默认0.9)
+        nesterovs_momentum (bool): 是否使用Nesterov动量 (默认True)
+        
+        # 早停参数
+        early_stopping (bool): 是否启用早停 (默认False)
+        validation_fraction (float): 验证集比例 (默认0.1)
+        
+        # Adam优化器特有参数
+        beta_1 (float): Adam优化器参数 (默认0.9)
+        beta_2 (float): Adam优化器参数 (默认0.999)
+        epsilon (float): 数值稳定性参数 (默认1e-8)
+        
+        n_iter_no_change (int): 早停判断的不改善迭代次数 (默认10)
+        
+        **kwargs: 其他MLPClassifier参数
+
+    Returns:
+        Dict[str, Any]: 包含神经网络分类结果的字典
+    """
+    return neural_network_classification(file_path, x_columns, y_column, session_id,
+                                       hidden_layer_sizes, activation, solver, alpha,
+                                       batch_size, learning_rate, learning_rate_init,
+                                       max_iter, shuffle, random_state, tol,
+                                       verbose, warm_start, momentum, nesterovs_momentum,
+                                       early_stopping, validation_fraction, beta_1, beta_2,
+                                       epsilon, n_iter_no_change, **kwargs)
+
+
+# 注册神经网络回归工具
+@tool
+@tool_error_handler
+def neural_network_regression_tool(file_path: str, x_columns: List[str], y_column: str,
+                                 session_id: str = None, hidden_layer_sizes: tuple = (100,),
+                                 activation: str = 'relu', solver: str = 'adam',
+                                 alpha: float = 0.0001, batch_size: str = 'auto',
+                                 learning_rate: str = 'constant', learning_rate_init: float = 0.001,
+                                 max_iter: int = 200, shuffle: bool = True,
+                                 random_state: int = 42, tol: float = 1e-4,
+                                 verbose: bool = False, warm_start: bool = False,
+                                 momentum: float = 0.9, nesterovs_momentum: bool = True,
+                                 early_stopping: bool = False, validation_fraction: float = 0.1,
+                                 beta_1: float = 0.9, beta_2: float = 0.999,
+                                 epsilon: float = 1e-8, n_iter_no_change: int = 10,
+                                 **kwargs) -> Dict[str, Any]:
+    """
+    神经网络回归 - 使用多层感知机(MLP)进行回归任务
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列）
+        session_id (str): 会话ID
+        
+        # 神经网络结构参数
+        hidden_layer_sizes (tuple): 隐藏层节点数元组 (例如 (100,) 表示1个隐藏层含100个节点, (50, 25) 表示2个隐藏层分别含50和25个节点)
+        activation (str): 激活函数
+            - "identity": 恒等函数
+            - "logistic": sigmoid函数
+            - "tanh": 双曲正切函数
+            - "relu": ReLU函数 (默认)
+        
+        # 优化器参数
+        solver (str): 求解器
+            - "lbfgs": 拟牛顿法 (适合小数据集)
+            - "sgd": 随机梯度下降
+            - "adam": Adam优化器 (默认)
+        alpha (float): L2正则化参数 (默认0.0001)
+        batch_size (str or int): 批大小 (默认'auto')
+        learning_rate (str): 学习率调整策略
+            - "constant": 恒定学习率 (默认)
+            - "invscaling": 逆缩放
+            - "adaptive": 自适应
+        learning_rate_init (float): 初始学习率 (默认0.001)
+        
+        # 训练参数
+        max_iter (int): 最大迭代次数 (默认200)
+        shuffle (bool): 是否在每次迭代前打乱样本 (默认True)
+        random_state (int): 随机种子 (默认42)
+        tol (float): 停止容差 (默认1e-4)
+        verbose (bool): 是否输出训练过程信息 (默认False)
+        warm_start (bool): 是否使用上次训练结果继续训练 (默认False)
+        
+        # SGD优化器特有参数
+        momentum (float): 动量参数 (默认0.9)
+        nesterovs_momentum (bool): 是否使用Nesterov动量 (默认True)
+        
+        # 早停参数
+        early_stopping (bool): 是否启用早停 (默认False)
+        validation_fraction (float): 验证集比例 (默认0.1)
+        
+        # Adam优化器特有参数
+        beta_1 (float): Adam优化器参数 (默认0.9)
+        beta_2 (float): Adam优化器参数 (默认0.999)
+        epsilon (float): 数值稳定性参数 (默认1e-8)
+        
+        n_iter_no_change (int): 早停判断的不改善迭代次数 (默认10)
+        
+        **kwargs: 其他MLPRegressor参数
+
+    Returns:
+        Dict[str, Any]: 包含神经网络回归结果的字典
+    """
+    return neural_network_regression(file_path, x_columns, y_column, session_id,
+                                   hidden_layer_sizes, activation, solver, alpha,
+                                   batch_size, learning_rate, learning_rate_init,
+                                   max_iter, shuffle, random_state, tol,
+                                   verbose, warm_start, momentum, nesterovs_momentum,
+                                   early_stopping, validation_fraction, beta_1, beta_2,
+                                   epsilon, n_iter_no_change, **kwargs)
+
+
+# 注册神经网络分析工具（自动判断分类或回归）
+@tool
+@tool_error_handler
+def neural_network_analysis_tool(file_path: str, x_columns: List[str], y_column: str,
+                               task_type: str = "auto", session_id: str = None,
+                               **kwargs) -> Dict[str, Any]:
+    """
+    神经网络分析 - 自动判断任务类型并执行相应的神经网络分析
+
+    Args:
+        file_path (str): 文件路径
+        x_columns (List[str]): 自变量列名列表（特征列）
+        y_column (str): 因变量列名（目标列）
+        task_type (str): 任务类型 ("classification", "regression", "auto")
+        session_id (str): 会话ID
+        **kwargs: 其他参数
+
+    Returns:
+        Dict[str, Any]: 包含神经网络分析结果的字典
+    """
+    return neural_network_analysis(file_path, x_columns, y_column, task_type, session_id, **kwargs)
+
+
 # 将模块中的函数注册为工具
 def register_ml_tools(agent):
     """
@@ -351,3 +541,6 @@ def register_ml_tools(agent):
     agent.tools.append(decision_tree_classification_tool)
     agent.tools.append(decision_tree_regression_tool)
     agent.tools.append(decision_tree_analysis_tool)
+    agent.tools.append(neural_network_classification_tool)
+    agent.tools.append(neural_network_regression_tool)
+    agent.tools.append(neural_network_analysis_tool)

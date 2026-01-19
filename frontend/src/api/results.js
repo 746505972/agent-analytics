@@ -610,6 +610,60 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       } else {
         throw new Error(result.error || "获取决策树分析结果失败");
       }
+    } else if (method === 'neural_network') {
+      // 准备神经网络分析请求体
+      const requestBody = {
+        x_columns: selectedColumns || [],
+        y_column: configs.neuralNetworkConfig.y_column,
+        task_type: configs.neuralNetworkConfig.task_type || 'auto',
+        hidden_layer_sizes: configs.neuralNetworkConfig.hidden_layer_sizes || [100],
+        activation: configs.neuralNetworkConfig.activation || 'relu',
+        solver: configs.neuralNetworkConfig.solver || 'adam',
+        alpha: configs.neuralNetworkConfig.alpha || 0.0001,
+        max_iter: configs.neuralNetworkConfig.max_iter || 200,
+        early_stopping: configs.neuralNetworkConfig.early_stopping || false,
+        validation_fraction: configs.neuralNetworkConfig.validation_fraction || 0.1,
+        learning_rate_init: configs.neuralNetworkConfig.learning_rate_init || 0.001,
+        random_state: configs.neuralNetworkConfig.random_state || 42,
+        batch_size: configs.neuralNetworkConfig.batch_size || 'auto',
+        learning_rate: configs.neuralNetworkConfig.learning_rate || 'constant',
+        shuffle: configs.neuralNetworkConfig.shuffle !== undefined ? configs.neuralNetworkConfig.shuffle : true,
+        verbose: configs.neuralNetworkConfig.verbose !== undefined ? configs.neuralNetworkConfig.verbose : false,
+        warm_start: configs.neuralNetworkConfig.warm_start !== undefined ? configs.neuralNetworkConfig.warm_start : false,
+        momentum: configs.neuralNetworkConfig.momentum || 0.9,
+        nesterovs_momentum: configs.neuralNetworkConfig.nesterovs_momentum !== undefined ? configs.neuralNetworkConfig.nesterovs_momentum : true,
+        beta_1: configs.neuralNetworkConfig.beta_1 || 0.9,
+        beta_2: configs.neuralNetworkConfig.beta_2 || 0.999,
+        epsilon: configs.neuralNetworkConfig.epsilon || 1e-8,
+        n_iter_no_change: configs.neuralNetworkConfig.n_iter_no_change || 10,
+        params: {
+          ...configs.neuralNetworkConfig.params
+        }
+      };
+
+      // 验证Y列是否已选择
+      if (!requestBody.y_column) {
+        throw new Error("请选择因变量(Y列)");
+      }
+
+      const response = await fetch(`/data/${dataId}/neural_network_analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return {
+          ...result.data,
+          resultMethod: method
+        };
+      } else {
+        throw new Error(result.error || "获取神经网络分析结果失败");
+      }
     }
     // 其他分析方法可以在这里添加
     return null;

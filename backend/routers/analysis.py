@@ -17,7 +17,7 @@ from routers.data import load_csv_file
 from utils.pandas_tool import statistical_summary, correlation_analysis, \
     normality_test, t_test, f_test, chi_square_test, non_parametric_test,linear_regression
 from utils.ml_tool import clustering_analysis,logistic_regression, xgboost_analysis, svm_analysis, \
-    decision_tree_analysis
+    decision_tree_analysis, neural_network_analysis, neural_network_classification, neural_network_regression
 from utils.file_manager import get_file_path
 import pandas as pd
 
@@ -761,6 +761,34 @@ class DecisionTreeRequest(BaseModel):
     params: Optional[Dict[str, Any]] = None  # 其他参数
 
 
+class NeuralNetworkRequest(BaseModel):
+    x_columns: List[str]  # 自变量列
+    y_column: str         # 因变量列
+    task_type: str = "auto"  # 任务类型
+    hidden_layer_sizes: Tuple[int, ...] = (100,)  # 隐藏层节点数元组
+    activation: str = "relu"  # 激活函数
+    solver: str = "adam"  # 求解器
+    alpha: float = 0.0001  # L2正则化参数
+    batch_size: str = "auto"  # 批大小
+    learning_rate: str = "constant"  # 学习率调整策略
+    learning_rate_init: float = 0.001  # 初始学习率
+    max_iter: int = 200  # 最大迭代次数
+    shuffle: bool = True  # 是否在每次迭代前打乱样本
+    random_state: int = 42  # 随机种子
+    tol: float = 1e-4  # 停止容差
+    verbose: bool = False  # 是否输出训练过程信息
+    warm_start: bool = False  # 是否使用上次训练结果继续训练
+    momentum: float = 0.9  # 动量参数
+    nesterovs_momentum: bool = True  # 是否使用Nesterov动量
+    early_stopping: bool = False  # 是否启用早停
+    validation_fraction: float = 0.1  # 验证集比例
+    beta_1: float = 0.9  # Adam优化器参数
+    beta_2: float = 0.999  # Adam优化器参数
+    epsilon: float = 1e-8  # 数值稳定性参数
+    n_iter_no_change: int = 10  # 早停判断的不改善迭代次数
+    params: Optional[Dict[str, Any]] = None  # 其他参数
+
+
 @router.post("/{data_id}/decision_tree_analysis")
 async def get_decision_tree_analysis(request: Request, data_id: str, body: DecisionTreeRequest):
     """
@@ -819,3 +847,78 @@ async def get_decision_tree_analysis(request: Request, data_id: str, body: Decis
                 "error": f"{str(e)}"
             }
         )
+
+
+@router.post("/{data_id}/neural_network_analysis")
+async def get_neural_network_analysis(request: Request, data_id: str, body: NeuralNetworkRequest):
+    """
+    获取数据文件的神经网络分析结果接口，用于"神经网络"方法
+    """
+    try:
+        session_id, file_path, df, columns_to_process, error_response = validate_request_data(
+            request, data_id, body.x_columns)
+        if error_response:
+            return error_response
+
+        kwargs = body.params if body.params else {}
+        
+        kwargs.update({
+            'hidden_layer_sizes': body.hidden_layer_sizes,
+            'activation': body.activation,
+            'solver': body.solver,
+            'alpha': body.alpha,
+            'batch_size': body.batch_size,
+            'learning_rate': body.learning_rate,
+            'learning_rate_init': body.learning_rate_init,
+            'max_iter': body.max_iter,
+            'shuffle': body.shuffle,
+            'random_state': body.random_state,
+            'tol': body.tol,
+            'verbose': body.verbose,
+            'warm_start': body.warm_start,
+            'momentum': body.momentum,
+            'nesterovs_momentum': body.nesterovs_momentum,
+            'early_stopping': body.early_stopping,
+            'validation_fraction': body.validation_fraction,
+            'beta_1': body.beta_1,
+            'beta_2': body.beta_2,
+            'epsilon': body.epsilon,
+            'n_iter_no_change': body.n_iter_no_change
+        })
+
+        nn_result = neural_network_analysis(
+            file_path, columns_to_process, body.y_column, body.task_type, session_id, **kwargs)
+
+        result_data = {
+            "data_id": data_id,
+            "method": nn_result["method"],
+            "x_columns": nn_result["x_columns"],
+            "y_column": nn_result["y_column"],
+            "evaluation_metrics": nn_result["evaluation_metrics"],
+            "sample_size": nn_result["sample_size"],
+            "train_size": nn_result.get("train_size"),
+            "test_size": nn_result.get("test_size"),
+            "model_params": nn_result["model_params"],
+            "model_info": nn_result["model_info"]
+        }
+
+        # 根据任务类型添加特定信息
+        if nn_result.get("method", "").endswith("classification"):
+            result_data["n_classes"] = nn_result["n_classes"]
+            result_data["class_labels"] = nn_result["class_labels"]
+            result_data["confusion_matrix"] = nn_result.get("confusion_matrix")
+
+        return JSONResponse(content={
+            "success": True,
+            "data": result_data
+        })
+    except Exception as e:
+        logger.error(f"获取神经网络分析结果时出错: {str(e)},{traceback.format_exc()}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": f"{str(e)}"
+            }
+        )
+
