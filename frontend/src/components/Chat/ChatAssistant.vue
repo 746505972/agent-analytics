@@ -2,7 +2,8 @@
   <div class="chat-section">
     <ChatHeader 
       v-model:is-showing-history="isShowingHistory"
-      @toggleHistoryView="toggleHistoryView" 
+      v-model:base-url="baseUrl"
+      v-model:model="model"
       @createNewSession="createNewSession" 
     />
     <!-- 历史记录视图 -->
@@ -44,7 +45,7 @@
         </div>
       </div>
       <!-- 分析历史下拉选择 -->
-      <AnalysisHistoryDropdown
+      <AnalysisHistoryDropdown 
         :show-dropdown="showHistoryDropdown"
         :analysis-history="analysisHistory"
         :selected-analysis-history="selectedAnalysisHistory"
@@ -52,7 +53,7 @@
         @selectHistory="selectAnalysisHistory"
         @removeHistory="selectAnalysisHistory"
       />
-      <HistoryButtons
+      <HistoryButtons 
         :selected-analysis-history="selectedAnalysisHistory"
         @remove-selected-history="removeSelectedHistory" />
       <div class="input-area">
@@ -67,8 +68,18 @@
             id="messageInput"
           />
           <FileUploadWrapper @add-click="onAddClick" />
-          <SendButton :disabled="!selectedFile || isWaitingForResponse"
-                      @click="sendMessage"/>
+          <!-- 根据是否正在等待响应显示停止按钮或发送按钮 -->
+          <button
+            @click="stopGeneration"
+            class="stop-button"
+            :title="'停止生成'"
+          >
+            <img src="@/assets/images/stop.svg" alt="停止" width="16px" height="16px"/>
+          </button>
+          <SendButton
+            :disabled="!selectedFile || isWaitingForResponse || userInput === ''"
+            :title="'发送'"
+            @click="sendMessage"/>
         </div>
       </div>
     </div>
@@ -118,6 +129,9 @@ export default {
       isShowingHistory: false, // 新增：是否显示历史记录视图
       showHistoryDropdown: false,
       selectedAnalysisHistory: [],
+      baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      model: 'qwen-plus',
+      abortController: null // 用于中断请求
     }
   },
   computed: {
@@ -264,7 +278,10 @@ export default {
       }
       function getDetails(selectedAnalysisHistory) {
         return selectedAnalysisHistory.length > 0
-          ? selectedAnalysisHistory.map(({ dataId, name }) => (`${dataId}-${name}`)) : null;
+          ? selectedAnalysisHistory.map(({ dataId, name }) => {
+              const formattedDataId = dataId.length > 10 ? dataId.substring(0, 7) + '...' : dataId;
+              return `${formattedDataId}-${name}`;
+            }) : null;
       }
       // 添加用户消息到当前会话的聊天记录
       const userMessage = {
@@ -279,6 +296,9 @@ export default {
       this.userInput = "";
       this.isWaitingForResponse = true;
       
+      // 创建AbortController实例用于中断请求
+      this.abortController = new AbortController();
+
       // 添加AI回复占位符
       const aiMessageIndex = this.currentSession.messages.length;
       this.currentSession.messages.push({
@@ -295,13 +315,15 @@ export default {
           message: userQuery,
           data_id: this.selectedFile,
           history: this.currentSession.messages.slice(0, -1), // 不包括刚添加的AI回复占位符
-          analysis_history: this.selectedAnalysisHistory
+          analysis_history: this.selectedAnalysisHistory,
+          base_url: this.baseUrl,
+          model: this.model,
         };
 
         // 如果是第一次查询，先调用生成标题的API
         if (this.currentSession.name === '新会话') {
           try {
-            const request = {message: userQuery,};
+            const request = {message: userQuery,base_url: this.baseUrl,model: this.model};
             const titleResponse = await fetch(`${backendBaseUrl}/chat/generate_title`, {
               method: 'POST',
               headers: {
@@ -329,7 +351,8 @@ export default {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(requestData),
-          credentials: 'include'
+          credentials: 'include',
+          signal: this.abortController.signal // 添加中断信号
         });
         
         if (response.ok && response.body) {
@@ -341,6 +364,12 @@ export default {
           
           // 逐步接收流式响应
           while (!done) {
+            // 检查是否被中断
+            if (this.abortController.signal.aborted) {
+              console.log('请求已被中断');
+              break;
+            }
+
             const { value, done: readerDone } = await reader.read();
             done = readerDone;
             
@@ -416,14 +445,35 @@ export default {
           this.currentSession.messages[aiMessageIndex].content = `抱歉，无法连接到AI助手。状态码: ${response.status}`;
         }
       } catch (error) {
-        this.currentSession.messages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;
+        // 检查是否是由于中断导致的错误
+        if (error.name === 'AbortError') {
+          console.log('请求已被中断');
+          // 可以选择在此处更新消息内容提示用户请求被中断
+          const aiMessage = this.currentSession.messages.find((msg, idx) =>
+            idx === this.currentSession.messages.length - 1 && msg.type === 'received'
+          );
+          if (aiMessage) {
+            aiMessage.content = '生成已停止';
+          }
+        } else {
+          this.currentSession.messages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;
+        }
       } finally {
         this.isWaitingForResponse = false;
+        this.abortController = null; // 重置abortController
         this.selectedAnalysisHistory = []; // 清空已选择的分析历史
         this.saveSessions(); // 保存会话到localStorage
       }
     },
     
+    // 停止生成
+    stopGeneration() {
+      if (this.abortController) {
+        this.abortController.abort(); // 中断请求
+      }
+      this.isWaitingForResponse = false;
+    },
+
     // 复制消息文本
     copyMessageText(text) {
       // 检查 Clipboard API 是否可用
@@ -536,15 +586,12 @@ export default {
         // 如果没有保存的会话，创建一个新会话
         this.createNewSession();
       }
+      this.baseUrl = localStorage.getItem('baseUrl') || 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+      this.model = localStorage.getItem('model') || 'qwen-plus';
     },
     
     onAddClick() {
       this.showHistoryDropdown = !this.showHistoryDropdown;
-    },
-    
-    // 切换历史记录视图
-    toggleHistoryView() {
-      this.isShowingHistory = !this.isShowingHistory;
     },
 
     // 选择分析历史
@@ -553,7 +600,7 @@ export default {
       const existingIndex = this.selectedAnalysisHistory.findIndex(
         item => item.id === historyItem.id && item.method === historyItem.method
       );
-
+      
       if (existingIndex === -1) {
         // 如果未选择，则添加到选中的列表
         this.selectedAnalysisHistory.push({
@@ -566,7 +613,7 @@ export default {
       // 保持下拉框打开状态
       this.showHistoryDropdown = true;
     },
-
+    
     // 移除已选择的分析历史
     removeSelectedHistory(index) {
       this.selectedAnalysisHistory.splice(index, 1);
@@ -724,6 +771,20 @@ export default {
 #messageInput:focus,
 #messageInput:valid {
   stroke: #409eff;
+}
+
+.stop-button {
+  width: fit-content;
+  height: 100%;
+  background-color: transparent;
+  outline: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  padding: 5px;
 }
 
 /* 聊天视图样式 */

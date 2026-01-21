@@ -92,5 +92,67 @@ export const getDefaultConfigs = () => ({
       linkage: 'ward',
       covariance_type: 'full'
     }
+  },
+  xgboostConfig: {
+    y_column: '',
+    task_type: 'auto',
+    objective: '',
+    n_estimators: 100,
+    max_depth: 6,
+    learning_rate: 0.3,
+    subsample: 1.0,
+    colsample_bytree: 1.0,
+    random_state: 42,
+    params: {}
+  },
+  svmConfig: {
+    y_column: '',
+    task_type: 'classification',
+    kernel: 'rbf',
+    C: 1.0,
+    gamma: 'scale',
+    degree: 3,
+    coef0: 0.0,
+    shrinking: true,
+    probability: true,
+    tol: 0.001,
+    max_iter: -1,
+    params: {}
+  },
+  decisionTreeConfig: {
+    y_column: '',
+    task_type: 'auto',
+    criterion: '',
+    max_depth: null,
+    min_samples_split: 2,
+    min_samples_leaf: 1,
+    max_features: '',
+    random_state: 42,
+    params: {}
+  },
+  neuralNetworkConfig: {
+    y_column: '',
+    task_type: 'auto',
+    hidden_layer_sizes: [100],
+    activation: 'relu',
+    solver: 'adam',
+    alpha: 0.0001,
+    max_iter: 200,
+    early_stopping: false,
+    validation_fraction: 0.1,
+    learning_rate_init: 0.001,
+    random_state: 42,
+    batch_size: 'auto',
+    learning_rate: 'constant',
+    shuffle: true,
+    verbose: false,
+    warm_start: false,
+    momentum: 0.9,
+    nesterovs_momentum: true,
+    beta_1: 0.9,
+    beta_2: 0.999,
+    epsilon: 1e-8,
+    n_iter_no_change: 10,
+    params: {}
   }
 })

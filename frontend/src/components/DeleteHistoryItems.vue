@@ -7,14 +7,14 @@ export default {
 <style scoped>
 /* From Uiverse.io by cssbuttons-io */
 button {
-  width: 100px;
+  min-width: 100px;
+  width: auto;
   height: 30px;
   cursor: pointer;
   display: flex;
   align-items: center;
   border: none;
   border-radius: 5px;
-  box-shadow: 1px 1px 3px rgba(0,0,0,0.15);
   background: #ff6363;
   margin-right: 10px;
 }
@@ -64,6 +64,30 @@ button:focus {
 
 button:active .icon svg {
  transform: scale(0.8);
+}
+
+/* 小屏幕适配 */
+@media screen and (max-width: 768px) {
+  button {
+    min-width: 80px;
+    width: auto;
+    padding: 0 8px;
+  }
+  
+  button .text {
+    font-size: 0.8rem;
+    transform: translateX(-5px);
+  }
+  
+  button .icon {
+    transform: translateX(50px);
+    width: 20px;
+  }
+  
+  button:hover .icon {
+    width: 80px;
+    transform: translateX(-7px);
+  }
 }
 </style>
 

@@ -63,6 +63,7 @@ app.include_router(charts_router)
 
 # 挂载静态文件目录，使生成的图片和HTML图表可以通过URL访问
 app.mount("/data", StaticFiles(directory="data"), name="data")
+app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
 # 存储定时任务的引用
 cleanup_task = None
