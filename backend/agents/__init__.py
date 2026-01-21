@@ -55,8 +55,8 @@ class DataAnalysisAgent:
         else:
             self.llm = ChatOpenAI(
                 api_key=api_key,
-                base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-                model="qwen-plus"
+                base_url=self.base_url,
+                model=self.model
             )
         
         # 注册各个模块的工具
