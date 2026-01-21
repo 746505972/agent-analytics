@@ -486,6 +486,184 @@ export async function fetchAnalysisResult(dataId, method, options = {}) {
       } else {
         throw new Error(result.error || "获取聚类分析结果失败");
       }
+    } else if (method === 'xgboost') {
+      // 准备XGBoost分析请求体
+      const requestBody = {
+        x_columns: selectedColumns || [],
+        y_column: configs.xgboostConfig.y_column,
+        task_type: configs.xgboostConfig.task_type || 'auto',
+        objective: configs.xgboostConfig.objective || null,
+        n_estimators: configs.xgboostConfig.n_estimators || 100,
+        max_depth: configs.xgboostConfig.max_depth || 6,
+        learning_rate: configs.xgboostConfig.learning_rate || 0.3,
+        subsample: configs.xgboostConfig.subsample || 1.0,
+        colsample_bytree: configs.xgboostConfig.colsample_bytree || 1.0,
+        random_state: configs.xgboostConfig.random_state || 42,
+        params: {
+          ...configs.xgboostConfig.params
+        }
+      };
+
+      // 验证Y列是否已选择
+      if (!requestBody.y_column) {
+        throw new Error("请选择因变量(Y列)");
+      }
+
+      const response = await fetch(`/data/${dataId}/xgboost_analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return {
+          ...result.data,
+          resultMethod: method
+        };
+      } else {
+        throw new Error(result.error || "获取XGBoost分析结果失败");
+      }
+    } else if (method === 'svm') {
+      // 准备SVM分析请求体
+      const requestBody = {
+        x_columns: selectedColumns || [],
+        y_column: configs.svmConfig.y_column,
+        task_type: configs.svmConfig.task_type || 'classification',
+        kernel: configs.svmConfig.kernel || 'rbf',
+        C: configs.svmConfig.C || 1.0,
+        gamma: configs.svmConfig.gamma || 'scale',
+        degree: configs.svmConfig.degree || 3,
+        coef0: configs.svmConfig.coef0 || 0.0,
+        shrinking: configs.svmConfig.shrinking || true,
+        probability: configs.svmConfig.probability || true,
+        tol: configs.svmConfig.tol || 0.001,
+        max_iter: configs.svmConfig.max_iter || -1,
+        params: {
+          ...configs.svmConfig.params
+        }
+      };
+
+      // 验证Y列是否已选择
+      if (!requestBody.y_column) {
+        throw new Error("请选择因变量(Y列)");
+      }
+
+      const response = await fetch(`/data/${dataId}/svm_analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return {
+          ...result.data,
+          resultMethod: method
+        };
+      } else {
+        throw new Error(result.error || "获取SVM分析结果失败");
+      }
+    } else if (method === 'decision_tree') {
+      // 准备决策树分析请求体
+      const requestBody = {
+        x_columns: selectedColumns || [],
+        y_column: configs.decisionTreeConfig.y_column,
+        task_type: configs.decisionTreeConfig.task_type || 'auto',
+        criterion: configs.decisionTreeConfig.criterion || null,
+        max_depth: configs.decisionTreeConfig.max_depth || null,
+        min_samples_split: configs.decisionTreeConfig.min_samples_split || 2,
+        min_samples_leaf: configs.decisionTreeConfig.min_samples_leaf || 1,
+        max_features: configs.decisionTreeConfig.max_features || null,
+        random_state: configs.decisionTreeConfig.random_state || 42,
+        params: {
+          ...configs.decisionTreeConfig.params
+        }
+      };
+
+      // 验证Y列是否已选择
+      if (!requestBody.y_column) {
+        throw new Error("请选择因变量(Y列)");
+      }
+
+      const response = await fetch(`/data/${dataId}/decision_tree_analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return {
+          ...result.data,
+          resultMethod: method
+        };
+      } else {
+        throw new Error(result.error || "获取决策树分析结果失败");
+      }
+    } else if (method === 'neural_network') {
+      // 准备神经网络分析请求体
+      const requestBody = {
+        x_columns: selectedColumns || [],
+        y_column: configs.neuralNetworkConfig.y_column,
+        task_type: configs.neuralNetworkConfig.task_type || 'auto',
+        hidden_layer_sizes: configs.neuralNetworkConfig.hidden_layer_sizes || [100],
+        activation: configs.neuralNetworkConfig.activation || 'relu',
+        solver: configs.neuralNetworkConfig.solver || 'adam',
+        alpha: configs.neuralNetworkConfig.alpha || 0.0001,
+        max_iter: configs.neuralNetworkConfig.max_iter || 200,
+        early_stopping: configs.neuralNetworkConfig.early_stopping || false,
+        validation_fraction: configs.neuralNetworkConfig.validation_fraction || 0.1,
+        learning_rate_init: configs.neuralNetworkConfig.learning_rate_init || 0.001,
+        random_state: configs.neuralNetworkConfig.random_state || 42,
+        batch_size: configs.neuralNetworkConfig.batch_size || 'auto',
+        learning_rate: configs.neuralNetworkConfig.learning_rate || 'constant',
+        shuffle: configs.neuralNetworkConfig.shuffle !== undefined ? configs.neuralNetworkConfig.shuffle : true,
+        verbose: configs.neuralNetworkConfig.verbose !== undefined ? configs.neuralNetworkConfig.verbose : false,
+        warm_start: configs.neuralNetworkConfig.warm_start !== undefined ? configs.neuralNetworkConfig.warm_start : false,
+        momentum: configs.neuralNetworkConfig.momentum || 0.9,
+        nesterovs_momentum: configs.neuralNetworkConfig.nesterovs_momentum !== undefined ? configs.neuralNetworkConfig.nesterovs_momentum : true,
+        beta_1: configs.neuralNetworkConfig.beta_1 || 0.9,
+        beta_2: configs.neuralNetworkConfig.beta_2 || 0.999,
+        epsilon: configs.neuralNetworkConfig.epsilon || 1e-8,
+        n_iter_no_change: configs.neuralNetworkConfig.n_iter_no_change || 10,
+        params: {
+          ...configs.neuralNetworkConfig.params
+        }
+      };
+
+      // 验证Y列是否已选择
+      if (!requestBody.y_column) {
+        throw new Error("请选择因变量(Y列)");
+      }
+
+      const response = await fetch(`/data/${dataId}/neural_network_analysis`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        return {
+          ...result.data,
+          resultMethod: method
+        };
+      } else {
+        throw new Error(result.error || "获取神经网络分析结果失败");
+      }
     }
     // 其他分析方法可以在这里添加
     return null;

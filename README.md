@@ -13,6 +13,8 @@
 <img src="frontend/src/assets/images/logo.png" alt="Logo" width="200" align="center">
 </div>
 
+[English](README_en.md)
+
 ## 项目简介
 
 Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据分析与报告生成系统，旨在通过智能代理技术实现自动化数据处理、分析与可视化报告输出。

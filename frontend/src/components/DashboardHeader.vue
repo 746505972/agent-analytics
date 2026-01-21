@@ -137,6 +137,7 @@ export default {
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.3s;
+  height: 28px;
 }
 
 .history-button:hover {
@@ -144,6 +145,7 @@ export default {
 }
 
 .delete-history-button {
+  height: 28px;
   padding: 5px;
   background-color: #f56c6c;
   color: white;

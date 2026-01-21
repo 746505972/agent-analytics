@@ -10,27 +10,34 @@ class DataAnalysisAgent:
     负责解析用户指令、调度分析工具、生成分析报告
     """
     
-    def __init__(self):
+    def __init__(self, base_url=None, model=None):
         """
         初始化 Agent
         """
         self.tools = []
         self.agent = None
+        self.base_url = base_url or "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        self.model = model or "qwen-plus"
         self.setup_agent()
-        self.system_message ="""
-            你是一个专业的数据分析助手。你的任务是根据用户的问题，使用提供的工具来分析数据并给出专业的回答。
-            
-            你会收到以下信息：
-            1. 数据上下文信息：包含当前正在分析的文件的相关信息，如文件名、行列数、列名等
-            2. 用户问题：用户想要进行的具体分析任务
-            
-            请严格按照以下规则进行操作：
-            1. 仔细区分数据上下文信息和用户问题，不要混淆两者
-            2. 调用工具时一定要传入session_id          
-            3. 根据用户问题，结合数据上下文信息，选择合适的工具进行分析
-            4. 如果需要查看数据内容，可以使用文件读取工具
-            5. 回答时要专业、清晰、有条理
-            6. 在回答中主动提及当前分析的文件ID，让用户知道你了解上下文，但不要说出文件路径
+        self.system_message = """
+            你是一位专业的数据分析助手，负责根据用户的问题，结合数据上下文，使用工具完成分析任务。
+    
+            【输入信息】
+            1. 数据上下文：当前分析文件的基本信息，包括文件名、数据规模（行列数）、列名等
+            2. 用户问题：用户提出的具体分析需求
+            3. 分析历史（可能存在）：用户添加的分析历史记录
+    
+            【操作规则】
+            1. 严格区分数据上下文与用户问题，不混淆二者
+            2. 调用任何工具时必须传入正确的 session_id
+            3. 依据用户需求与数据上下文，选择最合适的工具进行分析
+            4. 如需查看数据内容，可优先使用文件读取工具
+            5. 回答应专业清晰、逻辑性强，突出关键发现
+            6. 在回答中主动提及当前分析的文件ID（不透露文件路径），以体现上下文感知
+            7. 单次对话调用工具不超过5次，建议分步骤引导用户深入分析
+    
+            【目标】
+            为用户提供准确、高效、可解释的数据分析结果。
             """
     
     def setup_agent(self):
@@ -40,13 +47,17 @@ class DataAnalysisAgent:
         # 初始化模型
         api_key = os.getenv("DASHSCOPE_API_KEY")
         if not api_key:
-            raise ValueError("DASHSCOPE_API_KEY 环境变量未设置")
-            
-        self.llm = ChatOpenAI(
-            api_key=api_key,
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-            model="qwen-plus"
-        )
+            # 如果环境变量未设置，将llm设为None，在使用时再检查并返回错误信息
+            self.llm = None
+            print("警告: DASHSCOPE_API_KEY 环境变量未设置，AI Agent功能将不可用")
+            # 不创建agent，因为没有可用的模型
+            self.agent = None
+        else:
+            self.llm = ChatOpenAI(
+                api_key=api_key,
+                base_url=self.base_url,
+                model=self.model
+            )
         
         # 注册各个模块的工具
         self.register_module_tools()
@@ -65,12 +76,15 @@ class DataAnalysisAgent:
         from .tools.pandas_api import register_pandas_tools
         from .tools.ml_api import register_ml_tools
         from .tools.basic_api import register_builtin_tools
+        # from .tools.search import register_search_tools
         
         # 注册各模块的工具
         register_builtin_tools(self)
         register_pandas_tools(self)
         register_ml_tools(self)
-    # TODO: 实现流式响应(DONE) & 添加分析结果上下文
+        # register_search_tools(self)
+    # DONE: 实现流式响应 & 添加分析结果上下文
+    # TODO: 减少上下文长度 & tokens count
     async def process_query_stream(self, query: str, data_context=None, session_id=None, history=None, analysis_history=None):
         """
         流式处理用户查询
@@ -185,9 +199,15 @@ class DataAnalysisAgent:
                 'data': None
             }
         except Exception as e:
-            import traceback
-            error_info = f"处理查询时发生错误，请稍后重试。"
-            print(f"处理查询时发生错误: {traceback.format_exc()}")
+            # 获取异常信息
+            error_str = str(e)
+            
+            # 检查是否是模型不存在或无权限的错误
+            if "model_not_found" in error_str or "does not exist" in error_str or "do not have access" in error_str or "404" in error_str:
+                error_info = f"模型配置错误：找不到模型或无权限访问。请检查模型名称是否正确。{e}"
+            else:
+                error_info = f"处理查询时发生错误，请稍后重试。{e}"
+            
             yield {
                 'type': 'error',
                 'data': error_info
@@ -217,25 +237,31 @@ class DataAnalysisAgent:
         return response.content
 
 class SessionTitleManager:
-    def __init__(self):
+    def __init__(self, base_url=None, model=None):
         self.llm = None
+        self.base_url = base_url or "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        self.model = model or "qwen-plus"
         self.setup_llm()
         
     def setup_llm(self):
         api_key = os.getenv("DASHSCOPE_API_KEY")
         if not api_key:
-            raise ValueError("DASHSCOPE_API_KEY 环境变量未设置")
-        
-        self.llm = ChatOpenAI(
-            api_key=api_key,
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-            model="qwen-plus"
-        )
+            print("DASHSCOPE_API_KEY 环境变量未设置")
+            self.llm = None
+        else:
+            self.llm = ChatOpenAI(
+                api_key=api_key,
+                base_url=self.base_url,
+                model=self.model
+            )
     
     def generate_session_title(self, user_query: str) -> str:
         """
         根据用户查询和数据上下文生成会话标题
         """
+        # 构造提示词，让AI生成会话标题
+        if self.llm is None:
+            return user_query[:10] + "..." if len(user_query) > 10 else user_query
         # 构造提示词，让AI生成会话标题
         prompt = f"请根据用户的数据分析需求生成一个简洁的会话标题（不超过15个字）：{user_query}。只需要返回标题，不要其他内容。"
         

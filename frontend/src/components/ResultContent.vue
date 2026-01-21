@@ -50,9 +50,29 @@
       <LogisticRegressionResult :datasetDetails="datasetDetails" />
     </div>
 
+    <!-- 决策树分析结果 -->
+    <div v-else-if="currentMethod === 'decision_tree' && datasetDetails" class="analysis-section">
+      <DecisionTreeResult :datasetDetails="datasetDetails" />
+    </div>
+
     <!-- 聚类分析结果 -->
     <div v-else-if="currentMethod === 'clustering_analysis' && datasetDetails" class="analysis-section">
       <ClusteringResult :datasetDetails="datasetDetails" />
+    </div>
+
+    <!-- 神经网络分析结果 -->
+    <div v-else-if="currentMethod === 'neural_network' && datasetDetails" class="analysis-section">
+      <NeuralNetworkResult :datasetDetails="datasetDetails" />
+    </div>
+    
+    <!-- XGBoost分析结果 -->
+    <div v-else-if="currentMethod === 'xgboost' && datasetDetails" class="analysis-section">
+      <XGBoostResult :datasetDetails="datasetDetails" />
+    </div>
+    
+    <!-- SVM分析结果 -->
+    <div v-else-if="currentMethod === 'svm' && datasetDetails" class="analysis-section">
+      <SVMResult :datasetDetails="datasetDetails" />
     </div>
 
     <!-- 词云分析结果 -->
@@ -102,6 +122,10 @@ import LinearRegressionResult from "@/components/AnalyseResult/LinearRegressionR
 import Waiting from "@/components/Waiting.vue";
 import LogisticRegressionResult from "@/components/AnalyseResult/LogisticRegressionResult.vue";
 import ClusteringResult from "@/components/AnalyseResult/ClusteringResult.vue";
+import XGBoostResult from "@/components/AnalyseResult/XGBoostResult.vue";
+import SVMResult from "./AnalyseResult/SVMResult.vue";
+import DecisionTreeResult from "@/components/AnalyseResult/DecisionTreeResult.vue";
+import NeuralNetworkResult from "./AnalyseResult/NeuralNetworkResult.vue";
 
 export default {
   name: "ResultContent",
@@ -120,7 +144,11 @@ export default {
     NonParametricTestResult,
     LinearRegressionResult,
     LogisticRegressionResult,
-    ClusteringResult
+    ClusteringResult,
+    XGBoostResult,
+    SVMResult,
+    DecisionTreeResult,
+    NeuralNetworkResult
   },
   props: {
     currentMethod: {

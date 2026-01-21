@@ -3,7 +3,7 @@ import pandas as pd
 from utils.file_manager import ensure_session_dir, read_any_file
 from typing import List
 
-def check_and_read(file_path: str, columns: List[str], session_id: str = None, select_all_cols: bool = False) -> tuple:
+def check_and_read(file_path: str, columns: List[str], session_id: str = None, select_all_cols: bool = False, ignore_text: bool = False) -> tuple:
     """
     检查文件和列的有效性，并读取数据
 
@@ -46,7 +46,7 @@ def check_and_read(file_path: str, columns: List[str], session_id: str = None, s
     # 只选择数值型列进行处理
     numeric_columns = [col for col in columns if pd.api.types.is_numeric_dtype(df[col])]
 
-    if not numeric_columns:
+    if not (numeric_columns or ignore_text):
         raise ValueError("没有有效的数值型列可供处理")
 
     return df, numeric_columns

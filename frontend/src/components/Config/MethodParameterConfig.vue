@@ -25,7 +25,7 @@
           <p>点击选择列，支持 Ctrl/Shift 多选</p>
           <p>不选则分析所有数值型列</p>
         </div>
-        <div v-else-if="['linear_regression','logistic_regression'].includes(currentMethod)">
+        <div v-else-if="['linear_regression','logistic_regression', 'xgboost', 'svm', 'decision_tree'].includes(currentMethod)">
           <div class="header">
             <h3>选择自变量 (X)</h3> <DeleteColumns @click="clearSelectedColumns" />
           </div>
@@ -39,8 +39,8 @@
           <p>点击选择一列，用于分析文本数据</p>
           <p>多选则默认分析第一列</p>
         </div>
-        <div v-else>
-          <h3>列名列表</h3>
+        <div v-else class="header">
+          <h3>列名列表</h3> <DeleteColumns @click="clearSelectedColumns" />
         </div>
 
         <ul class="column-list">
@@ -132,10 +132,34 @@
         :available-columns="selectedFileColumns"
       />
 
+      <DecisionTreeConfig
+        v-else-if="currentMethod === 'decision_tree'"
+        v-model:config="configs.decisionTreeConfig"
+        :columns="selectedFileColumns"
+      />
+
       <ClusteringConfig
         v-else-if="currentMethod === 'clustering_analysis'"
         v-model:config="configs.clusteringConfig"
         :available-columns="selectedFileColumns"
+      />
+
+      <XGBoostConfig
+        v-else-if="currentMethod === 'xgboost'"
+        v-model:config="configs.xgboostConfig"
+        :columns="selectedFileColumns"
+      />
+
+      <NeuralNetworkConfig
+        v-else-if="currentMethod === 'neural_network'"
+        v-model:config="configs.neuralNetworkConfig"
+        :columns="selectedFileColumns"
+      />
+
+      <SVMConfig
+        v-else-if="currentMethod === 'svm'"
+        v-model:config="configs.svmConfig"
+        :columns="selectedFileColumns"
       />
 
       <WordCloudConfig
@@ -176,11 +200,19 @@ import Waiting from "@/components/Waiting.vue";
 import LogisticRegressionConfig from "@/components/Config/LogisticRegressionConfig.vue";
 import DeleteColumns from "@/components/DeleteColumns.vue";
 import ClusteringConfig from "@/components/Config/ClusteringConfig.vue";
+import XGBoostConfig from "@/components/Config/XGBoostConfig.vue";
+import SVMConfig from "@/components/Config/SVMConfig.vue";
+import DecisionTreeConfig from "@/components/Config/DecisionTreeConfig.vue";
+import NeuralNetworkConfig from "@/components/Config/NeuralNetworkConfig.vue";
 
 export default {
   name: "MethodParameterConfig",
   components: {
+    NeuralNetworkConfig,
+    DecisionTreeConfig,
     ClusteringConfig,
+    XGBoostConfig,
+    SVMConfig,
     DeleteColumns,
     Waiting,
     ChiSquareTestConfig,
@@ -268,7 +300,11 @@ export default {
         'non_parametric_test',
         'linear_regression',
         'logistic_regression',
-        'clustering_analysis'
+        'clustering_analysis',
+        'xgboost',
+        'svm',
+        'decision_tree',
+        'neural_network'
       ]
     };
   },
