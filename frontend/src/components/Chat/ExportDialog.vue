@@ -12,12 +12,12 @@
             <h4>选择导出格式</h4>
             <div class="format-options">
               <label class="radio-option">
-                <input type="radio" v-model="exportFormat" value="pdf" />
-                PDF
-              </label>
-              <label class="radio-option">
                 <input type="radio" v-model="exportFormat" value="docx" />
                 Word
+              </label>
+              <label class="radio-option">
+                <input type="radio" v-model="exportFormat" value="pdf" />
+                PDF
               </label>
             </div>
           </div>
@@ -26,6 +26,10 @@
             <label class="checkbox-label">
               <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" />
               全选
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="isShowingRole"/>
+              显示角色
             </label>
           </div>
         </div>
@@ -44,10 +48,10 @@
                   :value="index" 
                   v-model="selectedMessages" 
                 />
-                <div class="message-preview">
-                  <span class="message-role">{{ message.type === 'sent' ? 'user' : model }}:</span>
-                  <div v-html="renderMarkdown(message.content)"></div>
-                </div>
+                <span class="message-preview" :id="'message-preview-' + index">
+                  <span v-if="isShowingRole" class="message-role">{{ message.type === 'sent' ? 'user' : model }}:</span>
+                  <span class="message" v-html="renderMarkdown(message.content)"></span>
+                </span>
               </label>
             </div>
           </div>
@@ -68,6 +72,7 @@
 import { jsPDF } from 'jspdf';
 import { Document, Paragraph, TextRun, Packer } from 'docx';
 import { marked } from 'marked';
+import html2canvas from "html2canvas";
 
 export default {
   name: 'ExportDialog',
@@ -88,9 +93,10 @@ export default {
   emits: ['update:isShowingExportDialog'],
   data() {
     return {
-      exportFormat: 'pdf', // 默认导出格式
+      exportFormat: 'docx', // 默认导出格式
       selectedMessages: [], // 选中的消息索引
-      selectAll: false
+      selectAll: false,
+      isShowingRole: true
     }
   },
   watch: {
@@ -139,17 +145,19 @@ export default {
     async handleExport() {
       if (this.selectedMessages.length === 0) return;
 
-      const selectedMsgs = this.selectedMessages
-        .map(index => this.messages[index])
-        .map(msg => ({
-          role: msg.type === 'sent' ? 'user' : this.model,
-          content: msg.content
-        }))
-        .filter(Boolean);
+      // 排序
+      this.selectedMessages.sort((a, b) => a - b);
 
       if (this.exportFormat === 'pdf') {
-        await this.exportToPdf(selectedMsgs);
+        await this.exportToPdf(this.selectedMessages);
       } else if (this.exportFormat === 'docx') {
+        const selectedMsgs = this.selectedMessages
+          .map(index => this.messages[index])
+          .map(msg => ({
+            role: msg.type === 'sent' ? 'user' : this.model,
+            content: msg.content
+          }))
+          .filter(Boolean);
         await this.exportToDocx(selectedMsgs);
       }
 
@@ -157,54 +165,70 @@ export default {
       this.$emit('update:isShowingExportDialog', !this.isShowingExportDialog);
     },
 
-    async exportToPdf(messages) {
+    async exportToPdf(messageIDs) {
       const pdf = new jsPDF();
-
-      let yPosition = 20;
-      pdf.setFontSize(12);
-
-      messages.forEach((msg, index) => {
-        const roleText = `${msg.role}: `;
-        const fullText = `${roleText}${msg.content}`;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const maxWidth = pageWidth - margin * 2;
+      
+      let yPosition = margin;
+      
+      for (let i = 0; i < messageIDs.length; i++) {
+        const element = document.getElementById('message-preview-' + messageIDs[i]);
         
-        // 添加角色
-        pdf.setFont(undefined, 'bold');
-        pdf.text(roleText, 10, yPosition);
+        // 计算元素在PDF中的尺寸
+        const elementWidth = element.offsetWidth;
+        const elementHeight = element.offsetHeight;
         
-        // 计算内容起始位置
-        const roleWidth = pdf.getTextWidth(roleText);
-        const startX = 10 + roleWidth;
+        // 根据原始宽高比计算缩放后的尺寸
+        let scaledWidth = maxWidth;
+        let scaledHeight = (elementHeight * maxWidth) / elementWidth;
         
-        // 添加内容（自动换行）
-        const contentLines = pdf.splitTextToSize(msg.content, 180 - roleWidth);
-        pdf.setFont(undefined, 'normal');
+        // 如果当前页面空间不足，则添加新页面
+        if (yPosition + scaledHeight > pageHeight - margin && i > 0) {
+          pdf.addPage();
+          yPosition = margin;
+        }
         
-        contentLines.forEach((line, lineIndex) => {
-          if (yPosition > 280) { // 如果快到底部则添加新页面
-            pdf.addPage();
-            yPosition = 20;
-          }
-          
-          if (lineIndex === 0) {
-            pdf.text(line, startX, yPosition);
-          } else {
-            pdf.text(line, 10, yPosition);
-          }
-          yPosition += 10;
+        // 如果单个元素高度超过页面剩余空间，需要调整或分割
+        if (scaledHeight > pageHeight - margin * 2) {
+          // 对于超长元素，保持比例但限制最大高度
+          scaledHeight = pageHeight - margin * 2;
+          scaledWidth = (elementWidth * scaledHeight) / elementHeight;
+        }
+        
+        // 检查是否需要新页面（确保有足够的空间）
+        if (yPosition + scaledHeight > pageHeight - margin) {
+          pdf.addPage();
+          yPosition = margin;
+        }
+        
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          scrollX: 0,
+          scrollY: 0
         });
         
-        yPosition += 10; // 消息间距
+        const imgData = canvas.toDataURL('image/png');
         
-        if (yPosition > 280 && index < messages.length - 1) { // 不是最后一个消息且需要新页
-          pdf.addPage();
-          yPosition = 20;
+        // 将元素渲染为图像并添加到PDF
+        pdf.addImage(imgData, 'PNG', margin, yPosition, scaledWidth, scaledHeight);
+        
+        // 更新Y位置
+        yPosition += scaledHeight + 5; // 添加一些间距
+        
+        // 如果到达页面底部，重置yPosition以开始新页面
+        if (yPosition >= pageHeight - margin) {
+          yPosition = margin;
         }
-      });
-
-      // 保存PDF
+      }
+      
       pdf.save(`chat_export_${new Date().toISOString().slice(0, 19)}.pdf`);
-    },
 
+    },
+    
     async exportToDocx(messages) {
       const docMessages = messages.map(msg => {
         return new Paragraph({
@@ -335,10 +359,13 @@ export default {
   align-items: center;
   gap: 5px;
   cursor: pointer;
+  user-select: none;
 }
 
 .select-all-section {
   margin-top: 15px;
+  display: flex;
+  gap: 20px
 }
 
 .checkbox-label {
@@ -346,6 +373,7 @@ export default {
   align-items: center;
   gap: 5px;
   cursor: pointer;
+  user-select: none;
 }
 
 .messages-container h4 {
@@ -387,12 +415,6 @@ export default {
   margin-right: 8px;
 }
 
-.message-text {
-  word-break: break-word;
-  white-space: pre-wrap;
-  color: #606266;
-}
-
 .export-footer {
   display: flex;
   justify-content: flex-end;
@@ -431,5 +453,61 @@ export default {
 .btn-export:disabled {
   background-color: #a0cfff;
   cursor: not-allowed;
+}
+
+/* Markdown 表格样式 */
+.message :deep(table) {
+  border-collapse: collapse;
+  margin: 15px 0;
+  font-size: 0.9em;
+  font-family: sans-serif;
+  min-width: 400px;
+  border: 1px solid #e0e0e0;
+  border-radius: 0;
+}
+
+.message :deep(table th),
+.message :deep(table td) {
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  text-align: left;
+}
+
+.message :deep(table th) {
+  background-color: #f5f7fa;
+  font-weight: 600;
+}
+
+.message :deep(table tbody tr:nth-of-type(even)) {
+  background-color: #f8f9fa;
+}
+
+.message :deep(table tbody tr:hover) {
+  background-color: #f0f2f5;
+}
+
+/* Markdown 代码块样式 */
+.message :deep(code) {
+  background-color: #f6f8fa;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 0.875em;
+  font-family: 'SFMono-Regular', Consolas, 'Courier New', monospace;
+  color: #24292f;
+}
+
+.message :deep(pre) {
+  background-color: #f6f8fa;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  border: 1px solid #d0d7de;
+}
+
+.message :deep(pre code) {
+  background-color: transparent;
+  padding: 0;
+  font-size: 0.875em;
+  color: #24292f;
 }
 </style>
