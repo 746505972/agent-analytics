@@ -230,17 +230,28 @@ export default {
     },
     
     async exportToDocx(messages) {
-      const docMessages = messages.map(msg => {
-        return new Paragraph({
-          children: [
-            new TextRun({
-              text: `${msg.role}: `,
-              bold: true
-            }),
-            new TextRun(msg.content)
-          ]
-        });
-      });
+      const docMessages = [];
+      
+      for (const msg of messages) {
+        if (this.isShowingRole) {
+          // 如果显示角色，则创建角色段落
+          docMessages.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${msg.role}:`,
+                  bold: true
+                })
+              ],
+              spacing: { after: 100 } // 角色行下方留一点间距
+            })
+          );
+        }
+        
+        // 解析markdown内容并转换为docx段落
+        const parsedContent = await this.parseMarkdownToDocx(msg.content);
+        docMessages.push(...parsedContent);
+      }
 
       const doc = new Document({
         sections: [{
@@ -264,6 +275,192 @@ export default {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       }, 100);
+    },
+    
+    // 将markdown内容转换为docx段落
+    parseMarkdownToDocx(markdown) {
+      const docMessages = [];
+      
+      // 使用marked解析markdown为tokens
+      const tokens = marked.lexer(markdown);
+      
+      for (const token of tokens) {
+        switch (token.type) {
+          case 'paragraph':
+            docMessages.push(new Paragraph({
+              children: this.parseInlineMarkdown(token.text)
+            }));
+            break;
+          case 'heading':
+            docMessages.push(new Paragraph({
+              children: [new TextRun({
+                text: token.text,
+                bold: true,
+                size: 16 - (token.depth - 1) * 2 // 标题级别越大，字体越小
+              })],
+              heading: `heading_${token.depth}`
+            }));
+            break;
+          case 'list':
+            token.items.forEach((item, index) => {
+              docMessages.push(new Paragraph({
+                children: this.parseInlineMarkdown(item.text.replace(/^\s*[\*\+\-]\s*/, '')),
+                bullet: { level: 0 }
+              }));
+            });
+            break;
+          case 'code':
+            docMessages.push(new Paragraph({
+              children: [new TextRun({
+                text: token.code || token.text,
+                fontFamily: 'Courier New'
+              })],
+              indent: { left: 720 } // 左缩进
+            }));
+            break;
+          case 'table':
+            // 处理表格
+            const tableRows = [];
+            // 表头
+            const headerRow = [];
+            token.header.forEach(cell => {
+              headerRow.push(cell);
+            });
+            
+            // 表体
+            const bodyRows = [];
+            token.rows.forEach(row => {
+              const cells = [];
+              row.forEach(cell => {
+                cells.push(cell);
+              });
+              bodyRows.push(cells);
+            });
+            
+            // 这里我们简化处理，将表格转换为文本形式
+            // 表头
+            docMessages.push(new Paragraph({
+              children: [new TextRun({
+                text: '| ' + headerRow.join(' | ') + ' |',
+                bold: true
+              })]
+            }));
+            
+            // 分隔线
+            docMessages.push(new Paragraph({
+              children: [new TextRun('| ' + headerRow.map(() => '---').join(' | ') + ' |')]
+            }));
+            
+            // 表体
+            bodyRows.forEach(row => {
+              docMessages.push(new Paragraph({
+                children: [new TextRun('| ' + row.join(' | ') + ' |')]
+              }));
+            });
+            
+            break;
+          default:
+            // 对于其他类型的token，作为普通段落处理
+            if (token.text) {
+              docMessages.push(new Paragraph({
+                children: this.parseInlineMarkdown(token.text)
+              }));
+            }
+            break;
+        }
+      }
+      
+      return docMessages;
+    },
+    
+    // 解析行内markdown格式，返回TextRun数组
+    parseInlineMarkdown(text) {
+      // 定义正则表达式来匹配不同的markdown格式
+      const rules = [
+        // 匹配粗体 **text** 或 __text__
+        { regex: /\*\*(.*?)\*\*/g, type: 'bold' },
+        { regex: /__(.*?)__/g, type: 'bold' },
+        // 匹配斜体 *text* 或 _text_
+        { regex: /\*(.*?)\*/g, type: 'italic' },
+        { regex: /_(.*?)_/g, type: 'italic' },
+        // 匹配行内代码 `code`
+        { regex: /`(.*?)`/g, type: 'code' }
+      ];
+      
+      // 创建TextRun数组
+      let parts = [{ text, formatting: {} }];
+      
+      // 应用所有格式规则
+      for (const rule of rules) {
+        const newParts = [];
+        
+        for (const part of parts) {
+          if (part.formatting[rule.type]) {
+            // 如果已经有此格式，跳过
+            newParts.push(part);
+            continue;
+          }
+          
+          let remainingText = part.text;
+          let lastIndex = 0;
+          let match;
+          
+          while ((match = rule.regex.exec(remainingText)) !== null) {
+            // 添加匹配前的文本
+            if (match.index > lastIndex) {
+              newParts.push({
+                text: remainingText.substring(lastIndex, match.index),
+                formatting: { ...part.formatting }
+              });
+            }
+            
+            // 添加匹配的文本，带格式
+            const newFormatting = { ...part.formatting };
+            newFormatting[rule.type] = true;
+            
+            newParts.push({
+              text: match[1],
+              formatting: newFormatting
+            });
+            
+            lastIndex = match.index + match[0].length;
+            rule.regex.lastIndex = lastIndex; // 重置正则表达式的lastIndex
+          }
+          
+          // 添加剩余文本
+          if (lastIndex < remainingText.length) {
+            newParts.push({
+              text: remainingText.substring(lastIndex),
+              formatting: { ...part.formatting }
+            });
+          }
+          
+          parts = newParts;
+        }
+      }
+      
+      // 将parts转换为TextRun对象
+      return parts.map(part => {
+        const options = {};
+        
+        if (part.formatting.bold) {
+          options.bold = true;
+        }
+        if (part.formatting.italic) {
+          options.italic = true;
+        }
+        if (part.formatting.code) {
+          options.fontFamily = 'Courier New';
+          options.color = {
+            rgb: 'C0C0C0'
+          };
+        }
+        
+        return new TextRun({
+          text: part.text,
+          ...options
+        });
+      });
     }
   },
   
