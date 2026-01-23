@@ -70,7 +70,6 @@
 
 <script>
 import { jsPDF } from 'jspdf';
-import {Document, Paragraph, TextRun, Packer, HeadingLevel} from 'docx';
 import { marked } from 'marked';
 import html2canvas from "html2canvas";
 
@@ -230,272 +229,65 @@ export default {
     },
     
     async exportToDocx(messages) {
-      const docMessages = [];
+      // 构建HTML内容
+      let htmlContent = '';
       
       for (const msg of messages) {
         if (this.isShowingRole) {
-          // 如果显示角色，则创建角色段落
-          docMessages.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `${msg.role}:`,
-                  bold: true,
-                })
-              ],
-              heading: HeadingLevel.HEADING_1,
-            })
-          );
+          // 添加角色信息
+          htmlContent += `<h1>${msg.role}:</h1>`;
         }
-        // 解析markdown内容并转换为docx段落
-        const parsedContent = this.parseMarkdownToDocx(msg.content);
-        docMessages.push(...parsedContent);
+        
+        // 使用marked解析markdown内容
+        const renderedHtml = await marked.parse(msg.content);
+        htmlContent += renderedHtml;
+        
+        // 在每条消息之间添加间隔
+        htmlContent += '<hr style="margin: 15px 0;"/>';
       }
-
-      const doc = new Document({
-        sections: [{
-          properties: {},
-          children: docMessages
-        }]
+      
+      // 构建完整的HTML文档
+      const fullHtml = `
+        <html
+              xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="utf-8">
+            <title>Chat Export</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 40px; }
+              h1 { color: #409eff; font-size: 1.2em; }
+              table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f5f7fa; font-weight: bold; }
+              code { background-color: #f6f8fa; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+              pre { background-color: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
+              blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 16px; color: #666; }
+              ul, ol { padding-left: 20px; }
+              li { margin: 5px 0; }
+              hr { border: 0; border-top: 1px solid #ccc; margin: 15px 0; }
+            </style>
+          </head>
+          <body>
+            ${htmlContent}
+          </body>
+        </html>
+      `;
+      
+      // 创建Blob对象
+      const blob = new Blob(['\ufeff', fullHtml], {
+        type: 'application/msword'
       });
-
-      // 生成并下载
-      const blob = await Packer.toBlob(doc);
-      const url = URL.createObjectURL(blob);
       
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `chat_export_${new Date().toISOString().slice(0, 19)}.docx`;
-      document.body.appendChild(a);
-      a.click();
+      // 创建并触发下载
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `chat_export_${new Date().toISOString().slice(0, 19)}.doc`;
+      document.body.appendChild(link);
+      link.click();
       
-      // 清理
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
-    },
-    
-    // 将markdown内容转换为docx段落
-    parseMarkdownToDocx(markdown) {
-      const docMessages = [];
-      
-      // 使用marked解析markdown为tokens
-      const tokens = marked.lexer(markdown);
-      console.log(tokens);
-      for (const token of tokens) {
-
-        switch (token.type) {
-          case 'paragraph':
-            docMessages.push(new Paragraph({
-              children: this.parseInlineMarkdown(token.text || '')
-            }));
-            break;
-          case 'heading':
-            docMessages.push(new Paragraph({
-              children: [new TextRun({
-                text: token.text || '',
-                bold: true,
-                size: 16 - (token.depth - 1) * 2 // 标题级别越大，字体越小
-              })],
-              heading: `heading_${token.depth}`
-            }));
-            break;
-          case 'list':
-            if (token.items) {
-              token.items.forEach((item, index) => {
-                docMessages.push(new Paragraph({
-                  children: this.parseInlineMarkdown((item.text || '').replace(/^\s*[\*\+\-]\s*/, '')),
-                  bullet: { level: 0 }
-                }));
-              });
-            }
-            break;
-          case 'code':
-            docMessages.push(new Paragraph({
-              children: [new TextRun({
-                text: token.code || token.text || '',
-                fontFamily: 'Courier New'
-              })],
-              indent: { left: 720 } // 左缩进
-            }));
-            break;
-          case 'table':
-            // 处理表格
-            const tableRows = [];
-            // 表头
-            const headerRow = [];
-            if (token.header) {
-              token.header.forEach(cell => {
-                headerRow.push(cell);
-              });
-            }
-            
-            // 表体
-            const bodyRows = [];
-            if (token.rows) {
-              token.rows.forEach(row => {
-                const cells = [];
-                row.forEach(cell => {
-                  cells.push(cell);
-                });
-                bodyRows.push(cells);
-              });
-            }
-            
-            // 这里我们简化处理，将表格转换为文本形式
-            // 表头
-            if (headerRow.length > 0) {
-              docMessages.push(new Paragraph({
-                children: [new TextRun({
-                  text: '| ' + headerRow.join(' | ') + ' |',
-                  bold: true
-                })]
-              }));
-              
-              // 分隔线
-              docMessages.push(new Paragraph({
-                children: [new TextRun('| ' + headerRow.map(() => '---').join(' | ') + ' |')]
-              }));
-            }
-            
-            // 表体
-            bodyRows.forEach(row => {
-              docMessages.push(new Paragraph({
-                children: [new TextRun('| ' + row.join(' | ') + ' |')]
-              }));
-            });
-            
-            break;
-          case 'space':
-            // 处理空格，插入换行
-            if (token.raw) {
-              docMessages.push(new Paragraph({
-                children: [new TextRun({
-                  text: token.raw
-                })]
-              }));
-            }
-            break;
-          default:
-            // 对于其他类型的token，作为普通段落处理
-            if (token.text !== undefined) {
-              docMessages.push(new Paragraph({
-                children: this.parseInlineMarkdown(token.text || '')
-              }));
-            } else if (token.raw) {
-              // 如果没有text属性但有raw属性，使用raw
-              docMessages.push(new Paragraph({
-                children: this.parseInlineMarkdown(token.raw || '')
-              }));
-            }
-            break;
-        }
-      }
-      
-      return docMessages;
-    },
-    
-    // 解析行内markdown格式，返回TextRun数组
-    parseInlineMarkdown(text) {
-      // 确保text是字符串类型
-      if (typeof text !== 'string') {
-        text = String(text);
-      }
-      
-      // 定义正则表达式来匹配不同的markdown格式
-      const rules = [
-        // 匹配粗体 **text** 或 __text__
-        { regex: /\*\*(.*?)\*\*/g, type: 'bold' },
-        { regex: /__(.*?)__/g, type: 'bold' },
-        // 匹配斜体 *text* 或 _text_
-        { regex: /\*(.*?)\*/g, type: 'italic' },
-        { regex: /_(.*?)_/g, type: 'italic' },
-        // 匹配行内代码 `code`
-        { regex: /`(.*?)`/g, type: 'code' }
-      ];
-      
-      // 创建TextRun数组
-      let parts = [{ text, formatting: {} }];
-      
-      // 应用所有格式规则
-      for (const rule of rules) {
-        const newParts = [];
-        
-        for (const part of parts) {
-          if (part.formatting[rule.type]) {
-            // 如果已经有此格式，跳过
-            newParts.push(part);
-            continue;
-          }
-          
-          // 确保 part.text 是字符串
-          let remainingText = typeof part.text === 'string' ? part.text : String(part.text);
-          let lastIndex = 0;
-          let match;
-          
-          while ((match = rule.regex.exec(remainingText)) !== null) {
-            // 添加匹配前的文本
-            if (match.index > lastIndex) {
-              newParts.push({
-                text: remainingText.substring(lastIndex, match.index),
-                formatting: { ...part.formatting }
-              });
-            }
-            
-            // 添加匹配的文本，带格式
-            const newFormatting = { ...part.formatting };
-            newFormatting[rule.type] = true;
-            
-            // 确保 match[1] 存在
-            const matchedText = match[1] || '';
-            
-            newParts.push({
-              text: matchedText,
-              formatting: newFormatting
-            });
-            
-            lastIndex = match.index + match[0].length;
-            rule.regex.lastIndex = lastIndex; // 重置正则表达式的lastIndex
-          }
-          
-          // 添加剩余文本
-          if (lastIndex < remainingText.length) {
-            newParts.push({
-              text: remainingText.substring(lastIndex),
-              formatting: { ...part.formatting }
-            });
-          }
-          
-          parts = newParts;
-        }
-      }
-      
-      // 将parts转换为TextRun对象
-      return parts.map(part => {
-        const options = {};
-        
-        if (part.formatting.bold) {
-          options.bold = true;
-        }
-        if (part.formatting.italic) {
-          options.italic = true;
-        }
-        if (part.formatting.code) {
-          options.fontFamily = 'Courier New';
-          options.color = {
-            rgb: 'C0C0C0'
-          };
-        }
-        
-        // 确保 part.text 是字符串
-        const textValue = typeof part.text === 'string' ? part.text : String(part.text);
-        
-        return new TextRun({
-          text: textValue,
-          ...options
-        });
-      });
+      // 清理DOM元素
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
     }
   },
   
