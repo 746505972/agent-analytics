@@ -148,26 +148,17 @@ export default {
 
       // 排序
       this.selectedMessages.sort((a, b) => a - b);
-
-      if (this.exportFormat === 'pdf') {
-        await this.exportToPdf(this.selectedMessages);
-      } else {
-        const selectedMsgs = this.selectedMessages
-          .map(index => this.messages[index])
-          .map(msg => ({
-            role: msg.type === 'sent' ? 'user' : this.model,
-            content: msg.content
-          }))
-          .filter(Boolean);
-        await this.exportToDocx(selectedMsgs, this.exportFormat);
-      }
+      await this.exportUnified(this.selectedMessages, this.exportFormat);
 
       // 导出完成后关闭对话框
       this.$emit('update:isShowingExportDialog', !this.isShowingExportDialog);
     },
 
-    async exportToPdf(messageIDs) {
-      // 复用exportToDocx中的HTML构建逻辑
+    async exportUnified(messageIDs, format) {
+      // 构建HTML内容
+      let htmlContent = '';
+      
+      // 获取选中的消息
       const selectedMsgs = messageIDs
         .map(index => this.messages[index])
         .map(msg => ({
@@ -175,9 +166,6 @@ export default {
           content: msg.content
         }))
         .filter(Boolean);
-      
-      // 构建HTML内容
-      let htmlContent = '';
       
       for (const msg of selectedMsgs) {
         if (this.isShowingRole) {
@@ -224,101 +212,59 @@ export default {
         </html>
       `;
       
-      // 创建一个隐藏的iframe用于打印
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.right = '0';
-      iframe.style.bottom = '0';
-      iframe.style.width = '0';
-      iframe.style.height = '0';
-      iframe.style.border = 'none';
-      iframe.style.zIndex = '-1';
-      iframe.srcdoc = fullHtml;
-      
-      iframe.onload = () => {
-        // 延迟执行以确保内容完全加载
-        setTimeout(() => {
-          iframe.contentWindow.focus();
-          iframe.contentWindow.print();
-          
-          // 打印完成后移除iframe
+      if (format === 'pdf') {
+        // 创建一个隐藏的iframe用于打印
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        iframe.style.zIndex = '-1';
+        iframe.srcdoc = fullHtml;
+        
+        iframe.onload = () => {
+          // 延迟执行以确保内容完全加载
           setTimeout(() => {
-            document.body.removeChild(iframe);
-          }, 1000);
-        }, 500);
-      };
-      
-      document.body.appendChild(iframe);
-    },
-    
-    async exportToDocx(messages, format) {
-      // 构建HTML内容
-      let htmlContent = '';
-      
-      for (const msg of messages) {
-        if (this.isShowingRole) {
-          // 添加角色信息
-          htmlContent += `<h1>${msg.role}:</h1>`;
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+            
+            // 打印完成后移除iframe
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+            }, 1000);
+          }, 500);
+        };
+        
+        document.body.appendChild(iframe);
+      } else {
+        // 处理HTML和DOCX格式
+        let mimeType, fileName;
+        
+        if (format === 'html') {
+          mimeType = 'text/html';
+          fileName = `chat_export_${new Date().toISOString().slice(0, 19)}.html`;
+        } else { // doc
+          mimeType = 'application/msword';
+          fileName = `chat_export_${new Date().toISOString().slice(0, 19)}.doc`;
         }
         
-        // 使用marked解析markdown内容
-        const renderedHtml = await marked.parse(msg.content);
-        htmlContent += renderedHtml;
+        // 创建Blob对象
+        const blob = new Blob(['\ufeff', fullHtml], { type: mimeType });
+        
+        // 创建并触发下载
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        
+        // 清理DOM元素
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
       }
-      
-      // 构建完整的HTML文档
-      const fullHtml = `
-        <html
-              xmlns="http://www.w3.org/TR/REC-html40">
-          <head>
-            <meta charset="utf-8">
-            <title>Chat Export</title>
-            <style>
-              body { font-family: Arial, sans-serif; margin: 20px; }
-              h1 { color: #409eff; font-size: 1.2em; }
-              table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-              th { background-color: #f5f7fa; font-weight: bold; }
-              code { background-color: #f6f8fa; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
-              pre { background-color: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
-              blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 16px; color: #666; }
-              ul, ol { padding-left: 20px; }
-              li { margin: 5px 0; }
-              hr { border: 0; border-top: 1px solid #ccc; margin: 15px 0; }
-            </style>
-          </head>
-          <body>
-            ${htmlContent}
-          </body>
-        </html>
-      `;
-      
-      let mimeType, fileExtension, fileName;
-      
-      if (format === 'html') {
-        mimeType = 'text/html';
-        fileExtension = 'html';
-        fileName = `chat_export_${new Date().toISOString().slice(0, 19)}.html`;
-      } else { // 默认为doc格式
-        mimeType = 'application/msword';
-        fileExtension = 'doc';
-        fileName = `chat_export_${new Date().toISOString().slice(0, 19)}.doc`;
-      }
-      
-      // 创建Blob对象
-      const blob = new Blob(['\ufeff', fullHtml], { type: mimeType });
-      
-      // 创建并触发下载
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      document.body.appendChild(link);
-      link.click();
-      
-      // 清理DOM元素
-      document.body.removeChild(link);
-      URL.revokeObjectURL(link.href);
-    }
+    },
   },
   
   mounted() {
