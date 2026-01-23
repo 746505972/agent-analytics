@@ -14,8 +14,11 @@
   "description": "",
   "dependencies": {
     "axios": "^1.13.2",
+    "docx": "^9.5.1",
     "echarts": "^6.0.0",
     "echarts-stat": "^1.2.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.0.0",
     "katex": "^0.16.27",
     "marked": "^17.0.0",
     "vue": "^3.5.24",

@@ -4,7 +4,8 @@
       v-model:is-showing-history="isShowingHistory"
       v-model:base-url="baseUrl"
       v-model:model="model"
-      @createNewSession="createNewSession" 
+      v-model:is-showing-export-dialog="isShowingExportDialog"
+      @createNewSession="createNewSession"
     />
     <!-- 历史记录视图 -->
     <div v-if="isShowingHistory" class="chat-box">
@@ -84,6 +85,11 @@
       </div>
     </div>
   </div>
+  <ExportDialog
+      v-model:is-showing-export-dialog="isShowingExportDialog"
+      :messages="chatMessages"
+      :model="model"
+  />
 </template>
 
 <script>
@@ -97,12 +103,13 @@ import clickOutside from "@/utils/clickOutside";
 import HistoryButtons from "@/components/Chat/HistoryButtons.vue";
 import AnalysisHistoryDropdown from "@/components/Chat/AnalysisHistoryDropdown.vue";
 import MessageMeta from "@/components/Chat/MessageMeta.vue";
+import ExportDialog from "@/components/Chat/ExportDialog.vue";
 
 export default {
   name: "ChatAssistant",
   components: {
-    MessageMeta, AnalysisHistoryDropdown, ChatHeader, HistoryView,
-    HistoryButtons, FileUploadWrapper, SendButton},
+    ExportDialog, MessageMeta, AnalysisHistoryDropdown, ChatHeader,
+    HistoryView, HistoryButtons, FileUploadWrapper, SendButton},
   directives: {clickOutside},
   props: {
     selectedFile: {
@@ -126,7 +133,8 @@ export default {
       sessions: [],
       currentSessionId: null,
       isWaitingForResponse: false,
-      isShowingHistory: false, // 新增：是否显示历史记录视图
+      isShowingHistory: false, // 是否显示历史记录视图
+      isShowingExportDialog: false, // 是否显示导出对话框
       showHistoryDropdown: false,
       selectedAnalysisHistory: [],
       baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
@@ -369,7 +377,7 @@ export default {
               console.log('请求已被中断');
               break;
             }
-
+            
             const { value, done: readerDone } = await reader.read();
             done = readerDone;
             
@@ -473,7 +481,7 @@ export default {
       }
       this.isWaitingForResponse = false;
     },
-
+    
     // 复制消息文本
     copyMessageText(text) {
       // 检查 Clipboard API 是否可用
@@ -593,7 +601,7 @@ export default {
     onAddClick() {
       this.showHistoryDropdown = !this.showHistoryDropdown;
     },
-
+    
     // 选择分析历史
     selectAnalysisHistory(historyItem) {
       // 检查是否已经选择过这个历史项
