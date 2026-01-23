@@ -70,7 +70,7 @@
 
 <script>
 import { jsPDF } from 'jspdf';
-import { Document, Paragraph, TextRun, Packer } from 'docx';
+import {Document, Paragraph, TextRun, Packer, HeadingLevel} from 'docx';
 import { marked } from 'marked';
 import html2canvas from "html2canvas";
 
@@ -240,16 +240,15 @@ export default {
               children: [
                 new TextRun({
                   text: `${msg.role}:`,
-                  bold: true
+                  bold: true,
                 })
               ],
-              spacing: { after: 100 } // 角色行下方留一点间距
+              heading: HeadingLevel.HEADING_1,
             })
           );
         }
-        
         // 解析markdown内容并转换为docx段落
-        const parsedContent = await this.parseMarkdownToDocx(msg.content);
+        const parsedContent = this.parseMarkdownToDocx(msg.content);
         docMessages.push(...parsedContent);
       }
 
@@ -283,18 +282,19 @@ export default {
       
       // 使用marked解析markdown为tokens
       const tokens = marked.lexer(markdown);
-      
+      console.log(tokens);
       for (const token of tokens) {
+
         switch (token.type) {
           case 'paragraph':
             docMessages.push(new Paragraph({
-              children: this.parseInlineMarkdown(token.text)
+              children: this.parseInlineMarkdown(token.text || '')
             }));
             break;
           case 'heading':
             docMessages.push(new Paragraph({
               children: [new TextRun({
-                text: token.text,
+                text: token.text || '',
                 bold: true,
                 size: 16 - (token.depth - 1) * 2 // 标题级别越大，字体越小
               })],
@@ -302,17 +302,19 @@ export default {
             }));
             break;
           case 'list':
-            token.items.forEach((item, index) => {
-              docMessages.push(new Paragraph({
-                children: this.parseInlineMarkdown(item.text.replace(/^\s*[\*\+\-]\s*/, '')),
-                bullet: { level: 0 }
-              }));
-            });
+            if (token.items) {
+              token.items.forEach((item, index) => {
+                docMessages.push(new Paragraph({
+                  children: this.parseInlineMarkdown((item.text || '').replace(/^\s*[\*\+\-]\s*/, '')),
+                  bullet: { level: 0 }
+                }));
+              });
+            }
             break;
           case 'code':
             docMessages.push(new Paragraph({
               children: [new TextRun({
-                text: token.code || token.text,
+                text: token.code || token.text || '',
                 fontFamily: 'Courier New'
               })],
               indent: { left: 720 } // 左缩进
@@ -323,33 +325,39 @@ export default {
             const tableRows = [];
             // 表头
             const headerRow = [];
-            token.header.forEach(cell => {
-              headerRow.push(cell);
-            });
+            if (token.header) {
+              token.header.forEach(cell => {
+                headerRow.push(cell);
+              });
+            }
             
             // 表体
             const bodyRows = [];
-            token.rows.forEach(row => {
-              const cells = [];
-              row.forEach(cell => {
-                cells.push(cell);
+            if (token.rows) {
+              token.rows.forEach(row => {
+                const cells = [];
+                row.forEach(cell => {
+                  cells.push(cell);
+                });
+                bodyRows.push(cells);
               });
-              bodyRows.push(cells);
-            });
+            }
             
             // 这里我们简化处理，将表格转换为文本形式
             // 表头
-            docMessages.push(new Paragraph({
-              children: [new TextRun({
-                text: '| ' + headerRow.join(' | ') + ' |',
-                bold: true
-              })]
-            }));
-            
-            // 分隔线
-            docMessages.push(new Paragraph({
-              children: [new TextRun('| ' + headerRow.map(() => '---').join(' | ') + ' |')]
-            }));
+            if (headerRow.length > 0) {
+              docMessages.push(new Paragraph({
+                children: [new TextRun({
+                  text: '| ' + headerRow.join(' | ') + ' |',
+                  bold: true
+                })]
+              }));
+              
+              // 分隔线
+              docMessages.push(new Paragraph({
+                children: [new TextRun('| ' + headerRow.map(() => '---').join(' | ') + ' |')]
+              }));
+            }
             
             // 表体
             bodyRows.forEach(row => {
@@ -359,11 +367,26 @@ export default {
             });
             
             break;
+          case 'space':
+            // 处理空格，插入换行
+            if (token.raw) {
+              docMessages.push(new Paragraph({
+                children: [new TextRun({
+                  text: token.raw
+                })]
+              }));
+            }
+            break;
           default:
             // 对于其他类型的token，作为普通段落处理
-            if (token.text) {
+            if (token.text !== undefined) {
               docMessages.push(new Paragraph({
-                children: this.parseInlineMarkdown(token.text)
+                children: this.parseInlineMarkdown(token.text || '')
+              }));
+            } else if (token.raw) {
+              // 如果没有text属性但有raw属性，使用raw
+              docMessages.push(new Paragraph({
+                children: this.parseInlineMarkdown(token.raw || '')
               }));
             }
             break;
@@ -375,6 +398,11 @@ export default {
     
     // 解析行内markdown格式，返回TextRun数组
     parseInlineMarkdown(text) {
+      // 确保text是字符串类型
+      if (typeof text !== 'string') {
+        text = String(text);
+      }
+      
       // 定义正则表达式来匹配不同的markdown格式
       const rules = [
         // 匹配粗体 **text** 或 __text__
@@ -401,7 +429,8 @@ export default {
             continue;
           }
           
-          let remainingText = part.text;
+          // 确保 part.text 是字符串
+          let remainingText = typeof part.text === 'string' ? part.text : String(part.text);
           let lastIndex = 0;
           let match;
           
@@ -418,8 +447,11 @@ export default {
             const newFormatting = { ...part.formatting };
             newFormatting[rule.type] = true;
             
+            // 确保 match[1] 存在
+            const matchedText = match[1] || '';
+            
             newParts.push({
-              text: match[1],
+              text: matchedText,
               formatting: newFormatting
             });
             
@@ -456,8 +488,11 @@ export default {
           };
         }
         
+        // 确保 part.text 是字符串
+        const textValue = typeof part.text === 'string' ? part.text : String(part.text);
+        
         return new TextRun({
-          text: part.text,
+          text: textValue,
           ...options
         });
       });
