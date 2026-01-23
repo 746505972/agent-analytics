@@ -16,7 +16,7 @@
                 HTML
               </label>
               <label class="radio-option">
-                <input type="radio" v-model="exportFormat" value="docx" />
+                <input type="radio" v-model="exportFormat" value="doc" />
                 Word
               </label>
               <label class="radio-option">
@@ -170,14 +170,15 @@ export default {
       for (const msg of selectedMsgs) {
         if (this.isShowingRole) {
           // 添加角色信息
-          htmlContent += `<h3>${msg.role}:</h3>`;
+          htmlContent += `<h1>${msg.role}:</h1>`;
         }
         
         // 使用marked解析markdown内容
         const renderedHtml = await marked.parse(msg.content);
         htmlContent += renderedHtml;
       }
-      
+
+      const margin = format === 'doc' ? '0' : '60px';
       // 构建完整的HTML文档
       const fullHtml = `
         <html
@@ -186,9 +187,8 @@ export default {
             <meta charset="utf-8">
             <title>Chat Export</title>
             <style>
-              body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+              body { font-family: Arial, sans-serif; margin: ${margin}; line-height: 1.6; }
               h1 { color: #409eff; font-size: 1.2em; }
-              h3 { color: #409eff; font-size: 1.1em; margin: 15px 0 5px 0; }
               table { border-collapse: collapse; width: 100%; margin: 10px 0; }
               th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
               th { background-color: #f5f7fa; font-weight: bold; }
@@ -222,6 +222,7 @@ export default {
         iframe.style.height = '0';
         iframe.style.border = 'none';
         iframe.style.zIndex = '-1';
+        iframe.title = `chat_export_${new Date().toISOString().slice(0, 19)}`;
         iframe.srcdoc = fullHtml;
         
         iframe.onload = () => {
@@ -239,7 +240,7 @@ export default {
         
         document.body.appendChild(iframe);
       } else {
-        // 处理HTML和DOCX格式
+        // 处理HTML和DOC格式
         let mimeType, fileName;
         
         if (format === 'html') {
