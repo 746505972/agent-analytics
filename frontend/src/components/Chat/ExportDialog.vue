@@ -12,6 +12,10 @@
             <h4>选择导出格式</h4>
             <div class="format-options">
               <label class="radio-option">
+                <input type="radio" v-model="exportFormat" value="html" />
+                HTML
+              </label>
+              <label class="radio-option">
                 <input type="radio" v-model="exportFormat" value="docx" />
                 Word
               </label>
@@ -92,7 +96,7 @@ export default {
   emits: ['update:isShowingExportDialog'],
   data() {
     return {
-      exportFormat: 'docx', // 默认导出格式
+      exportFormat: 'html', // 默认导出格式
       selectedMessages: [], // 选中的消息索引
       selectAll: false,
       isShowingRole: true
@@ -149,7 +153,7 @@ export default {
 
       if (this.exportFormat === 'pdf') {
         await this.exportToPdf(this.selectedMessages);
-      } else if (this.exportFormat === 'docx') {
+      } else {
         const selectedMsgs = this.selectedMessages
           .map(index => this.messages[index])
           .map(msg => ({
@@ -157,7 +161,7 @@ export default {
             content: msg.content
           }))
           .filter(Boolean);
-        await this.exportToDocx(selectedMsgs);
+        await this.exportToDocx(selectedMsgs, this.exportFormat);
       }
 
       // 导出完成后关闭对话框
@@ -228,7 +232,7 @@ export default {
 
     },
     
-    async exportToDocx(messages) {
+    async exportToDocx(messages, format) {
       // 构建HTML内容
       let htmlContent = '';
       
@@ -241,9 +245,6 @@ export default {
         // 使用marked解析markdown内容
         const renderedHtml = await marked.parse(msg.content);
         htmlContent += renderedHtml;
-        
-        // 在每条消息之间添加间隔
-        htmlContent += '<hr style="margin: 15px 0;"/>';
       }
       
       // 构建完整的HTML文档
@@ -254,7 +255,7 @@ export default {
             <meta charset="utf-8">
             <title>Chat Export</title>
             <style>
-              body { font-family: Arial, sans-serif; margin: 40px; }
+              body { font-family: Arial, sans-serif; margin: 20px; }
               h1 { color: #409eff; font-size: 1.2em; }
               table { border-collapse: collapse; width: 100%; margin: 10px 0; }
               th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -273,15 +274,25 @@ export default {
         </html>
       `;
       
+      let mimeType, fileExtension, fileName;
+      
+      if (format === 'html') {
+        mimeType = 'text/html';
+        fileExtension = 'html';
+        fileName = `chat_export_${new Date().toISOString().slice(0, 19)}.html`;
+      } else { // 默认为doc格式
+        mimeType = 'application/msword';
+        fileExtension = 'doc';
+        fileName = `chat_export_${new Date().toISOString().slice(0, 19)}.doc`;
+      }
+      
       // 创建Blob对象
-      const blob = new Blob(['\ufeff', fullHtml], {
-        type: 'application/msword'
-      });
+      const blob = new Blob(['\ufeff', fullHtml], { type: mimeType });
       
       // 创建并触发下载
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `chat_export_${new Date().toISOString().slice(0, 19)}.doc`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       
