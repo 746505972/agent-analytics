@@ -73,9 +73,7 @@
 </template>
 
 <script>
-import { jsPDF } from 'jspdf';
 import { marked } from 'marked';
-import html2canvas from "html2canvas";
 
 export default {
   name: 'ExportDialog',
@@ -169,67 +167,88 @@ export default {
     },
 
     async exportToPdf(messageIDs) {
-      const pdf = new jsPDF();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 10;
-      const maxWidth = pageWidth - margin * 2;
+      // 复用exportToDocx中的HTML构建逻辑
+      const selectedMsgs = messageIDs
+        .map(index => this.messages[index])
+        .map(msg => ({
+          role: msg.type === 'sent' ? 'user' : this.model,
+          content: msg.content
+        }))
+        .filter(Boolean);
       
-      let yPosition = margin;
+      // 构建HTML内容
+      let htmlContent = '';
       
-      for (let i = 0; i < messageIDs.length; i++) {
-        const element = document.getElementById('message-preview-' + messageIDs[i]);
-        
-        // 计算元素在PDF中的尺寸
-        const elementWidth = element.offsetWidth;
-        const elementHeight = element.offsetHeight;
-        
-        // 根据原始宽高比计算缩放后的尺寸
-        let scaledWidth = maxWidth;
-        let scaledHeight = (elementHeight * maxWidth) / elementWidth;
-        
-        // 如果当前页面空间不足，则添加新页面
-        if (yPosition + scaledHeight > pageHeight - margin && i > 0) {
-          pdf.addPage();
-          yPosition = margin;
+      for (const msg of selectedMsgs) {
+        if (this.isShowingRole) {
+          // 添加角色信息
+          htmlContent += `<h3>${msg.role}:</h3>`;
         }
         
-        // 如果单个元素高度超过页面剩余空间，需要调整或分割
-        if (scaledHeight > pageHeight - margin * 2) {
-          // 对于超长元素，保持比例但限制最大高度
-          scaledHeight = pageHeight - margin * 2;
-          scaledWidth = (elementWidth * scaledHeight) / elementHeight;
-        }
-        
-        // 检查是否需要新页面（确保有足够的空间）
-        if (yPosition + scaledHeight > pageHeight - margin) {
-          pdf.addPage();
-          yPosition = margin;
-        }
-        
-        const canvas = await html2canvas(element, {
-          scale: 2,
-          useCORS: true,
-          scrollX: 0,
-          scrollY: 0
-        });
-        
-        const imgData = canvas.toDataURL('image/png');
-        
-        // 将元素渲染为图像并添加到PDF
-        pdf.addImage(imgData, 'PNG', margin, yPosition, scaledWidth, scaledHeight);
-        
-        // 更新Y位置
-        yPosition += scaledHeight + 5; // 添加一些间距
-        
-        // 如果到达页面底部，重置yPosition以开始新页面
-        if (yPosition >= pageHeight - margin) {
-          yPosition = margin;
-        }
+        // 使用marked解析markdown内容
+        const renderedHtml = await marked.parse(msg.content);
+        htmlContent += renderedHtml;
       }
       
-      pdf.save(`chat_export_${new Date().toISOString().slice(0, 19)}.pdf`);
-
+      // 构建完整的HTML文档
+      const fullHtml = `
+        <html
+              xmlns="http://www.w3.org/TR/REC-html40">
+          <head>
+            <meta charset="utf-8">
+            <title>Chat Export</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+              h1 { color: #409eff; font-size: 1.2em; }
+              h3 { color: #409eff; font-size: 1.1em; margin: 15px 0 5px 0; }
+              table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+              th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+              th { background-color: #f5f7fa; font-weight: bold; }
+              code { background-color: #f6f8fa; padding: 2px 4px; border-radius: 4px; font-family: monospace; }
+              pre { background-color: #f6f8fa; padding: 16px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; }
+              blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 16px; color: #666; }
+              ul, ol { padding-left: 20px; }
+              li { margin: 5px 0; }
+              hr { border: 0; border-top: 1px solid #ccc; margin: 15px 0; }
+              img { max-width: 100%; height: auto; }
+              @media print {
+                body { -webkit-print-color-adjust: exact; color-adjust: exact; }
+                @page { margin: 20px; size: A4; }
+                .page-break { page-break-before: always; }
+              }
+            </style>
+          </head>
+          <body>
+            ${htmlContent}
+          </body>
+        </html>
+      `;
+      
+      // 创建一个隐藏的iframe用于打印
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = 'none';
+      iframe.style.zIndex = '-1';
+      iframe.srcdoc = fullHtml;
+      
+      iframe.onload = () => {
+        // 延迟执行以确保内容完全加载
+        setTimeout(() => {
+          iframe.contentWindow.focus();
+          iframe.contentWindow.print();
+          
+          // 打印完成后移除iframe
+          setTimeout(() => {
+            document.body.removeChild(iframe);
+          }, 1000);
+        }, 500);
+      };
+      
+      document.body.appendChild(iframe);
     },
     
     async exportToDocx(messages, format) {
