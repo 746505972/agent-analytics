@@ -49,6 +49,7 @@ import ChartsExample from "@/components/ChartsExample.vue";
 import Icon from "@/components/Icon.vue";
 import UploadError from "@/components/UploadError.vue";
 import DBConnector from "@/components/DBConnector.vue";
+import { encryptPassword } from '@/utils/cryptoUtils';
 
 export default {
   name: 'Upload',
@@ -134,12 +135,18 @@ export default {
       this.uploadError = null;
 
       try {
+        // 创建数据库配置副本，并对密码进行加密
+        const dbConfigToSend = { ...this.dbConfig };
+        if (dbConfigToSend.password) {
+          dbConfigToSend.password = encryptPassword(dbConfigToSend.password);
+        }
+
         const response = await fetch('/upload/db', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(this.dbConfig),
+          body: JSON.stringify(dbConfigToSend),
           credentials: 'include'
         });
 
