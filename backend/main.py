@@ -191,6 +191,49 @@ async def upload_data_file(request: Request, file: UploadFile = File(...)):
             }
         )
 
+
+from pydantic import BaseModel
+
+class DatabaseConfig(BaseModel):
+    type: str
+    host: str
+    port: str
+    username: str
+    password: str
+    database: str
+    table: str
+
+@app.post("/upload/db")
+async def upload_db_data(request: Request, db_config: DatabaseConfig):
+    """
+    通过数据库连接上传数据接口
+    """
+    try:
+        # 获取session_id
+        session_id = request.state.session_id
+        
+        # 验证必需参数
+        config_dict = db_config.dict()
+
+        from utils.file_manager import connect_database_to_csv
+        
+        result = connect_database_to_csv(config_dict, session_id)
+        
+        return JSONResponse(content={
+            "success": True,
+            "data": result
+        })
+    except Exception as e:
+        logger.error(f"连接数据库时出错: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "error": str(e)
+            }
+        )
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -1,8 +1,18 @@
 <template>
   <form class="form" @submit.prevent="submitForm">
-    <p class="title">数据库连接 </p>
+    <div class="flex">
+      <p class="title">数据库连接 </p>
+      <select v-model="dbConfig.type" class="select">
+        <option value="mysql">MySQL</option>
+        <option value="postgresql">PostgreSQL</option>
+        <option value="sqlite">SQLite</option>
+        <option value="sqlserver">SQL Server</option>
+        <option value="oracle">Oracle</option>
+      </select>
+    </div>
+
     <p class="message">填写数据库连接信息以访问您的数据 </p>
-    <label>
+    <label v-if="dbConfig.type !== 'sqlite'">
       <input
         v-model="dbConfig.host"
         class="input"
@@ -12,7 +22,7 @@
       <span>主机地址</span>
     </label>
 
-    <div class="flex">
+    <div class="flex" v-if="dbConfig.type !== 'sqlite'">
       <label>
         <input
           v-model="dbConfig.port"
@@ -34,7 +44,7 @@
       </label>
     </div>
 
-    <label>
+    <label v-if="dbConfig.type !== 'sqlite'">
       <input
         v-model="dbConfig.password"
         class="input"
@@ -44,7 +54,7 @@
       <span>密码</span>
     </label>
 
-    <div class="flex">
+    <div class="flex" v-if="dbConfig.type !== 'sqlite'">
       <label>
         <input
           v-model="dbConfig.database"
@@ -63,6 +73,17 @@
           placeholder=""
           required="">
         <span>表名</span>
+      </label>
+    </div>
+    <div v-else class="flex">
+      <label>
+        <input
+          v-model="dbConfig.database"
+          class="input"
+          type="text"
+          placeholder=""
+          required="">
+        <span>数据库文件路径</span>
       </label>
     </div>
     <button type="submit" class="submit">连接数据库</button>
@@ -227,6 +248,12 @@ export default {
 
 .submit:hover {
   background-color: #00bfff96;
+}
+
+.select {
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  box-sizing: border-box;
 }
 
 @keyframes pulse {

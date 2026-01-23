@@ -130,17 +130,6 @@ export default {
     },
 
     async connectToDatabase() {
-      // 验证必要参数
-      if (!this.dbConfig.database || !this.dbConfig.table) {
-        this.uploadError = '请提供数据库名称和表名';
-        return;
-      }
-
-      if (this.dbConfig.type !== 'sqlite' && (!this.dbConfig.host || !this.dbConfig.port)) {
-        this.uploadError = '请提供主机地址和端口';
-        return;
-      }
-
       this.isLoading = true;
       this.uploadError = null;
 
