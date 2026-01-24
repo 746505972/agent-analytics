@@ -105,7 +105,7 @@ def upload_file(file_path: str, original_filename: str = None, session_id: str =
     if session_id:
         target_path = os.path.join(DATA_DIR, session_id, f"{data_id}.csv")
     else:
-        target_path = os.path.join(DATA_DIR, f"{data_id}.csv")
+        target_path = os.path.join(DATA_DIR, '000', f"{data_id}.csv")
 
     # 如果文件已存在，添加序号
     counter = 1
@@ -142,6 +142,84 @@ def delete_file(data_id: str, session_id: str = None):
     file_path = get_file_path(data_id, session_id)
     if os.path.exists(file_path):
         os.remove(file_path)
+
+def connect_database_to_csv(db_config: dict, session_id: str) -> dict:
+    """
+    从数据库连接并导出数据到CSV文件
+    
+    Args:
+        db_config (dict): 数据库配置信息
+        session_id (str): 用户会话ID
+        
+    Returns:
+        dict: 包含data_id和文件路径的结果
+    """
+    import sqlite3
+    import pymysql
+    import psycopg2
+    from sqlalchemy import create_engine
+    import urllib.parse
+    
+    # 根据数据库类型构建连接字符串
+    db_type = db_config.get('type', 'mysql')
+    host = db_config.get('host', 'localhost')
+    port = db_config.get('port', '3306')
+    username = db_config.get('username', '')
+    password = db_config.get('password', '')
+    database = db_config.get('database', '')
+    table = db_config.get('table', '')
+    
+    # 确保数据目录存在
+    ensure_data_dir()
+    if session_id:
+        ensure_session_dir(session_id)
+    
+    # 根据数据库类型创建连接
+    if db_type == 'mysql':
+        connection_string = f"mysql+pymysql://{username}:{urllib.parse.quote(password)}@{host}:{port}/{database}?charset=utf8mb4"
+    elif db_type == 'postgresql':
+        connection_string = f"postgresql://{username}:{urllib.parse.quote(password)}@{host}:{port}/{database}"
+    elif db_type == 'sqlite':
+        connection_string = f"sqlite:///{database}"  # database字段应为SQLite文件路径
+    elif db_type == 'oracle':
+        connection_string = f"oracle+cx_oracle://{username}:{urllib.parse.quote(password)}@{host}:{port}/{database}"
+    elif db_type == 'sqlserver':
+        connection_string = f"mssql+pyodbc://{username}:{urllib.parse.quote(password)}@{host}:{port}/{database}?driver=ODBC+Driver+17+for+SQL+Server"
+    else:
+        raise ValueError(f"不支持的数据库类型: {db_type}")
+    
+    engine = create_engine(connection_string)
+    
+    # 从指定表读取数据
+    df = pd.read_sql_table(table, con=engine)
+    
+    # 生成新的文件名
+    data_id = f"db_{database}_{table}"
+    target_path = os.path.join("data", session_id, f"{data_id}.csv")
+
+    # 如果文件已存在，添加序号
+    counter = 1
+    while os.path.exists(target_path):
+        name_part = data_id
+        if counter > 1:
+            name_part = f"{data_id}_{counter}"
+
+        if session_id:
+            target_path = os.path.join(DATA_DIR, session_id, f"{name_part}.csv")
+        else:
+            target_path = os.path.join(DATA_DIR, '000', f"{name_part}.csv")
+        counter += 1
+
+    # 保存为CSV文件
+    df.to_csv(target_path, index=False, encoding="utf-8-sig")
+    
+    return {
+        "data_id": data_id,
+        "saved_path": target_path,
+        "rows": df.shape[0],
+        "cols": df.shape[1],
+        "columns": list(df.columns)
+    }
 
 def generate_new_file_path(file_path , session_id):
     original_filename = os.path.splitext(os.path.basename(file_path))[0]
