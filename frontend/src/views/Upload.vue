@@ -50,6 +50,7 @@ import Icon from "@/components/Icon.vue";
 import UploadError from "@/components/UploadError.vue";
 import DBConnector from "@/components/DBConnector.vue";
 import { encryptPassword } from '@/utils/cryptoUtils';
+import {backendBaseUrl} from "@/api/apiConfig";
 
 export default {
   name: 'Upload',
@@ -102,8 +103,6 @@ export default {
         formData.append('file', file)
 
         // 发送文件到后端
-        // 从apiConfig获取后端基础URL
-        const { backendBaseUrl } = await import('@/api/apiConfig.js');
         const response = await fetch(`${backendBaseUrl}/upload`, {
           method: 'POST',
           body: formData,
@@ -143,7 +142,7 @@ export default {
           dbConfigToSend.password = encryptPassword(dbConfigToSend.password);
         }
 
-        const response = await fetch('/upload/db', {
+        const response = await fetch(`${backendBaseUrl}/upload/db`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
