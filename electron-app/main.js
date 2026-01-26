@@ -113,10 +113,10 @@ function createWindow() {
   // 设置自定义菜单
   const { Menu } = require('electron');
   const template = [
-    {
-      label: '开发者工具',
-      click: () => mainWindow.webContents.openDevTools()
-    },
+    // {
+    //   label: '开发者工具',
+    //   click: () => mainWindow.webContents.openDevTools()
+    // },
     {
       label: '刷新',
       click: () => {
@@ -127,7 +127,7 @@ function createWindow() {
         label: '关于',
         click: () => {
           const { dialog, shell } = require('electron');
-          const detailMessage = '内测版本 0.2.0\n数据分析系统桌面应用\n·后端启动的比较慢，大概半分钟，在完全启动前上传文件报错是很正常的，耐心等待即可。\n·后端使用Qwen-plus模型的LLM服务实现Agent功能，使用前请先配置环境变量DASHSCOPE_API_KEY\n获取环境变量请参考官网：';
+          const detailMessage = '正式版本 1.0.0\n数据分析系统桌面应用\n·后端默认使用Qwen-plus模型的LLM服务实现Agent功能，使用前请先配置环境变量DASHSCOPE_API_KEY\n获取环境变量请参考官网：';
 
           dialog.showMessageBox(mainWindow, {
             type: 'info',

@@ -465,7 +465,7 @@ export default {
             if(aiMessage.content && !aiMessage.content.endsWith('生成已停止')) {
               aiMessage.content += '\n\n生成已停止';
             } else if(!aiMessage.content) {
-              aiMessage.content += '\n\n生成已停止';
+              aiMessage.content = '生成已停止';
             }
           }
         } else {
@@ -862,5 +862,3 @@ export default {
   font-size: 0.875em;
   color: #24292f;
 }
-
-</style>

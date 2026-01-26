@@ -1,6 +1,6 @@
 {
   "name": "agent-analytics",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "数据分析系统桌面应用",
   "main": "main.js",
   "type": "commonjs",
@@ -50,8 +50,8 @@
     ],
     "extraFiles": [
       {
-        "from": "backend-server/",
-        "to": "resources/backend-server/"
+        "from": "backend-server/assets/",
+        "to": "assets/"
       }
     ],
     "win": {
