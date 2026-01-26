@@ -1,6 +1,5 @@
 import os
 import uuid
-from typing import Any, List
 
 import pandas as pd
 from sklearn.impute import KNNImputer
@@ -391,9 +390,9 @@ def remove_invalid_samples(file_path: str, session_id: str = None,
 
 
 def handle_missing_values(file_path: str, session_id: str = None,
-                          specified_columns: List[str] = None,
+                          specified_columns: list[str] = None,
                           interpolation_method: str = "linear",
-                          fill_value: Any = None,
+                          fill_value: any = None,
                           knn_neighbors: int = 5) -> dict:
     """
     对缺失数据进行插值
@@ -477,8 +476,8 @@ def handle_missing_values(file_path: str, session_id: str = None,
 
 
 
-def _interpolate_missing_values(df: pd.DataFrame, columns: List[str], method: str,
-                                fill_value: Any, knn_neighbors: int) -> tuple:
+def _interpolate_missing_values(df: pd.DataFrame, columns: list[str], method: str,
+                                fill_value: any, knn_neighbors: int) -> tuple:
     """插值处理缺失值"""
     df_copy = df.copy()
     total_filled = 0
@@ -582,7 +581,7 @@ def _convert_to_serializable(x):
     return x
 
 
-def delete_columns(file_path: str, columns_to_delete: List[str], session_id: str = None) -> dict:
+def delete_columns(file_path: str, columns_to_delete: list[str], session_id: str = None) -> dict:
     """
     删除指定的列
     
