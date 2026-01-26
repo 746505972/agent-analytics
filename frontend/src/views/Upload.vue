@@ -28,14 +28,7 @@
       
       <div class="upload-section">
         <FileUploader @file-selected="handleFileSelect" @file-error="handleFileError" />
-        <ul class="upload-instructions">
-          <li>
-            <h3>导入说明：</h3>
-          </li>
-          <li>不含合并单元格</li>
-          <li>不要以 _edit 结尾</li>
-          <li>日期字段需包含年月日（如2021/1/1），或年月日时分秒（如2021/1/1 00:00:00）</li>
-        </ul>
+        <DBConnector v-model:db-config="dbConfig" @connect-db="connectToDatabase"/>
       </div>
       <ChartsExample />
     </div>
@@ -55,10 +48,13 @@ import FileUploader from '@/components/FileUploader.vue';
 import ChartsExample from "@/components/ChartsExample.vue";
 import Icon from "@/components/Icon.vue";
 import UploadError from "@/components/UploadError.vue";
+import DBConnector from "@/components/DBConnector.vue";
+import { encryptPassword } from '@/utils/cryptoUtils';
 
 export default {
   name: 'Upload',
   components: {
+    DBConnector,
     UploadError,
     Icon,
     FileUploader,
@@ -68,7 +64,16 @@ export default {
     return {
       isLoading: false,
       selectedFile: null,
-      uploadError: null
+      uploadError: null,
+      dbConfig: {
+        type: 'mysql',
+        host: '',
+        port: '',
+        username: '',
+        password: '',
+        database: '',
+        table: ''
+      }
     }
   },
   methods: {
@@ -82,9 +87,9 @@ export default {
     },
 
     async uploadFile(file) {
-      // 文件大小检查 (100MB)
-      if (file.size > 100 * 1024 * 1024) {
-        this.uploadError = '文件大小超过100MB限制'
+      // 文件大小检查 (1000MB)
+      if (file.size > 1000 * 1024 * 1024) {
+        this.uploadError = '文件大小超过1000MB限制'
         return
       }
 
@@ -122,6 +127,48 @@ export default {
         this.uploadError = '网络错误，请检查后端服务是否运行'
       } finally {
         this.isLoading = false
+      }
+    },
+
+    async connectToDatabase() {
+      this.isLoading = true;
+      this.uploadError = null;
+
+      try {
+        // 创建数据库配置副本，并对密码进行加密
+        const dbConfigToSend = { ...this.dbConfig };
+        if (dbConfigToSend.password) {
+          dbConfigToSend.password = encryptPassword(dbConfigToSend.password);
+        }
+
+        const response = await fetch('/upload/db', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(dbConfigToSend),
+          credentials: 'include'
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // 保存 data_id 到本地存储
+          localStorage.setItem('currentDataId', result.data.data_id);
+
+          // 连接成功后跳转到数据预览页面
+          this.$router.push({
+            path: '/preview',
+            query: { dataId: result.data.data_id }
+          });
+        } else {
+          this.uploadError = result.error || '数据库连接失败';
+        }
+      } catch (error) {
+        console.error('连接数据库时出错:', error);
+        this.uploadError = '网络错误，请检查后端服务是否运行';
+      } finally {
+        this.isLoading = false;
       }
     },
 
