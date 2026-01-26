@@ -460,7 +460,12 @@ export default {
             idx === this.currentSession.messages.length - 1 && msg.type === 'received'
           );
           if (aiMessage) {
-            aiMessage.content = '生成已停止';
+            // 如果是中断错误，保留已有内容并在后面加上停止提示
+            if(aiMessage.content && !aiMessage.content.endsWith('生成已停止')) {
+              aiMessage.content += '\n\n生成已停止';
+            } else if(!aiMessage.content) {
+              aiMessage.content += '\n\n生成已停止';
+            }
           }
         } else {
           this.currentSession.messages[aiMessageIndex].content = `抱歉，处理您的请求时出现错误: ${error.message}`;

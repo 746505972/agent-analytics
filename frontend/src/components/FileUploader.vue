@@ -76,6 +76,9 @@ export default {
   padding: 30px;
   cursor: pointer;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .upload-area:hover {
@@ -91,6 +94,10 @@ export default {
 
 .upload-content {
   text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .upload-icon {
