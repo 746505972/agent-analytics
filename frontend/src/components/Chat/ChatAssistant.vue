@@ -862,3 +862,5 @@ export default {
   font-size: 0.875em;
   color: #24292f;
 }
+
+</style>
