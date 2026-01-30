@@ -138,23 +138,11 @@ npm run server
 
 3. Visit http://localhost:5173 to view the application
 
-## Development Roadmap
-
-- [x] Basic file upload functionality
-- [x] Implement basic data analysis APIs
-- [x] Add data visualization functionality
-- [x] Implement natural language interaction
-- [ ] Automatic analysis report generation
-- [ ] Integrate more machine learning algorithms
-- [ ] Support more file formats
-- [ ] Enhance report template functionality
-- [ ] Add user authentication and permission management
-
 ## Languages
-Total : 101 files,  21342 codes, 1973 comments, 2796 blanks, all 26111 lines
+Total : 153 files,  31024 codes, 3156 comments, 3982 blanks, all 38162 lines
 
 | language   | files |   code | comment | blank |  total |
 |:-----------|------:|-------:|--------:|------:|-------:|
-| vue        |    52 | 16,430 |     134 | 1,738 | 18,302 |
-| Python     |    21 |  3,785 |   1,709 |   891 |  6,385 |
-| JavaScript |    10 |    697 |     121 |    91 |    909 |
+| vue        |    76 | 23,202 |     257 | 2,459 | 25,918 |
+| Python     |    42 |  6,121 |   2,693 | 1,283 | 10,097 |
+| JavaScript |    16 |  1,154 |     197 |   124 |  1,475 |
