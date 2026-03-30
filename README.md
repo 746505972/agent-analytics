@@ -6,7 +6,6 @@
 ![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
-<img src="https://qianwen-res.oss-cn-beijing.aliyuncs.com/logo_qwen.jpg" alt="通义千问" height="28">
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
 
@@ -25,22 +24,28 @@ Agent-Analytics 是一个基于大语言模型（LLM）Agent 的自适应数据�
 
 [👉示例展示](example.md)
 
-#### Agent对话
+### Agent对话
+
 ![img.png](images/img.png)
 
-#### 工具调用
+### 工具调用
+
 ![img_1.png](images/img_1.png)
 
-#### 工具链调用
+### 工具链调用
+
 ![img_3.png](images/img_3.png)
 
-#### 分析渲染
+### 分析渲染
+
 ![img_2.png](images/img_2.png)
 
-#### 可视化
+### 可视化
+
 ![img_5.png](images/img_5.png)
 
-#### 文本分析
+### 文本分析
+
 ![img_4.png](images/img_4.png)
 
 ## 系统架构图
@@ -102,23 +107,26 @@ project/
 
 ### 现已推出ELectron本地测试版
 
-https://github.com/746505972/agent-analytics/releases/latest
+<https://github.com/746505972/agent-analytics/releases/latest>
 
 ---
 
 ### 后端启动
 
 1. 安装依赖：
+
 ```bash
 pip install -r requirements.txt
 ```
 
-2. 设置环境变量（使用通义千问）：
+1. 设置环境变量（使用通义千问）：
+
 ```bash
 export DASHSCOPE_API_KEY=你的API密钥
 ```
 
-3. 运行后端服务：
+1. 运行后端服务：
+
 ```bash
 python backend/main.py
 ```
@@ -126,19 +134,22 @@ python backend/main.py
 ### 前端启动
 
 1. 安装依赖：
+
 ```bash
 cd frontend
 npm install
 ```
 
-2. 运行前端开发服务器：
+1. 运行前端开发服务器：
+
 ```bash
 npm run server
 ```
 
-3. 访问 http://localhost:5173 查看应用
+1. 访问 <http://localhost:5173> 查看应用
 
 ## Languages
+
 Total : 153 files,  31024 codes, 3156 comments, 3982 blanks, all 38162 lines
 
 | language   | files |   code | comment | blank |  total |
