@@ -119,13 +119,13 @@ project/
 pip install -r requirements.txt
 ```
 
-1. Set environment variables (using Qwen):
+2. Set environment variables (using Qwen):
 
 ```bash
 export DASHSCOPE_API_KEY=your_api_key
 ```
 
-1. Run backend service:
+3. Run backend service:
 
 ```bash
 python backend/main.py
@@ -140,13 +140,13 @@ cd frontend
 npm install
 ```
 
-1. Run frontend development server:
+2. Run frontend development server:
 
 ```bash
 npm run server
 ```
 
-1. Visit <http://localhost:5173> to view the application
+3. Visit <http://localhost:5173> to view the application
 
 ## Languages
 
