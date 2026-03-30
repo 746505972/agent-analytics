@@ -119,13 +119,13 @@ project/
 pip install -r requirements.txt
 ```
 
-1. 设置环境变量（使用通义千问）：
+2. 设置环境变量（使用通义千问）：
 
 ```bash
 export DASHSCOPE_API_KEY=你的API密钥
 ```
 
-1. 运行后端服务：
+3. 运行后端服务：
 
 ```bash
 python backend/main.py
@@ -140,13 +140,13 @@ cd frontend
 npm install
 ```
 
-1. 运行前端开发服务器：
+2. 运行前端开发服务器：
 
 ```bash
 npm run server
 ```
 
-1. 访问 <http://localhost:5173> 查看应用
+3. 访问 <http://localhost:5173> 查看应用
 
 ## Languages
 
