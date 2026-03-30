@@ -6,7 +6,6 @@
 ![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![LangChain](https://img.shields.io/badge/LangChain-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
-<img src="https://qianwen-res.oss-cn-beijing.aliyuncs.com/logo_qwen.jpg" alt="Qwen" height="28">
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
 ![Pandas](https://img.shields.io/badge/Pandas-150458?style=for-the-badge&logo=pandas&logoColor=white)
 
@@ -25,22 +24,28 @@ The system can visualize and implement data cleaning, statistical modeling, mach
 
 [👉Example Demo](example.md)
 
-#### Agent Conversation
+### Agent Conversation
+
 ![img.png](images/img.png)
 
-#### Tool Invocation
+### Tool Invocation
+
 ![img_1.png](images/img_1.png)
 
-#### Tool Chain Invocation
+### Tool Chain Invocation
+
 ![img_3.png](images/img_3.png)
 
-#### Analysis Rendering
+### Analysis Rendering
+
 ![img_2.png](images/img_2.png)
 
-#### Visualization
+### Visualization
+
 ![img_5.png](images/img_5.png)
 
-#### Text Analysis
+### Text Analysis
+
 ![img_4.png](images/img_4.png)
 
 ## System Architecture Diagram
@@ -102,23 +107,26 @@ project/
 
 ### Electron Local Test Version Now Available
 
-https://github.com/746505972/agent-analytics/releases/latest
+<https://github.com/746505972/agent-analytics/releases/latest>
 
 ---
 
 ### Backend Setup
 
 1. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Set environment variables (using Qwen):
+1. Set environment variables (using Qwen):
+
 ```bash
 export DASHSCOPE_API_KEY=your_api_key
 ```
 
-3. Run backend service:
+1. Run backend service:
+
 ```bash
 python backend/main.py
 ```
@@ -126,19 +134,22 @@ python backend/main.py
 ### Frontend Setup
 
 1. Install dependencies:
+
 ```bash
 cd frontend
 npm install
 ```
 
-2. Run frontend development server:
+1. Run frontend development server:
+
 ```bash
 npm run server
 ```
 
-3. Visit http://localhost:5173 to view the application
+1. Visit <http://localhost:5173> to view the application
 
 ## Languages
+
 Total : 153 files,  31024 codes, 3156 comments, 3982 blanks, all 38162 lines
 
 | language   | files |   code | comment | blank |  total |
