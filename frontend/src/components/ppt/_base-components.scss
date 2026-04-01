@@ -1,0 +1,255 @@
+/**
+ * PPT 基础组件样式
+ * 提供通用的 UI 组件样式规范
+ */
+
+@use './variables' as *;
+@use './mixins' as *;
+
+// ==================== 幻灯片内容容器 ====================
+.slide-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 30px 40px;
+  @include fade-in;
+}
+
+// ==================== 标题样式 ====================
+.title-slide {
+  text-align: center;
+  
+  .title {
+    @include title-text;
+    margin-bottom: $spacing-huge;
+  }
+  
+  .subtitle {
+    @include subtitle-text;
+    margin-bottom: $spacing-huge;
+  }
+  
+  .presenter-info {
+    margin-top: $spacing-huge + 20px;
+    font-size: $font-size-presenter;
+    
+    .presenter {
+      margin-bottom: $spacing-sm;
+    }
+    
+    .date {
+      opacity: 0.8;
+    }
+  }
+}
+
+.slide-title {
+  @include slide-title;
+}
+
+// ==================== 信息卡片 ====================
+.info-card {
+  @include info-card;
+  
+  h3 {
+    @include heading-text;
+  }
+  
+  p {
+    @include body-text;
+  }
+  
+  &.highlight {
+    @include highlight-card;
+  }
+  
+  &.question {
+    @include question-card;
+  }
+}
+
+// ==================== 卡片盒子 ====================
+.card-box {
+  @include card-box;
+  
+  .icon {
+    @include icon-medium;
+  }
+  
+  p {
+    @include body-text($font-size-body-large);
+  }
+  
+  .desc {
+    font-size: $font-size-body-small !important;
+    opacity: 0.8;
+  }
+}
+
+// ==================== 模块卡片 ====================
+.module-card {
+  @include module-card;
+  
+  h4 {
+    font-size: $font-size-caption + 3px;
+    margin-bottom: $spacing-sm;
+    color: $text-gold;
+  }
+  
+  p {
+    @include caption-text;
+  }
+}
+
+// ==================== 工具盒子 ====================
+.tool-box {
+  background: $card-bg-default;
+  backdrop-filter: $backdrop-blur;
+  border-radius: $border-radius-md;
+  padding: $spacing-md;
+  text-align: center;
+  border: 2px solid $card-border-default;
+  
+  .icon {
+    @include icon-small;
+    margin-bottom: $spacing-xs;
+  }
+  
+  p {
+    @include body-text;
+  }
+}
+
+// ==================== 列表样式 ====================
+.problem-list,
+.bullet-list {
+  text-align: left;
+  padding-left: $spacing-lg;
+  @include body-text;
+  
+  li {
+    margin-bottom: $spacing-xs;
+    line-height: 1.6;
+  }
+}
+
+// ==================== 问题文本 ====================
+.question-text {
+  font-size: $font-size-body;
+  font-weight: bold;
+  color: $text-gold;
+  margin-top: $spacing-md;
+}
+
+// ==================== 箭头指示 ====================
+.arrow {
+  font-size: $font-size-subtitle - 16px;
+  text-align: center;
+  margin: $spacing-md 0;
+  opacity: 0.7;
+}
+
+// ==================== 网格布局 ====================
+.content-grid {
+  @include grid-layout(3, $gap-lg);
+}
+
+.tools-grid {
+  @include grid-layout(4, $gap-md);
+}
+
+.modules-description {
+  @include grid-layout(4, $gap-md);
+  margin-top: $spacing-xl;
+}
+
+.architecture-diagram {
+  max-width: 1000px;
+  margin: 0 auto $spacing-xl;
+}
+
+.layer {
+  margin: $spacing-md 0;
+}
+
+// ==================== 表格样式 ====================
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: $spacing-xl;
+  
+  th, td {
+    padding: $spacing-md;
+    text-align: left;
+    border: 1px solid $card-border-light;
+  }
+  
+  th {
+    background: $card-bg-highlight;
+    font-weight: bold;
+    @include body-text($font-size-body);
+  }
+  
+  td {
+    @include body-text;
+  }
+  
+  tr:hover {
+    background: $card-bg-hover;
+  }
+}
+
+// ==================== 图表容器 ====================
+.chart-container {
+  width: 100%;
+  height: 400px;
+  margin-top: $spacing-xl;
+  background: $card-bg-default;
+  backdrop-filter: $backdrop-blur;
+  border-radius: $border-radius-lg;
+  padding: $spacing-lg;
+  border: 2px solid $card-border-default;
+}
+
+// ==================== 代码块样式 ====================
+.code-block {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: $border-radius-md;
+  padding: $spacing-lg;
+  font-family: 'Courier New', monospace;
+  font-size: $font-size-body-small;
+  line-height: 1.6;
+  overflow-x: auto;
+  margin-top: $spacing-lg;
+  border: 1px solid $card-border-light;
+}
+
+// ==================== 强调文本 ====================
+.highlight-text {
+  color: $text-gold;
+  font-weight: bold;
+}
+
+// ==================== 响应式适配 ====================
+@media (max-width: 768px) {
+  .slide-content {
+    padding: 40px 20px;
+  }
+  
+  .title-slide .title {
+    font-size: 48px;
+  }
+  
+  .slide-title {
+    font-size: 36px;
+  }
+  
+  .content-grid,
+  .tools-grid,
+  .modules-description {
+    grid-template-columns: 1fr;
+  }
+}

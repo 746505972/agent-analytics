@@ -1,0 +1,145 @@
+/**
+ * PPT 通用 Mixins
+ * 提供可复用的样式模式
+ */
+
+@forward './variables';
+@use './variables' as *;
+
+// ==================== 卡片样式 ====================
+@mixin info-card($bg-color: $card-bg-default, $border-color: $card-border-default) {
+  background: $bg-color;
+  backdrop-filter: $backdrop-blur;
+  border-radius: $border-radius-lg;
+  padding: $spacing-xl $spacing-lg;
+  text-align: center;
+  transition: all $transition-fast;
+  border: 2px solid $border-color;
+  
+  &:hover {
+    transform: translateY(-10px);
+    background: $card-bg-hover;
+  }
+}
+
+@mixin card-box($bg-color: $card-bg-default, $border-color: $card-border-default) {
+  background: $bg-color;
+  backdrop-filter: $backdrop-blur;
+  border-radius: $border-radius-md;
+  padding: $spacing-lg $spacing-xl;
+  text-align: center;
+  border: 2px solid $border-color;
+  transition: all $transition-fast;
+  
+  &:hover {
+    transform: scale(1.02);
+    background: $card-bg-hover;
+  }
+}
+
+@mixin module-card {
+  background: $card-bg-default;
+  backdrop-filter: $backdrop-blur;
+  border-radius: $border-radius-sm;
+  padding: $spacing-md;
+  text-align: center;
+  border: 1px solid $card-border-light;
+}
+
+// ==================== 文字样式 ====================
+@mixin slide-title {
+  font-size: $font-size-slide-title;
+  font-weight: bold;
+  margin-bottom: $spacing-xxl;
+  text-align: center;
+  text-shadow: $text-shadow-light;
+}
+
+@mixin title-text {
+  font-size: $font-size-title;
+  font-weight: bold;
+  text-shadow: $text-shadow-default;
+}
+
+@mixin subtitle-text {
+  font-size: $font-size-subtitle;
+  opacity: 0.9;
+}
+
+@mixin heading-text {
+  font-size: $font-size-heading;
+  margin-bottom: $spacing-sm;
+}
+
+@mixin body-text($size: $font-size-body, $line-height: 1.5) {
+  font-size: $size;
+  line-height: $line-height;
+  opacity: 0.9;
+}
+
+@mixin caption-text {
+  font-size: $font-size-caption;
+  line-height: 1.4;
+  opacity: 0.9;
+}
+
+// ==================== 图标样式 ====================
+@mixin icon-large {
+  font-size: $icon-size-large;
+  margin-bottom: $spacing-md;
+}
+
+@mixin icon-medium {
+  font-size: $icon-size-medium;
+  margin-bottom: $spacing-sm;
+}
+
+@mixin icon-small {
+  font-size: $icon-size-small;
+  margin-bottom: $spacing-xs;
+}
+
+// ==================== 布局样式 ====================
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin grid-layout($columns: 3, $gap: $gap-lg) {
+  display: grid;
+  grid-template-columns: repeat($columns, 1fr);
+  gap: $gap;
+  margin-top: $spacing-xl;
+}
+
+// ==================== 特殊效果 ====================
+@mixin glass-effect {
+  backdrop-filter: $backdrop-blur;
+}
+
+@mixin highlight-card {
+  background: $card-bg-highlight;
+  border-color: $card-border-highlight;
+}
+
+@mixin question-card {
+  background: $card-bg-question;
+  border-color: $card-border-question;
+}
+
+// ==================== 动画关键帧 ====================
+@mixin fade-in {
+  animation: fadeIn $transition-normal ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

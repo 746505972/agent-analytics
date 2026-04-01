@@ -11,6 +11,9 @@
         </div>
       </div>
       <div class="right-section">
+        <button class="ppt-mode-button" @click="switchToPPTMode" title="切换到 PPT 演示模式">
+          PPT 演示
+        </button>
         <a href="https://github.com/746505972/agent-analytics" target="_blank" class="github-link">
           <img src="@/assets/images/logo.png" width="100" alt="Agent-Analytics">
         </a>
@@ -87,6 +90,9 @@ export default {
     },
     isHistoryItemActive(historyItem) {
       return this.selectedFile === historyItem.dataId && this.currentMethod === historyItem.method;
+    },
+    switchToPPTMode() {
+      this.$router.push('/ppt');
     }
   }
 }
@@ -181,6 +187,26 @@ export default {
   flex: 1;
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 15px;
+}
+
+.ppt-mode-button {
+  background: linear-gradient(235deg, rgb(65, 159, 255) 0%, rgba(78, 208, 255, 0.72) 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgb(237, 237, 237);
+}
+
+.ppt-mode-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(144, 147, 153, 0.4);
 }
 
 .selected-file-info {

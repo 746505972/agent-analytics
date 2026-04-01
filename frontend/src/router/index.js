@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Upload from '@/views/Upload.vue'
 import Dashboard from '@/views/Dashboard.vue'
 import Preview from '@/views/Preview.vue'
+import PPTPresentation from '@/views/PPTPresentation.vue'
 
 const routes = [
   {
@@ -22,6 +23,11 @@ const routes = [
     path: '/preview',
     name: 'Preview',
     component: Preview
+  },
+  {
+    path: '/ppt',
+    name: 'PPTPresentation',
+    component: PPTPresentation
   },
 ]
 

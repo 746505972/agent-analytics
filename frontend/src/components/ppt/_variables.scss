@@ -1,0 +1,79 @@
+/**
+ * PPT 统一样式变量和工具类
+ * 为所有幻灯片组件提供一致的视觉风格
+ */
+
+// ==================== 颜色变量 ====================
+// 主色调（背景渐变）- 赛博朋克霓虹
+$primary-gradient-start: #ff006e;
+$primary-gradient-end: #3a86ff;
+
+// 文字颜色
+$text-white: #ffffff;
+$text-gold: #fffb96;  // 霓虹黄
+$text-silver: #c0c0c0;
+$text-grey: rgba(41, 41, 41, 0.8);
+$text-opacity-90: rgba(255, 255, 255, 0.95);
+$text-opacity-80: rgba(255, 255, 255, 0.85);
+$text-opacity-70: rgba(255, 255, 255, 0.7);
+
+// 卡片背景
+$card-bg-default: rgba(255, 0, 110, 0.12);
+$card-bg-hover: rgba(58, 134, 255, 0.18);
+$card-bg-highlight: rgba(131, 118, 255, 0.25);  // 紫色高亮
+$card-bg-question: rgba(255, 0, 110, 0.25);
+
+// 卡片边框
+$card-border-default: rgba(255, 0, 110, 0.4);
+$card-border-highlight: rgba(131, 118, 255, 0.6);  // 紫色边框
+$card-border-question: rgba(255, 0, 110, 0.6);
+$card-border-light: rgba(58, 134, 255, 0.3);
+
+// ==================== 字体大小 ====================
+$font-size-title: 72px;        // 封面标题
+$font-size-subtitle: 36px;     // 副标题
+$font-size-slide-title: 48px;  // 幻灯片标题
+$font-size-heading: 22px;      // 卡片标题
+$font-size-body-large: 18px;   // 正文 - 大
+$font-size-body: 15px;         // 正文
+$font-size-body-small: 14px;   // 正文 - 小
+$font-size-caption: 13px;      // 说明文字
+$font-size-presenter: 24px;    // 演示者信息
+
+// ==================== 间距 ====================
+$spacing-xs: 8px;
+$spacing-sm: 12px;
+$spacing-md: 15px;
+$spacing-lg: 20px;
+$spacing-xl: 25px;
+$spacing-xxl: 35px;
+$spacing-huge: 60px;
+
+// ==================== 圆角 ====================
+$border-radius-sm: 10px;
+$border-radius-md: 12px;
+$border-radius-lg: 15px;
+$border-radius-xl: 20px;
+
+// ==================== 动画效果 ====================
+$transition-fast: 0.3s ease;
+$transition-normal: 0.5s ease-in-out;
+$transform-hover-y: translateY(-10px);
+$transform-hover-scale: scale(1.02);
+
+// ==================== 阴影 ====================
+$text-shadow-default: 2px 2px 4px rgba(0, 0, 0, 0.3);
+$text-shadow-light: 2px 2px 4px rgba(0, 0, 0, 0.2);
+$backdrop-blur: blur(10px);
+
+// ==================== 图标大小 ====================
+$icon-size-large: 30px;
+$icon-size-medium: 20px;
+$icon-size-small: 16px;
+
+// ==================== 网格布局 ====================
+$grid-columns-3: repeat(3, 1fr);
+$grid-columns-4: repeat(4, 1fr);
+$gap-sm: 15px;
+$gap-md: 20px;
+$gap-lg: 25px;

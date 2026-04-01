@@ -1,0 +1,39 @@
+/**
+ * PPT 统一样式规范
+ * 
+ * 使用说明:
+ * 1. 在每个幻灯片组件中引入此样式文件
+ * 2. 使用预定义的 class 名称保持视觉一致性
+ * 3. 基于业务需求扩展样式，但保持设计语言统一
+ * 
+ * 文件结构:
+ * - _variables.scss: 样式变量定义
+ * - _mixins.scss: 可复用的样式模式
+ * - _base-components.scss: 基础组件样式
+ */
+
+// 导入所有样式文件
+@forward './variables';
+@forward './mixins';
+@forward './base-components';
+
+/**
+ * 使用示例:
+ * 
+ * <template>
+ *   <div class="slide-content">
+ *     <h2 class="slide-title">标题</h2>
+ *     <div class="content-grid">
+ *       <div class="info-card highlight">
+ *         <div class="icon-large">📊</div>
+ *         <h3>卡片标题</h3>
+ *         <p>卡片内容描述</p>
+ *       </div>
+ *     </div>
+ *   </div>
+ * </template>
+ * 
+ * <style scoped>
+ * @import '@/components/ppt/styles';
+ * </style>
+ */
