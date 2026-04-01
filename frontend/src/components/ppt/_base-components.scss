@@ -29,7 +29,7 @@
   
   .subtitle {
     @include subtitle-text;
-    margin-bottom: $spacing-huge;
+    margin-bottom: $spacing-md;
   }
   
   .presenter-info {
@@ -144,6 +144,14 @@
   margin-top: $spacing-md;
 }
 
+.question-sub {
+  font-size: $font-size-body-large;
+  color: $text-blue;
+  font-weight: bold;
+  margin-top: $spacing-sm;
+  text-align: center;
+}
+
 // ==================== 箭头指示 ====================
 .arrow {
   font-size: $font-size-subtitle - 16px;
@@ -155,6 +163,19 @@
 // ==================== 网格布局 ====================
 .content-grid {
   @include grid-layout(3, $gap-lg);
+}
+
+// 5 列布局：用于研究背景页
+.content-grid.grid-5 {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: $gap-lg;
+  width: 100%;
+}
+
+// 跨两列的卡片
+.info-card.wide {
+  grid-column: span 2;
 }
 
 .tools-grid {
@@ -231,6 +252,16 @@
 .highlight-text {
   color: $text-blue;
   font-weight: bold;
+  font-size: $font-size-body-large;
+  margin-bottom: $spacing-sm;
+}
+
+.question-sub {
+  font-size: $font-size-body-large;
+  color: $text-blue;
+  font-weight: bold;
+  margin-top: $spacing-sm;
+  text-align: center;
 }
 
 // ==================== 响应式适配 ====================

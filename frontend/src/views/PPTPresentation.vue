@@ -28,12 +28,12 @@
       <div class="progress" :style="{ width: progressPercentage + '%' }"></div>
     </div>
 
-    <!-- 退出提示 -->
-<!--    <div class="exit-hint">-->
-<!--      <button class="exit-button" @click="goToDashboard" title="返回系统界面">-->
-<!--        ↩-->
-<!--      </button>-->
-<!--    </div>-->
+    <!-- 退出提示（桌面端可用esc，不显示） -->
+    <div class="exit-hint">
+      <button class="exit-button" @click="goToDashboard" title="返回系统界面">
+        ↩️
+      </button>
+    </div>
   </div>
 </template>
 
@@ -172,6 +172,7 @@ export default {
   }
   
   max-width: 1400px;
+  margin: 0 auto;
   color: $text-white;
 }
 
@@ -225,15 +226,36 @@ export default {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 6px;
+  height: 4px;
   background: rgba(255, 255, 255, 0.2);
   z-index: 100;
+  overflow: hidden;
 }
 
 .progress {
   height: 100%;
-  background: $text-white;
+  border-radius: 0 999px 999px 0;
+  /* 流动色彩渐变 */
+  background: linear-gradient(
+    45deg,
+    #ededed,
+    rgba(144, 147, 153, 0.4),
+    #ededed,
+  );
+  background-size: 300% 100%;
+  /* 应用流动动画 */
+  animation: flowing-progress 5s linear infinite;
   transition: width $transition-fast;
+}
+
+/* 流动色彩动画 */
+@keyframes flowing-progress {
+  0% {
+    background-position: 300% 50%;
+  }
+  100% {
+    background-position: 30% 50%;
+  }
 }
 
 @media (max-width: 768px) {
@@ -243,6 +265,31 @@ export default {
   
   .slide {
     padding: 40px 20px;
+  }
+
+  /* 退出按钮 */
+  .exit-hint {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    z-index: 100;
+  }
+
+  .exit-button {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-size: 16px;
+    padding: 6px 12px;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .exit-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
   }
 }
 </style>
