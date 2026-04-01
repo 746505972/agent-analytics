@@ -12,31 +12,37 @@
       <!-- 创新点 -->
       <div class="innovations">
         <div class="innovation-item">
-          <div class="number">1</div>
-          <div class="content">
+          <div class="number-title-row">
+            <div class="number">1</div>
             <h4>分析流程的智能决策机制</h4>
+          </div>
+          <div class="content">
             <p>
               将 LLM-Agent 引入数据分析流程，<br/>
-              实现从“工具执行”到“自主决策”的转变
+              实现从"工具执行"到"自主决策"的转变
             </p>
           </div>
         </div>
-
+        
         <div class="innovation-item">
-          <div class="number">2</div>
-          <div class="content">
+          <div class="number-title-row">
+            <div class="number">2</div>
             <h4>可控的工具调用与分步分析框架</h4>
+          </div>
+          <div class="content">
             <p>
               基于 Function Calling 构建分步分析机制，<br/>
               提升分析过程的可解释性与可控性
             </p>
           </div>
         </div>
-
+        
         <div class="innovation-item">
-          <div class="number">3</div>
-          <div class="content">
+          <div class="number-title-row">
+            <div class="number">3</div>
             <h4>面向结果输出的报告生成方法</h4>
+          </div>
+          <div class="content">
             <p>
               实现对话驱动的报告生成，并支持过程筛选与人工干预
             </p>
@@ -102,12 +108,12 @@ export default {
 
 .innovation-item {
   display: flex;
-  align-items: center;
-  gap: $spacing-xs;
+  flex-direction: column;
+  gap: $spacing-md;
   background: $card-bg-default;
   backdrop-filter: $backdrop-blur;
   border-radius: $border-radius-md;
-  padding: $spacing-lg $spacing-xl - 3px;
+  padding: $spacing-xl - 3px;
   border: 2px solid $card-border-default;
   transition: all $transition-fast;
   
@@ -117,20 +123,28 @@ export default {
   }
 }
 
+.number-title-row {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
 .number {
   font-size: 36px;
   font-weight: bold;
   color: $text-blue;
-  min-width: 60px;
+  min-width: 40px;
   text-align: center;
 }
 
 .content h4 {
   font-size: $font-size-heading;
   margin-bottom: $spacing-sm;
+  flex: 1;
 }
 
 .content p {
   @include caption-text;
+  margin-top: 0;
 }
 </style>

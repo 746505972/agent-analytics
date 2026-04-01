@@ -28,12 +28,13 @@
           <p class="highlight">让系统具备"代理人"特征</p>
         </div>
       </div>
-      
-      <div class="summary-box">
+    </div>
+
+    <div class="summary-box">
         <h4>技术整合</h4>
         <p>LLM + Function Calling + Agent = 智能数据分析系统</p>
-      </div>
     </div>
+
   </div>
 </template>
 
@@ -51,8 +52,9 @@ export default {
 }
 
 .tech-container {
-  max-width: 1200px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: unset;
+  gap: $spacing-lg;
 }
 
 .tech-item {
@@ -68,7 +70,6 @@ export default {
   transition: all $transition-fast;
   
   &:hover {
-    transform: translateX(10px);
     background: $card-bg-hover;
     border-color: rgba(255, 255, 255, 0.3);
   }
