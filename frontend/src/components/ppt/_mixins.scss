@@ -69,18 +69,21 @@
 @mixin heading-text {
   font-size: $font-size-heading;
   margin-bottom: $spacing-sm;
+  color: $text-white;
 }
 
 @mixin body-text($size: $font-size-body, $line-height: 1.5) {
   font-size: $size;
   line-height: $line-height;
   opacity: 0.9;
+  color: $text-white;
 }
 
 @mixin caption-text {
   font-size: $font-size-caption;
   line-height: 1.4;
   opacity: 0.9;
+  color: $text-light-grey;
 }
 
 // ==================== 图标样式 ====================

@@ -96,7 +96,7 @@ export default {
   font-size: $font-size-heading + 10px;
   margin-bottom: $spacing-xl - 2px;
   text-align: center;
-  color: $text-gold;
+  color: $text-blue;
 }
 
 .summary-list {

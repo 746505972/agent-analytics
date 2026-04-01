@@ -96,7 +96,7 @@ export default {
 .limitation-item h3 {
   font-size: $font-size-heading;
   margin-bottom: $spacing-sm;
-  color: $text-gold;
+  color: $text-red;
 }
 
 .limitation-item p {
@@ -153,7 +153,7 @@ export default {
 .direction-item .number {
   @include icon-large;
   font-weight: bold;
-  color: $text-gold;
+  color: $text-blue;
   margin-bottom: $spacing-md;
 }
 

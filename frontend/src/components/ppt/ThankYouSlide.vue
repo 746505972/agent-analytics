@@ -1,6 +1,6 @@
 <template>
   <div class="slide-content title-slide">
-    <h1 class="title">感谢观看</h1>
+    <h1 class="title">谢谢</h1>
     <p class="subtitle">Q & A</p>
     <div class="contact-info">
       <p>欢迎提问与交流！</p>

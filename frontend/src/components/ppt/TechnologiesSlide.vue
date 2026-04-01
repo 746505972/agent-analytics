@@ -90,7 +90,7 @@ export default {
 }
 
 .tech-info .highlight {
-  color: $text-gold;
+  color: $text-blue;
   font-weight: bold;
   margin-top: $spacing-xs;
   font-size: $font-size-body-small;

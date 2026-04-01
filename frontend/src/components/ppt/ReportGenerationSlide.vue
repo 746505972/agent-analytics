@@ -114,7 +114,7 @@ export default {
 .flow-step h4 {
   font-size: $font-size-heading;
   margin-bottom: $spacing-md;
-  color: $text-gold;
+  color: $text-blue;
 }
 
 .flow-step p {
@@ -164,7 +164,7 @@ export default {
 .number {
   font-size: 42px;
   font-weight: bold;
-  color: $text-gold;
+  color: $text-blue;
   min-width: 70px;
   text-align: center;
 }

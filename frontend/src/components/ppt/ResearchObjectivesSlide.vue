@@ -106,7 +106,7 @@ export default {
 .number {
   font-size: 36px;
   font-weight: bold;
-  color: $text-gold;
+  color: $text-blue;
   min-width: 60px;
   text-align: center;
 }

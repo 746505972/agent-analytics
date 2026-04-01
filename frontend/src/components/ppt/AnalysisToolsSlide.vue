@@ -99,7 +99,7 @@ export default {
   font-size: $font-size-heading;
   margin-bottom: $spacing-md;
   text-align: center;
-  color: $text-gold;
+  color: $text-blue;
 }
 
 .tool-category ul {
@@ -117,7 +117,7 @@ export default {
   content: "▸";
   position: absolute;
   left: 0;
-  color: $text-gold;
+  color: $text-blue;
 }
 
 .feature-highlight {

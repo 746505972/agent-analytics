@@ -96,7 +96,7 @@
   h4 {
     font-size: $font-size-caption + 3px;
     margin-bottom: $spacing-sm;
-    color: $text-gold;
+    color: $text-blue;
   }
   
   p {
@@ -140,7 +140,7 @@
 .question-text {
   font-size: $font-size-body;
   font-weight: bold;
-  color: $text-gold;
+  color: $text-red;
   margin-top: $spacing-md;
 }
 
@@ -229,7 +229,7 @@
 
 // ==================== 强调文本 ====================
 .highlight-text {
-  color: $text-gold;
+  color: $text-blue;
   font-weight: bold;
 }
 

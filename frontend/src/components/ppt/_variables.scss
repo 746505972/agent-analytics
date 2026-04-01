@@ -4,30 +4,34 @@
  */
 
 // ==================== 颜色变量 ====================
-// 主色调（背景渐变）- 赛博朋克霓虹
-$primary-gradient-start: #ff006e;
-$primary-gradient-end: #3a86ff;
+// 主色调（背景渐变）- 黑白蓝红现代简约
+$primary-gradient-start: rgba(41, 41, 41, 0.75);  // 黑色
+$primary-gradient-end: rgba(41, 41, 41, 0.9);     // 深灰色
 
 // 文字颜色
-$text-white: #ffffff;
-$text-gold: #fffb96;  // 霓虹黄
-$text-silver: #c0c0c0;
-$text-grey: rgba(41, 41, 41, 0.8);
+$text-white: #ffffff;              // 白色
+$text-black: #000000;              // 黑色
+$text-blue: #0066cc;               // 蓝色
+$text-red: #cc0000;                // 红色
+$text-grey: #666666;               // 灰色
+$text-light-grey: #999999;         // 浅灰色
 $text-opacity-90: rgba(255, 255, 255, 0.95);
 $text-opacity-80: rgba(255, 255, 255, 0.85);
 $text-opacity-70: rgba(255, 255, 255, 0.7);
 
 // 卡片背景
-$card-bg-default: rgba(255, 0, 110, 0.12);
-$card-bg-hover: rgba(58, 134, 255, 0.18);
-$card-bg-highlight: rgba(131, 118, 255, 0.25);  // 紫色高亮
-$card-bg-question: rgba(255, 0, 110, 0.25);
+$card-bg-default: rgba(30, 30, 30, 0.6);      // 深灰色半透明
+$card-bg-hover: rgba(50, 50, 50, 0.7);        //  hover 状态
+$card-bg-highlight: rgba(0, 102, 204, 0.15);  // 蓝色高亮
+$card-bg-question: rgba(204, 0, 0, 0.15);     // 红色高亮
+$card-bg-white: rgba(255, 255, 255, 0.05);    // 白色点缀
 
 // 卡片边框
-$card-border-default: rgba(255, 0, 110, 0.4);
-$card-border-highlight: rgba(131, 118, 255, 0.6);  // 紫色边框
-$card-border-question: rgba(255, 0, 110, 0.6);
-$card-border-light: rgba(58, 134, 255, 0.3);
+$card-border-default: rgba(80, 80, 80, 0.5);   // 灰色边框
+$card-border-highlight: rgba(0, 102, 204, 0.6); // 蓝色边框
+$card-border-question: rgba(204, 0, 0, 0.6);    // 红色边框
+$card-border-light: rgba(120, 120, 120, 0.3);  // 浅色边框
+$card-border-white: rgba(255, 255, 255, 0.2);  // 白色边框
 
 // ==================== 字体大小 ====================
 $font-size-title: 72px;        // 封面标题

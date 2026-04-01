@@ -7,7 +7,7 @@ import PPTPresentation from '@/views/PPTPresentation.vue'
 const routes = [
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: '/ppt'
   },
   {
     path: '/upload',
