@@ -2,37 +2,52 @@
   <div class="slide-content">
     <h2 class="slide-title">研究目标与贡献</h2>
     <div class="objectives-container">
+
+      <!-- 总体目标 -->
       <div class="main-objective">
-        <div class="icon-target">🎯</div>
         <h3>总体目标</h3>
-        <p>构建一个自然语言驱动的数据分析系统</p>
+        <p>构建一个具备分析决策能力的自适应数据分析系统（LLM-Agent驱动）</p>
       </div>
-      
+
+      <!-- 创新点 -->
       <div class="innovations">
         <div class="innovation-item">
-          <div class="number">01</div>
+          <div class="number">1</div>
           <div class="content">
-            <h4>LLM-Agent 驱动分析流程决策</h4>
-            <p>利用大模型的推理能力，自动规划分析路径</p>
+            <h4>分析流程的智能决策机制</h4>
+            <p>
+              将 LLM-Agent 引入数据分析流程，<br/>
+              实现从“工具执行”到“自主决策”的转变
+            </p>
           </div>
         </div>
-        
+
         <div class="innovation-item">
-          <div class="number">02</div>
+          <div class="number">2</div>
           <div class="content">
-            <h4>工具调用 + 分步分析机制</h4>
-            <p>通过 Function Calling 实现可控的分析过程</p>
+            <h4>可控的工具调用与分步分析框架</h4>
+            <p>
+              基于 Function Calling 构建分步分析机制，<br/>
+              提升分析过程的可解释性与可控性
+            </p>
           </div>
         </div>
-        
+
         <div class="innovation-item">
-          <div class="number">03</div>
+          <div class="number">3</div>
           <div class="content">
-            <h4>自动化报告生成 + 可控性设计</h4>
-            <p>从对话到报告的自动转换，保留人工干预能力</p>
+            <h4>面向结果输出的报告生成方法</h4>
+            <p>
+              实现对话驱动的报告生成，并支持过程筛选与人工干预
+            </p>
           </div>
         </div>
+
       </div>
+    </div>
+
+    <div class="arrow">
+      核心提升：从“自动执行工具” → “智能决策分析”
     </div>
   </div>
 </template>
@@ -81,14 +96,14 @@ export default {
 
 .innovations {
   display: flex;
-  flex-direction: column;
+  flex-direction: unset;
   gap: $spacing-lg;
 }
 
 .innovation-item {
   display: flex;
   align-items: center;
-  gap: $spacing-lg;
+  gap: $spacing-xs;
   background: $card-bg-default;
   backdrop-filter: $backdrop-blur;
   border-radius: $border-radius-md;
@@ -97,7 +112,6 @@ export default {
   transition: all $transition-fast;
   
   &:hover {
-    transform: translateX(10px);
     background: $card-bg-hover;
     border-color: rgba(255, 255, 255, 0.3);
   }

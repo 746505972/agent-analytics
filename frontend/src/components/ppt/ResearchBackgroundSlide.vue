@@ -54,14 +54,59 @@
         </div>
       </transition>
       
-      <!-- 第三部分：解决方案 -->
+      <!-- 第三部分：现有解决方案不足 -->
       <transition :name="slideDirection">
         <div v-if="currentIndex === 2" class="card-section">
-          <div class="info-card question wide">
+          <div class="info-card large-size">
+            <div class="card-problem">📛</div>
+            <h3>传统数据分析工具的不足</h3>
+            <p class="highlight-text">核心局限：操作驱动、缺乏智能化</p>
+            <ul class="problem-list">
+              <li><strong>高使用门槛：</strong>依赖用户具备统计学知识与分析经验，需手动选择方法、配置参数，难以支持从问题到结果的全流程自动化</li>
+              <li><strong>缺乏流程建模能力：</strong>以"单次分析任务"为单位，难以支持多步骤、复杂分析任务的整体建模与管理</li>
+              <li><strong>交互与解释能力弱：</strong>无法理解自然语言，问题表达与操作转换成本高；结果缺乏自动化解释与报告生成，不利于非专业用户理解业务意义</li>
+            </ul>
+          </div>
+          <div class="info-card large-size">
+            <div class="card-problem">🤖</div>
+            <h3>自动化机器学习（AutoML）的局限</h3>
+            <p class="highlight-text">核心局限：模型中心、忽略分析全过程</p>
+            <ul class="problem-list">
+              <li><strong>对数据预处理支持不足：</strong>多数系统假设数据已清洗，缺乏对数据质量与理解环节的关注</li>
+              <li><strong>优化目标单一：</strong>以预测性能为核心，难以融合具体业务语义与动态分析意图</li>
+              <li><strong>可解释性有限：</strong>虽引入部分解释技术，但整体缺乏对分析过程的系统性说明与结果解释能力，难以实现"自动分析"而非仅"自动建模"</li>
+            </ul>
+          </div>
+          <div class="info-card large-size">
+            <div class="card-problem">💻</div>
+            <h3>编程环境数据分析方式的不足</h3>
+            <p class="highlight-text">核心局限：代码依赖、语义鸿沟</p>
+            <ul class="problem-list">
+              <li><strong>技术门槛高：</strong>要求用户具备编程能力与算法基础，需手动实现数据处理、建模、调试等各环节，自动化程度低</li>
+              <li><strong>语义表达困难：</strong>分析意图需转换为具体代码，问题定义与实现过程存在鸿沟，不利于分析经验的复用与共享</li>
+              <li><strong>结果表达不友好：</strong>缺乏自动化解释机制，分析逻辑隐含在代码中，对非专业用户不友好，难以形成标准化、可复现的分析流程</li>
+            </ul>
+          </div>
+        </div>
+      </transition>
+
+      <!-- 第四部分：大语言模型的新进展 -->
+      <transition :name="slideDirection">
+        <div v-if="currentIndex === 3" class="card-section">
+          <div class="info-card question wide-card">
             <div class="card-icon">💡</div>
-            <h3>LLM-Agent 带来的新机遇</h3>
-            <p class="highlight-text">大语言模型的 Function Calling 能力使 Agent 能够承担决策角色</p>
-            <p class="question-sub">构建以 LLM-Agent 为核心的自适应数据分析系统</p>
+            <h3>大语言模型带来的新进展</h3>
+            <p class="question-text">
+            大语言模型的 Function Calling 能力，使其具备调用外部工具的能力
+            </p>
+            <ul class="problem-list">
+              <li>能够理解自然语言分析需求</li>
+              <li>可以在一定程度上执行分析任务</li>
+              <li>已有系统尝试用于数据分析场景</li>
+            </ul>
+            <p class="question-sub">
+            但仍存在流程不可控、分析路径不清晰等问题
+            </p>
           </div>
         </div>
       </transition>
@@ -76,7 +121,7 @@ export default {
   data() {
     return {
       currentIndex: 0,
-      totalSlides: 3,
+      totalSlides: 4,
       slideDirection: 'slide-next'
     }
   },
@@ -106,7 +151,7 @@ export default {
 
 .info-card {
   @extend .info-card;
-  width: 300px;
+  width: 380px;
   height: 300px;
   
   h3 {
@@ -116,6 +161,11 @@ export default {
   p {
     @extend p;
   }
+}
+
+.info-card.large-size {
+  width: 500px;
+  height: 400px;
 }
 
 .problem-list {
