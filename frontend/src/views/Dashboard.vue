@@ -193,7 +193,8 @@ export default {
   },
     
   async mounted() {
-    await this.checkServerStatus();
+    // await this.checkServerStatus();
+    this.isWaitingForServer = false; // 演示时设为false
     await this.loadUploadedFiles();
     // 恢复保存的状态
     this.restoreState();
