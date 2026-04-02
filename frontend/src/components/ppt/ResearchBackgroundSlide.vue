@@ -16,7 +16,7 @@
       <transition :name="slideDirection">
         <div v-if="currentIndex === 0" class="card-section">
           <div class="info-card highlight">
-            <div class="card-icon">📊</div>
+            <div class="card-problem">📊</div>
             <h3>数据分析的重要性</h3>
             <p>大数据时代，数据分析已成为政府治理、商业决策、科学研究与工程实践的重要支撑手段</p>
           </div>
@@ -94,7 +94,7 @@
       <transition :name="slideDirection">
         <div v-if="currentIndex === 3" class="card-section">
           <div class="info-card question wide-card">
-            <div class="card-icon">💡</div>
+            <div class="card-problem">💡</div>
             <h3>大语言模型带来的新进展</h3>
             <p class="question-text">
             大语言模型的 Function Calling 能力，使其具备调用外部工具的能力
@@ -201,6 +201,11 @@ export default {
   justify-content: center;
   align-items: center;
   gap: 20px;
+}
+
+.card-problem{
+  font-size: $icon-size-large;
+  margin-bottom: 10px;
 }
 
 // 导航按钮

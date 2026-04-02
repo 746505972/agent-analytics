@@ -49,11 +49,6 @@
         </div>
       </div>
     </div>
-    
-    <div class="thank-you">
-      <p class="main-text">感谢各位老师聆听！</p>
-      <p class="sub-text">敬请批评指正 🙏</p>
-    </div>
   </div>
 </template>
 
@@ -73,6 +68,9 @@ export default {
 .summary-container {
   max-width: 1200px;
   margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: $spacing-xl;
 }
 
 .summary-section,
@@ -80,7 +78,7 @@ export default {
   background: $card-bg-default;
   backdrop-filter: $backdrop-blur;
   border-radius: $border-radius-xl;
-  padding: $spacing-xxl - 2px $spacing-xxl + 5px;
+  padding: $spacing-md - 2px $spacing-md + 5px;
   margin-bottom: $spacing-xl + 5px;
   border: 2px solid $card-border-default;
 }
@@ -164,24 +162,4 @@ export default {
   @include caption-text;
 }
 
-.thank-you {
-  margin-top: $spacing-huge;
-  text-align: center;
-  padding: $spacing-xxl + 5px;
-  @include highlight-card;
-  backdrop-filter: $backdrop-blur;
-  border-radius: $border-radius-xl;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.thank-you .main-text {
-  font-size: $font-size-heading + 14px;
-  font-weight: bold;
-  margin-bottom: $spacing-md;
-}
-
-.thank-you .sub-text {
-  font-size: $font-size-heading - 2px;
-  opacity: 0.9;
-}
 </style>

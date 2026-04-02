@@ -23,7 +23,6 @@
       </div>
       
       <div class="key-mechanisms">
-        <h3>关键机制</h3>
         <div class="mechanism-grid">
           <div class="mechanism-item">
             <div class="icon">📝</div>
@@ -52,7 +51,6 @@
       </div>
       
       <div class="workflow">
-        <h3>工作流程</h3>
         <div class="workflow-steps">
           <div class="step">
             <div class="step-number">1</div>
@@ -101,7 +99,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: $spacing-lg;
-  margin-bottom: $spacing-xl + 5px;
+  margin-bottom: $spacing-xl;
 }
 
 .problem-box,
@@ -125,8 +123,8 @@ export default {
 
 .problem-box h3,
 .solution-box h3 {
-  font-size: $font-size-heading + 4px;
-  margin-bottom: $spacing-lg;
+  font-size: $font-size-heading;
+  margin-bottom: $spacing-md;
 }
 
 .problem-box ul,
@@ -158,11 +156,11 @@ export default {
 }
 
 .key-mechanisms {
-  margin-bottom: $spacing-xl + 5px;
+  margin-bottom: $spacing-xl;
 }
 
 .key-mechanisms h3 {
-  font-size: $font-size-heading + 4px;
+  font-size: $font-size-heading;
   margin-bottom: $spacing-lg;
   text-align: center;
 }
@@ -198,7 +196,7 @@ export default {
 }
 
 .mechanism-item h4 {
-  font-size: $font-size-caption + 4px;
+  font-size: $font-size-caption;
   margin-bottom: $spacing-xs;
 }
 
@@ -207,7 +205,7 @@ export default {
 }
 
 .workflow h3 {
-  font-size: $font-size-heading + 4px;
+  font-size: $font-size-heading;
   margin-bottom: $spacing-lg;
   text-align: center;
 }
@@ -219,7 +217,7 @@ export default {
   background: $card-bg-default;
   backdrop-filter: $backdrop-blur;
   border-radius: $border-radius-md;
-  padding: $spacing-lg;
+  padding: $spacing-sm;
   border: 2px solid $card-border-default;
 }
 

@@ -29,9 +29,9 @@
     </div>
 
     <!-- 退出提示（桌面端可用esc，不显示） -->
-    <div class="exit-hint">
+    <div class="exit-hint" v-if="[4].includes(currentSlide)">
       <button class="exit-button" @click="goToDashboard" title="返回系统界面">
-        ↩️
+        返回系统界面
       </button>
     </div>
   </div>
@@ -258,6 +258,31 @@ export default {
   }
 }
 
+/* 退出按钮 */
+.exit-hint {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+.exit-button {
+  background: linear-gradient(235deg, rgb(65, 159, 255) 0%, rgba(78, 208, 255, 0.72) 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(144, 147, 153, 0.4);
+  }
+}
+
 @media (max-width: 768px) {
   .ppt-container {
     padding: 20px;
@@ -265,31 +290,6 @@ export default {
   
   .slide {
     padding: 40px 20px;
-  }
-
-  /* 退出按钮 */
-  .exit-hint {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    z-index: 100;
-  }
-
-  .exit-button {
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    color: white;
-    font-size: 16px;
-    padding: 6px 12px;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-
-  .exit-button:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
   }
 }
 </style>
