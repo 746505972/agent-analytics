@@ -3,48 +3,74 @@
     <h2 class="slide-title">总结与展望</h2>
     <div class="summary-container">
       <div class="summary-section">
-        <div class="section-icon">✅</div>
-        <h3>工作总结</h3>
+<!--        <div class="section-icon">✅</div>-->
+        <h3>研究工作总结</h3>
         <div class="summary-list">
           <div class="summary-item">
             <span class="check">✓</span>
-            <p>构建了基于 LLM-Agent的数据分析系统</p>
+            <p>构建了"LLM决策+工具执行"的分析架构</p>
           </div>
           <div class="summary-item">
             <span class="check">✓</span>
-            <p>实现了自然语言驱动的自动化分析流程</p>
+            <p>实现了自然语言驱动的数据处理、统计分析与机器学习建模</p>
           </div>
           <div class="summary-item">
             <span class="check">✓</span>
-            <p>设计了工具调用和分步分析机制</p>
+            <p>设计了无状态工具与集中式会话管理机制</p>
           </div>
           <div class="summary-item">
             <span class="check">✓</span>
-            <p>开发了自动化报告生成功能</p>
+            <p>开发了基于分析过程记录的自动化报告生成功能</p>
+          </div>
+          <div class="summary-item">
+            <span class="check">✓</span>
+            <p>通过实验验证了系统的可行性与有效性</p>
+          </div>
+          <div class="summary-item">
+            <span class="check">✓</span>
+            <p>开源项目发布至GitHub，持续迭代更新</p>
           </div>
         </div>
       </div>
       
       <div class="outlook-section">
-        <div class="section-icon">🚀</div>
-        <h3>未来展望</h3>
+<!--        <div class="section-icon">🚀</div>-->
+        <h3>不足与展望</h3>
         <div class="outlook-grid">
           <div class="outlook-item">
-            <div class="icon">🧠</div>
-            <p>更强的决策能力</p>
-            <small>引入思维链和反思机制</small>
+            <div class="icon">🎯</div>
+            <p>增强意图理解能力</p>
+            <small>优化提示策略，引入用户确认机制</small>
           </div>
           
           <div class="outlook-item">
-            <div class="icon">🔗</div>
-            <p>多工具协同</p>
-            <small>支持复杂任务的并行处理</small>
+            <div class="icon">📊</div>
+            <p>改进报告生成机制</p>
+            <small>发挥LLM自动总结与结构化表达潜力</small>
+          </div>
+          
+          <div class="outlook-item">
+            <div class="icon">🔧</div>
+            <p>扩展分析工具库</p>
+            <small>支持领域特定分析方法，标准化接口</small>
+          </div>
+          
+          <div class="outlook-item">
+            <div class="icon">👥</div>
+            <p>扩大实验验证范围</p>
+            <small>更多用户群体与多样化数据场景</small>
           </div>
           
           <div class="outlook-item">
             <div class="icon">💡</div>
-            <p>更智能的交互</p>
-            <small>主动提问和意图识别</small>
+            <p>个性化分析辅助</p>
+            <small>结合用户行为数据与历史分析记录</small>
+          </div>
+          
+          <div class="outlook-item">
+            <div class="icon">🌐</div>
+            <p>推广应用至实际场景</p>
+            <small>教学、科研及业务分析等多层级支持</small>
           </div>
         </div>
       </div>
@@ -110,12 +136,12 @@ export default {
   background: $card-bg-default;
   backdrop-filter: $backdrop-blur;
   border-radius: $border-radius-md;
-  padding: $spacing-lg - 3px $spacing-xl - 2px;
+  padding: $spacing-md - 3px $spacing-md - 2px;
   border: 1px solid $card-border-light;
 }
 
 .summary-item .check {
-  font-size: 24px;
+  font-size: 20px;
   color: #4ade80;
   font-weight: bold;
 }

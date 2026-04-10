@@ -3,48 +3,50 @@
     <h2 class="slide-title">系统局限性</h2>
     <div class="limitations-container">
       <div class="limitation-item">
-        <div class="icon">⚠️</div>
+<!--        <div class="icon">⚠️</div>-->
         <div class="content">
-          <h3>一步生成报告问题</h3>
-          <p>在某些情况下，Agent 仍会跳过中间分析步骤，直接生成最终报告</p>
-          <div class="impact">影响：降低了分析过程的透明度和可控性</div>
+          <h3>分析流程控制不稳定</h3>
+          <p>用户输入模糊时（如"分析一下"），Agent仍可能跳过引导步骤，直接调用多工具生成完整报告</p>
+          <div class="impact">原因：模型对"任务完成度"的偏好，倾向于输出更全面的结果</div>
+          <div class="solution">已引入打断流式生成机制进行事后干预</div>
         </div>
       </div>
       
       <div class="limitation-item">
-        <div class="icon">🔧</div>
+<!--        <div class="icon">🔧</div>-->
         <div class="content">
-          <h3>工具调用不完全可控</h3>
-          <p>Agent 对工具的选择和调用顺序存在一定随机性</p>
-          <div class="impact">影响：可能导致分析路径不够优化</div>
+          <h3>用户意图约束不足</h3>
+          <p>明确要求"仅相关性分析"时，Agent仍可能自动扩展调用回归分析等后续工具</p>
+          <div class="impact">原因：模型基于常见分析流程自动扩展，任务边界识别不足</div>
+          <div class="solution">需引入结构化约束机制（显式任务规划、工具调用次数限制）</div>
         </div>
       </div>
       
       <div class="limitation-item">
-        <div class="icon">🧩</div>
+<!--        <div class="icon">📊</div>-->
         <div class="content">
-          <h3>复杂任务理解有限</h3>
-          <p>对于高度复杂或模糊的分析需求，理解能力仍有待提升</p>
-          <div class="impact">影响：需要用户多次澄清和调整</div>
+          <h3>高维数据场景适应性弱</h3>
+          <p>列数极多的数据集会导致工具选择不稳定、分析步骤混乱、结果解释质量下降</p>
+          <div class="impact">原因：高维数据序列化后占用大量上下文，干扰关键信息提取</div>
+          <div class="solution">需引入特征筛选、摘要表示或上下文压缩机制</div>
         </div>
       </div>
-      
+    </div>
+
+    <div class="green-note">
       <div class="improvement-direction">
-        <h3>改进方向</h3>
-        <div class="directions-grid">
-          <div class="direction-item">
-            <div class="number">01</div>
-            <p>强化提示词工程，引导分步思考</p>
-          </div>
-          <div class="direction-item">
-            <div class="number">02</div>
-            <p>引入人工审核节点，增强可控性</p>
-          </div>
-          <div class="direction-item">
-            <div class="number">03</div>
-            <p>增加领域知识库，提升专业理解</p>
-          </div>
-        </div>
+<!--        <div class="icon">✨</div>-->
+        <h3>被动演进优势</h3>
+        <p>系统基于云端API调用大语言模型,随底层模型能力提升而自然改善,无需频繁迭代即可获得推理与指令遵循能力的增强</p>
+      </div>
+
+      <div class="improvement-direction">
+        <h3>未来改进方向</h3>
+        <ul class="directions-grid">
+          <li>强化任务规划机制,提升流程控制稳定性</li>
+          <li>引入结构化约束,增强用户意图边界识别</li>
+          <li>优化上下文管理,提升高维数据处理能力</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -64,8 +66,9 @@ export default {
 }
 
 .limitations-container {
-  max-width: 1200px;
   margin: 0 auto;
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
 }
 
 .limitation-item {
@@ -76,7 +79,7 @@ export default {
   backdrop-filter: $backdrop-blur;
   border-radius: $border-radius-md;
   padding: $spacing-lg - 3px $spacing-xl - 3px;
-  margin-bottom: $spacing-lg + 3px;
+  margin-bottom: $spacing-sm;
   border: 2px solid $card-border-default;
   transition: all $transition-fast;
   
@@ -113,13 +116,29 @@ export default {
   margin-top: $spacing-xs;
 }
 
+.solution {
+  background: rgba(59, 130, 246, 0.2);
+  border-left: 4px solid #3b82f6;
+  padding: $spacing-xs $spacing-sm;
+  border-radius: 5px;
+  font-size: $font-size-body-small;
+  margin-top: $spacing-xs;
+  color: #60a5fa;
+}
+
 .improvement-direction {
-  margin-top: $spacing-xxl + 5px;
   background: rgba(34, 197, 94, 0.15);
   backdrop-filter: $backdrop-blur;
   border-radius: $border-radius-xl;
-  padding: $spacing-xxl $spacing-xxl + 5px;
+  padding: $spacing-xl $spacing-xl;
   border: 2px solid rgba(34, 197, 94, 0.3);
+  flex: 1;
+  transition: all $transition-fast;
+  
+  &:hover {
+    transform: translateY(-5px);
+    background: rgba(34, 197, 94, 0.2);
+  }
 }
 
 .improvement-direction h3 {
@@ -130,9 +149,7 @@ export default {
 }
 
 .directions-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $spacing-lg;
+  @extend .problem-list;
 }
 
 .direction-item {
@@ -160,5 +177,11 @@ export default {
 .direction-item p {
   font-size: $font-size-body;
   line-height: 1.6;
+}
+
+.green-note {
+  display: flex;
+  gap: $spacing-lg;
+  margin-top: $spacing-xl;
 }
 </style>
