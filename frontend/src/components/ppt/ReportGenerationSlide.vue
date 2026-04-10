@@ -19,13 +19,13 @@
         
         <div class="arrow">→</div>
         
-        <div class="flow-step">
-          <div class="step-icon">📑</div>
-          <h4>结构组织</h4>
-          <p>按章节逻辑编排</p>
-        </div>
-        
-        <div class="arrow">→</div>
+<!--        <div class="flow-step">-->
+<!--          <div class="step-icon">📑</div>-->
+<!--          <h4>结构组织</h4>-->
+<!--          <p>按章节逻辑编排</p>-->
+<!--        </div>-->
+<!--        -->
+<!--        <div class="arrow">→</div>-->
         
         <div class="flow-step">
           <div class="step-icon">📄</div>
@@ -139,7 +139,6 @@ export default {
 
 .points-grid {
   display: flex;
-  flex-direction: column;
   gap: $spacing-lg;
 }
 
