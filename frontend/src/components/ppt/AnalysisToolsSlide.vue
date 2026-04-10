@@ -1,6 +1,8 @@
 <template>
   <div class="slide-content">
-    <h2 class="slide-title">数据分析工具设计</h2>
+    <h2 class="slide-title">工具体系与报告生成</h2>
+    
+    <!-- 数据分析工具部分 -->
     <div class="tools-container">
       <div class="tool-category">
         <div class="category-icon">🧹</div>
@@ -45,12 +47,41 @@
           <li>词云图</li>
         </ul>
       </div>
+
+<!--      <div class="feature-highlight">-->
+<!--        <div class="icon">✨</div>-->
+<!--        <p>一份代码,两处使用</p>-->
+<!--      </div>-->
     </div>
-    
-    <div class="feature-highlight">
-      <div class="icon">✨</div>
-      <p>所有工具均可被 Agent 自主调用，无需人工干预</p>
+
+    <!-- 报告生成流程部分 -->
+    <div class="report-section">
+<!--      <h3 class="section-subtitle">报告生成方法</h3>-->
+      <div class="process-flow">
+        <div class="flow-step">
+          <div class="step-icon">💬</div>
+          <h4>对话记录</h4>
+          <p>完整的交互历史</p>
+        </div>
+        
+        <div class="arrow">→</div>
+        
+        <div class="flow-step">
+          <div class="step-icon">🔍</div>
+          <h4>内容筛选</h4>
+          <p>提取关键分析结果</p>
+        </div>
+        
+        <div class="arrow">→</div>
+        
+        <div class="flow-step">
+          <div class="step-icon">📄</div>
+          <h4>文档输出</h4>
+          <p>Word/PDF/Markdown</p>
+        </div>
+      </div>
     </div>
+
   </div>
 </template>
 
@@ -138,5 +169,59 @@ export default {
 .feature-highlight p {
   font-size: $font-size-body-large;
   font-weight: bold;
+}
+
+/* 报告生成部分样式 */
+.report-section {
+  margin-bottom: $spacing-xl;
+}
+
+.section-subtitle {
+  font-size: $font-size-heading + 8px;
+  margin-bottom: $spacing-lg;
+  text-align: center;
+  color: $text-blue;
+}
+
+.process-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: $card-bg-default;
+  backdrop-filter: $backdrop-blur;
+  border-radius: $border-radius-xl;
+  padding: $spacing-xl $spacing-lg + 5px;
+  border: 2px solid $card-border-default;
+}
+
+.flow-step {
+  text-align: center;
+  flex: 1;
+  transition: all $transition-fast;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.step-icon {
+  @include icon-medium;
+  margin-bottom: $spacing-sm;
+}
+
+.flow-step h4 {
+  font-size: $font-size-body-large;
+  margin-bottom: $spacing-sm;
+  color: $text-blue;
+}
+
+.flow-step p {
+  @include caption-text;
+}
+
+.arrow {
+  font-size: 36px;
+  opacity: 0.6;
+  margin: 0 $spacing-md;
 }
 </style>

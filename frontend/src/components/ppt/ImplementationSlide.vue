@@ -1,6 +1,6 @@
 <template>
   <div class="slide-content">
-    <h2 class="slide-title">系统实现与界面展示</h2>
+    <h2 class="slide-title">系统实现</h2>
     <div class="showcase-container">
       <div class="feature-grid">
         <div class="feature-item">
@@ -83,7 +83,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: $spacing-xl;
-  margin-bottom: $spacing-xxl + 5px;
+  margin-bottom: $spacing-xl + 5px;
 }
 
 .feature-item {
@@ -104,9 +104,9 @@ export default {
 .screenshot-placeholder {
   background: rgba(255, 255, 255, 0.15);
   border-radius: $border-radius-md;
-  padding: $spacing-xxl $spacing-lg;
+  padding: $spacing-xl $spacing-md;
   text-align: center;
-  margin-bottom: $spacing-lg;
+  margin-bottom: $spacing-md;
   border: 2px dashed $card-border-light;
 }
 
@@ -129,13 +129,13 @@ export default {
   background: $card-bg-default;
   backdrop-filter: $backdrop-blur;
   border-radius: $border-radius-xl;
-  padding: $spacing-xxl $spacing-xxl + 5px;
+  padding: $spacing-xl $spacing-xl + 5px;
   border: 2px solid $card-border-default;
 }
 
 .tech-stack h3 {
   font-size: $font-size-heading + 10px;
-  margin-bottom: $spacing-xl - 2px;
+  margin-bottom: $spacing-md - 2px;
   text-align: center;
 }
 

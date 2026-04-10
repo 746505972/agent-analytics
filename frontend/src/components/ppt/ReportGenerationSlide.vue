@@ -33,35 +33,7 @@
           <p>Word/PDF/Markdown</p>
         </div>
       </div>
-      
-      <div class="key-points">
-        <h3>关键技术点</h3>
-        <div class="points-grid">
-          <div class="point-item">
-            <div class="number">01</div>
-            <div class="content">
-              <h4>智能筛选机制</h4>
-              <p>基于重要性和相关性过滤冗余信息</p>
-            </div>
-          </div>
-          
-          <div class="point-item">
-            <div class="number">02</div>
-            <div class="content">
-              <h4>结构化组织</h4>
-              <p>自动生成目录和章节层次</p>
-            </div>
-          </div>
-          
-          <div class="point-item">
-            <div class="number">03</div>
-            <div class="content">
-              <h4>多格式支持</h4>
-              <p>导出为 Word、PDF、Markdown 等格式</p>
-            </div>
-          </div>
-        </div>
-      </div>
+
     </div>
   </div>
 </template>

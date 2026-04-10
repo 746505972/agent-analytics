@@ -10,7 +10,7 @@ import TechnologiesSlide from './TechnologiesSlide.vue'
 import SystemArchitectureSlide from './SystemArchitectureSlide.vue'
 import AgentMechanismSlide from './AgentMechanismSlide.vue'
 import AnalysisToolsSlide from './AnalysisToolsSlide.vue'
-import ReportGenerationSlide from './ReportGenerationSlide.vue'
+// import ReportGenerationSlide from './ReportGenerationSlide.vue'
 import ImplementationSlide from './ImplementationSlide.vue'
 import ExperimentsSlide from './ExperimentsSlide.vue'
 import LimitationsSlide from './LimitationsSlide.vue'
@@ -25,7 +25,7 @@ export { TechnologiesSlide }
 export { SystemArchitectureSlide }
 export { AgentMechanismSlide }
 export { AnalysisToolsSlide }
-export { ReportGenerationSlide }
+// export { ReportGenerationSlide }
 export { ImplementationSlide }
 export { ExperimentsSlide }
 export { LimitationsSlide }
@@ -41,11 +41,11 @@ export const slidesConfig = [
   { component: ResearchBackgroundSlide, name: 'background' },  // 2. 研究背景与问题
   { component: ResearchObjectivesSlide, name: 'objectives' },  // 3. 研究目标与贡献
   { component: TechnologiesSlide, name: 'technologies' },      // 4. 相关技术
+  { component: ImplementationSlide, name: 'implementation' },  // 9. 系统实现与界面
   { component: SystemArchitectureSlide, name: 'architecture' },// 5. 系统总体架构
   { component: AgentMechanismSlide, name: 'agent-mechanism' }, // 6. Agent 决策机制
   { component: AnalysisToolsSlide, name: 'tools' },            // 7. 数据分析工具设计
-  { component: ReportGenerationSlide, name: 'report-generation' }, // 8. 报告生成方法
-  { component: ImplementationSlide, name: 'implementation' },  // 9. 系统实现与界面
+  // { component: ReportGenerationSlide, name: 'report-generation' }, // 8. 报告生成方法
   { component: ExperimentsSlide, name: 'experiments' },        // 10. 实验与效果分析
   { component: LimitationsSlide, name: 'limitations' },        // 11. 系统局限性
   { component: ConclusionSlide, name: 'conclusion' },          // 12. 总结与展望

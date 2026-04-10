@@ -29,7 +29,7 @@
     </div>
 
     <!-- 退出提示（桌面端可用esc，不显示） -->
-    <div class="exit-hint" v-if="[4].includes(currentSlide)">
+    <div class="exit-hint" v-if="[5].includes(currentSlide)">
       <button class="exit-button" @click="goToDashboard" title="返回系统界面">
         返回系统界面
       </button>
