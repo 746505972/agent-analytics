@@ -306,13 +306,18 @@ export default {
       }
     },
     
-    toggleFileSection(event) {
+    async toggleFileSection(event) {
       // 阻止事件冒泡，避免触发clickOutside
       if (event) {
         event.stopPropagation();
       }
       this.isFileSectionCollapsed = !this.isFileSectionCollapsed;
       localStorage.setItem('isFileSectionCollapsed', this.isFileSectionCollapsed.toString());
+      
+      // 如果展开文件区域，则从后端更新文件数据
+      if (!this.isFileSectionCollapsed) {
+        await this.loadUploadedFiles();
+      }
     },
     
     // 关闭文件选择区域
