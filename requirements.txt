@@ -10,6 +10,7 @@ xgboost>=2.0.0
 
 # 自然语言处理
 jieba>=0.42.1
+snownlp>=0.12.3
 
 # 数据可视化
 pyecharts>=1.0.0
@@ -26,4 +27,5 @@ uvicorn>=0.23.0
 # 其他工具
 python-multipart>=0.0.6  # 用于文件上传
 pydantic>=2.0.0         # 数据验证
+pycryptodome>=3.23.0
 xlrd>=2.0.0
